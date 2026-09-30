@@ -1,25 +1,42 @@
 -- Void Harvester - Null Behemoth
 -- Custom Card ID: 58137786
+-- [Monster / Effect]
 -- Duelingbook Link: https://www.duelingbook.com/card?id=50000006
 local s,id=GetID()
 function s.initial_effect(c)
 
-	-- Effect Scaffold
+	-- Effect 1: Cannot be Normal Summoned/Set. Must be Special Summoned by b...
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
+	e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_REMOVE)
 	e1:SetType(EFFECT_TYPE_IGNITION)
-
 	e1:SetRange(LOCATION_MZONE)
-	e1:SetCountLimit(1,id)
-	e1:SetTarget(s.target)
-	e1:SetOperation(s.operation)
+	e1:SetTarget(s.target1)
+	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
+
+	-- Effect 2: Once per turn: You can banish 1 card your opponent controls....
+	local e2=Effect.CreateEffect(c)
+	e2:SetDescription(aux.Stringid(id,1))
+	e2:SetCategory(CATEGORY_REMOVE)
+	e2:SetType(EFFECT_TYPE_IGNITION)
+	e2:SetRange(LOCATION_MZONE)
+	e2:SetCountLimit(1)
+	e2:SetTarget(s.target2)
+	e2:SetOperation(s.operation2)
+	c:RegisterEffect(e2)
 end
 
-function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chk==0 then return true end
 end
+function s.operation1(e,tp,eg,ep,ev,re,r,rp)
+	-- Effect implementation
+end
 
-function s.operation(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect logic implementation
+function s.target2(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+	if chk==0 then return true end
+end
+function s.operation2(e,tp,eg,ep,ev,re,r,rp)
+	-- Effect implementation
 end
