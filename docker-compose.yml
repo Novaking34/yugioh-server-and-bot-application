@@ -1,0 +1,15 @@
+services:
+  ygoserver:
+    image: yunikon525/ygoserver:latest
+    container_name: ygo-simulator-server
+    restart: unless-stopped
+    ports:
+      - "7911:7911"
+      - "7922:7922"
+    volumes:
+      - ./server-data/config:/ygoserver/config
+      - ./server-data/expansions:/ygoserver/ygopro/expansions
+      - ./server-data/decks:/ygoserver/decks
+      - ./server-data/replays:/ygoserver/replays
+    environment:
+      - TZ=UTC
