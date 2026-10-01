@@ -215,6 +215,7 @@ class YugiohPlatformApp(tk.Tk):
 
         ttk.Button(controls_inner, text="🌐 Open Web Catalog", style="Action.TButton", command=self.open_web_dashboard).pack(fill=tk.X, pady=(0, 6))
         ttk.Button(controls_inner, text="🤖 Start Discord Bot", style="Action.TButton", command=self.start_discord_bot).pack(fill=tk.X, pady=(0, 6))
+        ttk.Button(controls_inner, text="☁️ Cloudflare HTTPS Tunnel", style="Action.TButton", command=lambda: self.run_cli(["tunnel", "--quick"])).pack(fill=tk.X, pady=(0, 6))
         ttk.Button(controls_inner, text="🐳 Open Docker Desktop", style="Action.TButton", command=self.open_docker_desktop).pack(fill=tk.X, pady=(0, 14))
 
         # Group 3: Card Pipeline & Sync

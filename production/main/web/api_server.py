@@ -250,6 +250,7 @@ def list_shared_decks() -> List[Dict[str, Any]]:
     return deck_files
 
 
+@app.get("/api/manifest", include_in_schema=False)
 @app.get("/api/shared/manifest", summary="Retrieve expansion package manifest for client synchronization")
 def get_shared_manifest() -> Dict[str, Any]:
     """Provides metadata for player clients to synchronize custom cards and scripts over the network."""

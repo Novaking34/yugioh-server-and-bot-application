@@ -135,25 +135,54 @@ class AdminCog(commands.GroupCog, group_name="admin"):
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="simulator", description="Check or restart the ocgcore simulator Docker container.")
-    @app_commands.describe(action="Status check or restart container")
-    async def simulator_control(self, interaction: discord.Interaction, action: Literal["status", "restart"]):
-        """Inspects or restarts the simulator container."""
+    @app_commands.command(name="simulator", description="Inspect, view logs, monitor stats, or manage the Docker duel simulator container.")
+    @app_commands.describe(action="Simulator action: status, logs, stats, restart, start, stop")
+    async def simulator_control(self, interaction: discord.Interaction, action: Literal["status", "logs", "stats", "restart", "start", "stop"]):
+        """Inspects, monitors, or controls the simulator container."""
         await interaction.response.defer(ephemeral=True)
 
         if action == "status":
             res = subprocess.run(
-                ["docker", "ps", "--filter", "name=ygo-simulator-server", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
+                ["docker", "ps", "-a", "--filter", "name=ygo-simulator-server", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}"],
                 capture_output=True, text=True, cwd=BASE_DIR
             )
-            out = res.stdout.strip() or "Container not running."
-            await interaction.followup.send(f"```\n{out}\n```", ephemeral=True)
+            out = res.stdout.strip() or "Container not found."
+            await interaction.followup.send(f"**🐳 Simulator Container Status**\n```text\n{out}\n```", ephemeral=True)
+        elif action == "logs":
+            res = subprocess.run(
+                ["docker", "logs", "--tail", "25", "ygo-simulator-server"],
+                capture_output=True, text=True, cwd=BASE_DIR
+            )
+            out = (res.stdout + res.stderr).strip() or "No logs available."
+            # Guard against exceeding Discord 2000 character limit
+            if len(out) > 1900:
+                out = "..." + out[-1890:]
+            await interaction.followup.send(f"**📜 Simulator Recent Logs (last 25 lines)**\n```text\n{out}\n```", ephemeral=True)
+        elif action == "stats":
+            res = subprocess.run(
+                ["docker", "stats", "--no-stream", "--format", "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}", "ygo-simulator-server"],
+                capture_output=True, text=True, cwd=BASE_DIR
+            )
+            out = res.stdout.strip() or "Unable to retrieve container metrics."
+            await interaction.followup.send(f"**⚡ Simulator Resource Metrics**\n```text\n{out}\n```", ephemeral=True)
         elif action == "restart":
             res = subprocess.run(["docker", "compose", "restart"], capture_output=True, text=True, cwd=BASE_DIR)
             if res.returncode == 0:
-                await interaction.followup.send("[+] Simulator container restarted successfully.", ephemeral=True)
+                await interaction.followup.send("✅ Simulator container restarted successfully.", ephemeral=True)
             else:
-                await interaction.followup.send(f"[-] Error restarting container:\n{res.stderr}", ephemeral=True)
+                await interaction.followup.send(f"❌ Error restarting container:\n```{res.stderr}```", ephemeral=True)
+        elif action == "start":
+            res = subprocess.run(["docker", "compose", "up", "-d"], capture_output=True, text=True, cwd=BASE_DIR)
+            if res.returncode == 0:
+                await interaction.followup.send("✅ Simulator container started.", ephemeral=True)
+            else:
+                await interaction.followup.send(f"❌ Error starting container:\n```{res.stderr}```", ephemeral=True)
+        elif action == "stop":
+            res = subprocess.run(["docker", "compose", "stop"], capture_output=True, text=True, cwd=BASE_DIR)
+            if res.returncode == 0:
+                await interaction.followup.send("🛑 Simulator container stopped.", ephemeral=True)
+            else:
+                await interaction.followup.send(f"❌ Error stopping container:\n```{res.stderr}```", ephemeral=True)
 
     @app_commands.command(name="broadcast", description="Send an official platform announcement to the current channel.")
     @app_commands.describe(title="Announcement title", message="Announcement body text")

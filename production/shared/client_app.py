@@ -31,9 +31,23 @@ DECKS_DIR = os.path.join(BASE_DIR, "decks")
 GUIDE_FILE = os.path.join(BASE_DIR, "CLIENT_GUIDE.md")
 
 # Default server host configuration (can be changed in UI)
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 DEFAULT_SERVER_HOST = "localhost"
 DEFAULT_SERVER_PORT = "7911"
 DEFAULT_WEB_PORT = "8000"
+DEFAULT_SERVER_URL = ""
+
+if os.path.exists(CONFIG_FILE):
+    try:
+        import json
+        with open(CONFIG_FILE, "r", encoding="utf-8") as _f:
+            _cfg = json.load(_f)
+            DEFAULT_SERVER_HOST = _cfg.get("simulator_host", DEFAULT_SERVER_HOST)
+            DEFAULT_SERVER_PORT = str(_cfg.get("simulator_port", DEFAULT_SERVER_PORT))
+            DEFAULT_WEB_PORT = str(_cfg.get("web_port", DEFAULT_WEB_PORT))
+            DEFAULT_SERVER_URL = _cfg.get("server_url", "")
+    except Exception:
+        pass
 
 
 class PlayerClientApp(tk.Tk):
@@ -242,8 +256,11 @@ class PlayerClientApp(tk.Tk):
         messagebox.showinfo("Copied", f"Connection details copied to clipboard:\n\n{info}\n\nPaste into EDOPro -> Multiplayer -> Direct Connect.")
 
     def _open_web_catalog(self):
-        host = self.server_ip.get().strip() or "localhost"
-        url = f"http://{host}:{DEFAULT_WEB_PORT}"
+        if DEFAULT_SERVER_URL:
+            url = DEFAULT_SERVER_URL
+        else:
+            host = self.server_ip.get().strip() or "localhost"
+            url = f"http://{host}:{DEFAULT_WEB_PORT}"
         self.log_message(f"[*] Opening Web Card Catalog at {url}...")
         webbrowser.open(url)
 
