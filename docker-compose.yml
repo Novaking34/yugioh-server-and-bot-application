@@ -1,6 +1,6 @@
 services:
   ygoserver:
-    image: yunikon525/ygoserver:latest
+    image: ${DOCKER_IMAGE:-professorseanex/ygoserver:latest}
     container_name: ygo-simulator-server
     restart: unless-stopped
     ports:
