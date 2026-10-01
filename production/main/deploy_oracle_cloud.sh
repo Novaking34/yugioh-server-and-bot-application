@@ -69,7 +69,6 @@ apt-get install -y \
     iptables \
     iptables-persistent \
     netfilter-persistent \
-    ufw \
     ca-certificates
 
 # Install Docker if not present
@@ -106,7 +105,7 @@ done
 netfilter-persistent save || true
 
 # Also configure UFW if enabled
-if ufw status | grep -q "Status: active"; then
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
     echo -e "${BLUE}[*] UFW firewall active. Adding firewall rules...${NC}"
     ufw allow 22/tcp
     ufw allow 7911/tcp
