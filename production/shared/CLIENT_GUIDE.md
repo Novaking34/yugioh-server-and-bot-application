@@ -4,11 +4,27 @@ Welcome to the custom Yu-Gi-Oh! duel server! This folder contains everything you
 
 ---
 
-## ⚡ Quick 1-Click Install
+## 🖥️ Method 1: Desktop Application (Recommended)
+
+Double-click to launch the graphical client manager:
+
+- **Windows:** Double-click `launch_client.bat`
+- **Linux / macOS:** Run `./launch_client.sh` or `python3 client_app.py`
+
+This opens the window where you can:
+
+- Auto-detect or browse for your EDOPro folder
+- Click **"⚡ 1-Click Install to Game"**
+- Click **"📋 Copy Connection Info"** (IP and port 7911)
+- Click **"📖 Open Web Catalog"** to view card art and effects
+
+---
+
+## ⚡ Method 2: Command Line Installer
 
 ### Linux / macOS
 
-Run the client installer from this directory:
+Run the installer script:
 
 ```bash
 ./install_client.sh
@@ -16,7 +32,7 @@ Run the client installer from this directory:
 
 ### Windows
 
-Open PowerShell or Command Prompt in this folder and run:
+Double-click `install_client.bat` or run in PowerShell / Command Prompt:
 
 ```powershell
 python sync_client.py

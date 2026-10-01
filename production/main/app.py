@@ -35,6 +35,7 @@ except ImportError:
     STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
     ICON_PATH = os.path.join(BASE_DIR, "production", "main", "assets", "icon.png")
 
+MANAGE_PY = os.path.join(BASE_DIR, "manage.py")
 MANAGE_SH = os.path.join(BASE_DIR, "manage.sh")
 
 # Regex pattern to strip ANSI terminal escape sequences from shell output
@@ -318,13 +319,14 @@ class YugiohPlatformApp(tk.Tk):
 
     def run_cli(self, args: list, on_complete: Optional[Callable] = None):
         """
-        Executes a `./manage.sh` command in a non-blocking background thread
+        Executes a `manage.py` command in a non-blocking background thread
         and streams stdout/stderr live to the application console.
+        Cross-platform compatible on Windows, macOS, and Linux.
         """
-        cmd = [MANAGE_SH] + args
+        cmd = [sys.executable, MANAGE_PY] + args
 
         def worker():
-            self.after(0, lambda: self.log_message(f"\n$ ./manage.sh {' '.join(args)}"))
+            self.after(0, lambda: self.log_message(f"\n$ python manage.py {' '.join(args)}"))
             try:
                 proc = subprocess.Popen(
                     cmd,
