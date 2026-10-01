@@ -1,6 +1,65 @@
-venv/
+# =============================================================================
+# Python & Bytecode
+# =============================================================================
 __pycache__/
 **/__pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Testing & Cache
 .pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# =============================================================================
+# Secrets & Environment Configurations
+# =============================================================================
 .env
+.env.*
+*.token
+discord_bot/config.json
+production/main/discord_bot/config.json
+
+# =============================================================================
+# Operating System & IDE Files
+# =============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Runtime Logs & Duel Replays
+# =============================================================================
+*.log
+production/main/simulator/replays/*.yrp
+!production/main/simulator/replays/.gitkeep
