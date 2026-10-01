@@ -32,7 +32,7 @@ GUIDE_FILE = os.path.join(BASE_DIR, "CLIENT_GUIDE.md")
 
 # Default server host configuration (can be changed in UI)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
-DEFAULT_SERVER_HOST = "localhost"
+DEFAULT_SERVER_HOST = "thelandofkustomazi.duckdns.org"
 DEFAULT_SERVER_PORT = "7911"
 DEFAULT_WEB_PORT = "8000"
 DEFAULT_SERVER_URL = ""
