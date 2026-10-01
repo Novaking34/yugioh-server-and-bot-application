@@ -42,9 +42,13 @@ import re
 import subprocess
 from typing import Optional, List, Tuple, Dict, Any
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STORY_DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
-SCRIPTS_DIR = os.path.join(BASE_DIR, "server-data", "expansions", "scripts")
+# Resolve project base directory
+try:
+    from config.paths import BASE_DIR, STORY_DB_PATH, SCRIPTS_DIR
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
+    SCRIPTS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions", "scripts")
 
 
 def clean_text(text: Optional[str]) -> str:

@@ -21,17 +21,33 @@ import os
 import sys
 
 # Resolve base directories
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
-TEMPLATES_DIR = os.path.join(BASE_DIR, "story_database", "templates")
+try:
+    from config.paths import (
+        BASE_DIR, STORY_DB_PATH, TEMPLATES_DIR, TOOLS_DIR,
+        CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR
+    )
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
+    TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
+    CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
+    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
+    EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
+
+DB_PATH = STORY_DB_PATH
 
 # Import modular database helpers and Pydantic models
-sys.path.append(os.path.join(BASE_DIR, "story_database"))
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
 from database import get_db, db_session
 from models import CardInput, StatusResponse
 
 # Import Duelingbook card importer tool
-sys.path.append(os.path.join(BASE_DIR, "tools"))
+if TOOLS_DIR not in sys.path:
+    sys.path.append(TOOLS_DIR)
 try:
     from duelingbook_importer import import_card_data
 except ImportError:
@@ -41,7 +57,7 @@ except ImportError:
 app = FastAPI(
     title="Yu-Gi-Oh! Story & Custom Card Engine API",
     description="Synchronizes Duelingbook custom cards with SQLite lore database and ocgcore simulator.",
-    version="1.1.0"
+    version="1.2.0"
 )
 
 
@@ -192,6 +208,50 @@ def get_decks() -> List[Dict[str, Any]]:
     return decks
 
 
+# =============================================================================
+# 5. SHARED CLIENT ASSET ENDPOINTS (For remote players / clients)
+# =============================================================================
+
+@app.get("/api/shared/cdb", summary="Download compiled custom_cards.cdb")
+def download_cdb():
+    """Serves the latest compiled CDB expansion database for players/clients."""
+    if os.path.exists(CDB_OUTPUT_PATH):
+        return FileResponse(
+            path=CDB_OUTPUT_PATH,
+            filename="custom_cards.cdb",
+            media_type="application/octet-stream"
+        )
+    raise HTTPException(status_code=404, detail="custom_cards.cdb not yet generated.")
+
+
+@app.get("/api/shared/decks", summary="List downloadable .ydk deck files")
+def list_shared_decks() -> List[Dict[str, Any]]:
+    """Returns all available .ydk deck files in the shared decks directory."""
+    if not os.path.exists(DECKS_DIR):
+        return []
+    deck_files = []
+    for f in os.listdir(DECKS_DIR):
+        if f.endswith(".ydk"):
+            fp = os.path.join(DECKS_DIR, f)
+            deck_files.append({
+                "filename": f,
+                "size_bytes": os.path.getsize(fp),
+                "download_url": f"/api/shared/decks/{f}"
+            })
+    return deck_files
+
+
+@app.get("/api/shared/decks/{filename}", summary="Download specific .ydk deck file")
+def download_deck(filename: str):
+    """Downloads a .ydk deck file."""
+    safe_name = os.path.basename(filename)
+    path = os.path.join(DECKS_DIR, safe_name)
+    if os.path.exists(path) and path.endswith(".ydk"):
+        return FileResponse(path=path, filename=safe_name, media_type="text/plain")
+    raise HTTPException(status_code=404, detail=f"Deck file {safe_name} not found.")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=True)
+

@@ -27,10 +27,15 @@ import webbrowser
 import sqlite3
 from typing import Optional, Callable
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Resolve base directories
+try:
+    from config.paths import BASE_DIR, STORY_DB_PATH, ICON_PATH
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
+    ICON_PATH = os.path.join(BASE_DIR, "production", "main", "assets", "icon.png")
+
 MANAGE_SH = os.path.join(BASE_DIR, "manage.sh")
-STORY_DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
-ICON_PATH = os.path.join(BASE_DIR, "assets", "icon.png")
 
 # Regex pattern to strip ANSI terminal escape sequences from shell output
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -366,7 +371,7 @@ class YugiohPlatformApp(tk.Tk):
             if not is_up:
                 self.after(0, lambda: self.log_message("[*] Starting web server in background via uvicorn..."))
                 subprocess.Popen(
-                    [sys.executable, "-m", "uvicorn", "story_database.api_server:app", "--host", "0.0.0.0", "--port", "8000"],
+                    [sys.executable, "-m", "uvicorn", "production.main.web.api_server:app", "--host", "0.0.0.0", "--port", "8000"],
                     cwd=BASE_DIR,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL

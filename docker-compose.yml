@@ -7,9 +7,9 @@ services:
       - "7911:7911"
       - "7922:7922"
     volumes:
-      - ./server-data/config:/ygoserver/config
-      - ./server-data/expansions:/ygoserver/ygopro/expansions
-      - ./server-data/decks:/ygoserver/decks
-      - ./server-data/replays:/ygoserver/replays
+      - ./production/main/simulator/config:/ygoserver/config
+      - ./production/shared/expansions:/ygoserver/ygopro/expansions
+      - ./production/shared/decks:/ygoserver/decks
+      - ./production/main/simulator/replays:/ygoserver/replays
     environment:
       - TZ=UTC

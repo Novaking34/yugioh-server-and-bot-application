@@ -94,13 +94,23 @@ The server runs an automated rule-enforcement duel engine container (`ocgcore`) 
    - **Port:** `7911`
 4. Enter any room name or leave blank for auto-matching.
 
-### Sharing Custom Card Expansions
+### Sharing Custom Card Expansions (For Players & Friends)
 
-- Custom cards are automatically compiled into:
-  `server-data/expansions/custom_cards.cdb`
-- Custom Lua effect scripts reside in:
-  `server-data/expansions/scripts/c<id>.lua`
-- To share custom cards with other players, simply copy `custom_cards.cdb` and the `scripts/` folder to their client's `expansions/` directory!
+All files needed for other players to duel on this server are organized in `production/shared/`:
+
+- **Compiled Card Database:** `production/shared/expansions/custom_cards.cdb`
+- **Lua Effect Scripts:** `production/shared/expansions/scripts/c<id>.lua`
+- **Sample & Story Decks:** `production/shared/decks/*.ydk`
+
+Players can install everything in one click:
+
+```bash
+cd production/shared
+./install_client.sh    # On Linux / Mac
+python sync_client.py   # On Windows
+```
+
+See [CLIENT_GUIDE.md](file:///home/professorseanex/yugioh-server/production/shared/CLIENT_GUIDE.md) for full instructions.
 
 ---
 
@@ -119,9 +129,9 @@ Duelingbook is the primary design workshop for card artwork, text, and manual te
    ```
 
 4. **Automatic Synchronization:**
-   - The card is registered in `story_database/ygo_story.db` with its Duelingbook URL and artwork thumbnail.
-   - The simulator `.cdb` binary database is compiled.
-   - A full Lua effect script (`c<id>.lua`) is generated in `server-data/expansions/scripts/`.
+   - The card is registered in `production/main/web/ygo_story.db` with its Duelingbook URL and artwork thumbnail.
+   - The simulator `.cdb` binary database is compiled into `production/shared/expansions/custom_cards.cdb`.
+   - A full Lua effect script (`c<id>.lua`) is generated in `production/shared/expansions/scripts/`.
    - The card is immediately searchable in the Discord bot and Web Dashboard!
 
 ---
@@ -177,46 +187,56 @@ A responsive web dashboard runs locally at:
 ```bash
 /home/professorseanex/yugioh-server/
 ├── README.md                          # Platform Documentation & Guide
-├── manage.sh                          # Master CLI Controller
-├── docker-compose.yml                 # Live Duel Simulator Container
-├── server-data/                       # Live Duel Simulator State
-│   ├── config/                        # Simulator port & rules configuration
-│   ├── expansions/                    # Custom cards & Lua effect scripts
-│   │   ├── custom_cards.cdb           # Compiled SQLite simulator database
-│   │   └── scripts/                   # Lua effect scripts (c<id>.lua)
-│   ├── decks/                         # Exported character .ydk decks
-│   └── replays/                       # Saved duel replays (.yrp)
-├── story_database/
-│   ├── schema.sql                     # Full relational schema + FTS5 index
-│   ├── ygo_story.db                   # Main SQLite database
-│   ├── database.py                    # Database connection helpers & session manager
-│   ├── models.py                      # Pydantic v2 schemas for API validation
-│   ├── seed_story_data.py             # Sample story, lore, & card seeder
-│   ├── api_server.py                  # FastAPI REST API
-│   └── templates/
-│       └── index.html                 # Web dashboard frontend template
-├── tools/
-│   ├── constants.py                   # Centralized YGOPro bitmasks & mappings
-│   ├── cdb_builder.py                 # YGOPro/EDOPro .cdb SQLite compiler
-│   ├── lua_generator.py               # Modular ocgcore Lua effect generator
-│   ├── duelingbook_importer.py        # Duelingbook card parser & pipeline sync
-│   └── export_deck.py                 # Standard .ydk deck exporter
-├── discord_bot/
-│   ├── bot.py                         # Modular Discord bot runner
-│   ├── config.py                      # Bot configuration & credential resolution
-│   ├── utils.py                       # Card frame color palettes & embed builders
-│   └── cogs/
-│       ├── cardpool.py                # Card search & autocomplete
-│       ├── deckbuilding.py            # Personal player deckbuilder
-│       ├── duel_engine.py             # Interactive duel state machine & buttons
-│       └── lore.py                    # Sagas, factions, dossiers & stats
-├── tests/                             # Comprehensive Unit Test Suite
-│   ├── test_constants.py              # Bitmask and flag tests
-│   ├── test_cdb_builder.py            # CDB parsing and binary encoding tests
-│   ├── test_lua_generator.py          # Procedure and effect parsing tests
-│   ├── test_duelingbook_importer.py   # Passcode and Duelingbook mapping tests
-│   └── test_api_server.py             # FastAPI REST endpoint tests
-└── venv/                              # Isolated Python 3 virtual environment
+├── requirements.txt                   # Platform Python Dependencies
+├── manage.sh                          # Master CLI Controller & Installer Wrapper
+├── manage.py                          # Master Python Controller Engine
+├── docker-compose.yml                 # Live Duel Simulator Container (Port 7911 / 7922)
+├── config/
+│   └── paths.py                       # Centralized Path Resolution Module
+├── production/
+│   ├── main/                          # Host Server Services
+│   │   ├── app.py                     # Desktop GUI Platform Manager
+│   │   ├── assets/                    # Platform Graphics & Icon
+│   │   ├── discord_bot/               # Modular Discord Story & Duel Bot
+│   │   │   ├── bot.py                 # Bot Runner
+│   │   │   ├── config.py              # Configuration & Token Resolution
+│   │   │   ├── utils.py               # Card Embeds & Color Palettes
+│   │   │   └── cogs/                  # Modular Command Cogs
+│   │   ├── simulator/                 # Live Duel Simulator Container Data
+│   │   │   ├── config/                # Simulator Room, Net & Admin Configuration
+│   │   │   └── replays/               # Saved Duel Replays (.yrp)
+│   │   └── web/                       # FastAPI Web Catalog & Lore Dashboard
+│   │       ├── api_server.py          # REST API & Web Dashboard Endpoints
+│   │       ├── database.py            # SQLite Connection & Session Manager
+│   │       ├── models.py              # Pydantic v2 Request/Response Schemas
+│   │       ├── templates/             # Web Dashboard HTML/JS Template
+│   │       └── ygo_story.db           # Live SQLite Lore & Card Database
+│   └── shared/                        # Client / Player Distribution Package
+│       ├── CLIENT_GUIDE.md            # Player Connection & Installation Guide
+│       ├── install_client.sh          # One-Click Linux/Mac Client Installer
+│       ├── sync_client.py             # Cross-Platform EDOPro Card Synchronizer
+│       ├── expansions/                # Simulator Expansion Files
+│       │   ├── custom_cards.cdb       # Compiled SQLite Simulator Card Database
+│       │   └── scripts/               # Lua Effect Scripts (c<id>.lua)
+│       └── decks/                     # Pre-Made & Exported Character .ydk Decks
+├── development/                       # Development Tools, Tests & Pipeline
+│   ├── database/                      # Schema & Seeding Tools
+│   │   ├── schema.sql                 # Relational Database Schema & FTS5 Index
+│   │   └── seed_story_data.py         # Sample Lore, Faction & Card Seeder
+│   ├── docs/                          # Architecture & Developer Documentation
+│   ├── tests/                         # Pytest Unit Test Suite
+│   │   ├── test_api_server.py         # FastAPI REST Endpoint Tests
+│   │   ├── test_cdb_builder.py        # CDB Binary Encoding Tests
+│   │   ├── test_constants.py          # Bitmask & Flag Tests
+│   │   ├── test_duelingbook_importer.py # Duelingbook Parser Tests
+│   │   └── test_lua_generator.py      # Lua Effect Generator Tests
+│   └── tools/                         # Card Generation & Sync Tools
+│       ├── cdb_builder.py             # YGOPro/EDOPro .cdb SQLite Compiler
+│       ├── constants.py               # Centralized YGOPro Bitmasks & Mappings
+│       ├── duelingbook_importer.py    # Duelingbook JSON Parser & Pipeline Sync
+│       ├── export_deck.py             # Standard .ydk Deck Exporter
+│       └── lua_generator.py           # Modular ocgcore Lua Effect Generator
+└── venv/                              # Isolated Python 3 Virtual Environment
 ```
 
 ---

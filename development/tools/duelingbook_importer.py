@@ -24,11 +24,18 @@ import sys
 import random
 from typing import Dict, Any, Optional, List, Union, Tuple
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STORY_DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
+# Resolve project base directory
+try:
+    from config.paths import BASE_DIR, STORY_DB_PATH
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
 
-# Import centralized tools and constants
-sys.path.append(os.path.join(BASE_DIR, "tools"))
+# Import centralized tools and constants from local tools directory
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
 from constants import (
     DB_CARD_TYPES, DB_MONSTER_COLORS, DB_SPELL_PROPERTIES,
     DB_TRAP_PROPERTIES, DB_ATTRIBUTES

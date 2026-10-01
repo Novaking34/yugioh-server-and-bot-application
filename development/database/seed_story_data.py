@@ -8,9 +8,14 @@ import sqlite3
 import os
 import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "ygo_story.db")
-SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+# Resolve project paths
+try:
+    from config.paths import STORY_DB_PATH, SCHEMA_PATH
+    DB_PATH = STORY_DB_PATH
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
+    SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 
 def initialize_database():
     print(f"[*] Initializing database at {DB_PATH}...")

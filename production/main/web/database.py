@@ -13,8 +13,12 @@ import os
 from contextlib import contextmanager
 from typing import Generator
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
+try:
+    from config.paths import STORY_DB_PATH, BASE_DIR
+    DB_PATH = STORY_DB_PATH
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
 
 
 def get_db() -> sqlite3.Connection:

@@ -27,9 +27,13 @@ import sys
 import re
 from typing import Optional, List, Tuple
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STORY_DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
-DECKS_DIR = os.path.join(BASE_DIR, "server-data", "decks")
+# Resolve project base directory
+try:
+    from config.paths import BASE_DIR, STORY_DB_PATH, DECKS_DIR
+except ImportError:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
+    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
 
 
 def sanitize_filename(name: str) -> str:
