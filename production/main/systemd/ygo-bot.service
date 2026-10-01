@@ -10,6 +10,7 @@ ExecStart=/home/professorseanex/yugioh-server/venv/bin/python3 /home/professorse
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/professorseanex/yugioh-server/.env
 
 [Install]
 WantedBy=multi-user.target
