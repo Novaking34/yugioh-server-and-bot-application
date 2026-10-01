@@ -30,7 +30,7 @@ if BASE_DIR not in sys.path:
 from config.paths import (
     STORY_DB_PATH, CDB_OUTPUT_PATH, SCRIPTS_DIR, DECKS_DIR,
     TOOLS_DIR, TESTS_DIR, APP_PY_PATH, BOT_DIR, SCHEMA_PATH,
-    SEED_SCRIPT_PATH, ensure_directories
+    SEED_SCRIPT_PATH, PROD_MAIN_DIR, ensure_directories
 )
 
 # Terminal color constants
@@ -252,7 +252,7 @@ def cmd_bot():
     if not os.path.exists(python_bin):
         python_bin = sys.executable
     bot_script = os.path.join(BOT_DIR, "bot.py")
-    os.execv(python_bin, [python_bin, bot_script])
+    os.execv(python_bin, [python_bin, "-u", bot_script])
 
 
 def cmd_app():
@@ -288,8 +288,19 @@ def cmd_install():
     print("  ./manage.sh start      # Starts live duel simulator")
     print("  ./manage.sh web        # Starts web catalog at http://localhost:8000")
     print("  ./manage.sh bot        # Starts Discord bot")
+    print("  ./manage.sh tunnel     # Launches Cloudflare HTTPS Tunnel for Web Catalog")
     print("  ./manage.sh app        # Starts Desktop GUI")
     print("  ./manage.sh status     # Checks status")
+
+
+def cmd_tunnel(extra: Optional[List[str]] = None):
+    """Launch or manage Cloudflare Tunnel for secure remote card syncing."""
+    tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.sh")
+    if not os.path.exists(tunnel_script):
+        print(f"{RED}[-] Error: Cloudflare Tunnel script not found at {tunnel_script}{NC}")
+        sys.exit(1)
+    args = [tunnel_script] + (extra or [])
+    os.execv(tunnel_script, args)
 
 
 def main():
@@ -310,6 +321,7 @@ Commands:
   validate-lua          Verify syntax of all generated Lua scripts
   web                   Start local web card catalog & dashboard (Port 8000)
   bot                   Launch modular Discord story & duel bot
+  tunnel                Launch Cloudflare HTTPS Tunnel for Web Catalog & Sync
   app                   Launch native desktop control panel application
   install               Initialize directory layout, database, CDB, and Lua scripts
         """
@@ -348,6 +360,8 @@ Commands:
         cmd_web()
     elif cmd == "bot":
         cmd_bot()
+    elif cmd == "tunnel":
+        cmd_tunnel(extra)
     elif cmd in ("app", "gui"):
         cmd_app()
     elif cmd in ("install", "setup"):

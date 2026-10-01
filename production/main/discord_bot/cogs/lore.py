@@ -14,7 +14,7 @@ from discord.ext import commands
 import aiosqlite
 from typing import Optional
 
-from config import BOT_CONFIG
+from bot_config import BOT_CONFIG
 
 
 class LoreCog(commands.Cog, name="Lore"):

@@ -28,14 +28,12 @@ BOT_DIR = os.path.dirname(os.path.abspath(__file__))
 if BOT_DIR not in sys.path:
     sys.path.insert(0, BOT_DIR)
 
-from config import BOT_CONFIG
+from bot_config import BOT_CONFIG
 
 # Configure Gateway Intents
 # Message Content Intent is required to parse mentions and interactive text
 intents = discord.Intents.default()
 intents.message_content = True
-
-bot = commands.Bot(command_prefix=BOT_CONFIG["prefix"], intents=intents)
 
 COGS_LIST = [
     # Community & Player Cogs
@@ -50,52 +48,76 @@ COGS_LIST = [
 ]
 
 
-@bot.event
-async def on_ready():
-    """Triggered when the Discord client successfully authenticates and establishes connection."""
-    print(f"[+] Bot logged in as {bot.user.name} (ID: {bot.user.id})")
-    print(f"[*] Synchronizing application slash commands with Discord...")
+def attach_event_handlers(bot: commands.Bot):
+    """Registers core lifecycle events to the bot instance."""
 
-    try:
-        guild_id = BOT_CONFIG.get("guild_id")
-        if guild_id:
-            guild_obj = discord.Object(id=guild_id)
-            bot.tree.copy_global_to(guild=guild_obj)
-            synced = await bot.tree.sync(guild=guild_obj)
-            print(f"[+] Synchronized {len(synced)} slash commands to Guild ID {guild_id}.")
-        else:
-            synced = await bot.tree.sync()
-            print(f"[+] Synchronized {len(synced)} global slash commands.")
-    except Exception as e:
-        print(f"[-] Failed to synchronize slash commands: {e}", file=sys.stderr)
+    @bot.event
+    async def on_ready():
+        print(f"[+] Bot logged in as {bot.user.name} (ID: {bot.user.id})", flush=True)
+        print(f"[*] Synchronizing application slash commands with Discord...", flush=True)
+
+        try:
+            guild_id = BOT_CONFIG.get("guild_id")
+            if guild_id:
+                guild_obj = discord.Object(id=guild_id)
+                bot.tree.copy_global_to(guild=guild_obj)
+                synced = await bot.tree.sync(guild=guild_obj)
+                print(f"[+] Synchronized {len(synced)} slash commands to Guild ID {guild_id}.", flush=True)
+            else:
+                synced = await bot.tree.sync()
+                print(f"[+] Synchronized {len(synced)} global slash commands.", flush=True)
+            print(f"[✓] Yu-Gi-Oh! Discord Bot is ONLINE and ready for duels & deckbuilding!", flush=True)
+        except Exception as e:
+            print(f"[-] Failed to synchronize slash commands: {e}", file=sys.stderr, flush=True)
 
 
-async def load_extensions():
-    """Dynamically loads all cog extensions."""
+async def run_bot_instance(token: str, with_privileged_intents: bool = True):
+    """Initializes and runs a bot instance with specified intents."""
+    intents = discord.Intents.default()
+    if with_privileged_intents:
+        intents.message_content = True
+        intents.members = True
+
+    bot = commands.Bot(command_prefix=BOT_CONFIG["prefix"], intents=intents)
+    attach_event_handlers(bot)
+
+    # Load all modular cogs
     for cog_name in COGS_LIST:
         try:
             await bot.load_extension(cog_name)
-            print(f"[+] Loaded extension: {cog_name}")
+            print(f"[+] Loaded extension: {cog_name}", flush=True)
         except Exception as e:
-            print(f"[-] Failed to load extension {cog_name}: {e}", file=sys.stderr)
+            print(f"[-] Failed to load extension {cog_name}: {e}", file=sys.stderr, flush=True)
+
+    async with bot:
+        await bot.start(token)
 
 
 async def main():
     token = BOT_CONFIG.get("token")
     if not token or "YOUR_DISCORD_BOT_TOKEN" in token:
-        print("[!] No Discord Bot Token configured.")
-        print("[*] To enable the bot, set your token in /home/professorseanex/yugioh-server/.env:")
-        print("    DISCORD_BOT_TOKEN=\"your_bot_token_here\"")
-        print("    Then launch via: ./manage.sh bot")
+        print("[!] No Discord Bot Token configured.", flush=True)
+        print("[*] To enable the bot, set your token in /home/professorseanex/yugioh-server/.env:", flush=True)
+        print("    DISCORD_BOT_TOKEN=\"your_bot_token_here\"", flush=True)
+        print("    Then launch via: ./manage.sh bot", flush=True)
         sys.exit(0)
 
-    async with bot:
-        await load_extensions()
-        await bot.start(token)
+    # Attempt to start with privileged intents first, fall back to standard intents if disabled
+    try:
+        await run_bot_instance(token, with_privileged_intents=True)
+    except discord.errors.PrivilegedIntentsRequired:
+        print("\n" + "=" * 70, flush=True)
+        print("[!] Notice: Privileged Gateway Intents not enabled in Discord Developer Portal.", flush=True)
+        print("[*] Reconnecting with Standard Intents...", flush=True)
+        print("[*] All Slash Commands (/card, /duel, /mydeck, /admin, etc.) are FULLY functional!", flush=True)
+        print("[*] To enable legacy text prefix commands (!card), enable 'Message Content Intent'", flush=True)
+        print("    in https://discord.com/developers/applications/ -> [Bot] -> [Privileged Gateway Intents].", flush=True)
+        print("=" * 70 + "\n", flush=True)
+        await run_bot_instance(token, with_privileged_intents=False)
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[*] Bot shutdown requested by user.")
+        print("\n[*] Bot shutdown requested by user.", flush=True)

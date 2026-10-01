@@ -17,7 +17,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+BASE_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 CURRENT_USER="${SUDO_USER:-$USER}"
 
 echo "[*] Installing Yu-Gi-Oh! 24/7 Systemd Services for user: $CURRENT_USER..."

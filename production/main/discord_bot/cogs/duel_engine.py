@@ -19,7 +19,7 @@ import aiosqlite
 import random
 from typing import Dict, List, Optional
 
-from config import BOT_CONFIG
+from bot_config import BOT_CONFIG
 
 
 # =============================================================================
