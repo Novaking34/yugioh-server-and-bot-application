@@ -38,10 +38,15 @@ intents.message_content = True
 bot = commands.Bot(command_prefix=BOT_CONFIG["prefix"], intents=intents)
 
 COGS_LIST = [
+    # Community & Player Cogs
+    "cogs.general",
     "cogs.cardpool",
     "cogs.deckbuilding",
     "cogs.duel_engine",
-    "cogs.lore"
+    "cogs.lore",
+    "cogs.server_tools",
+    # Host & Owner Administration Cog
+    "cogs.admin"
 ]
 
 

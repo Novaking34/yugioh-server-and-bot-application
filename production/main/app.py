@@ -147,7 +147,20 @@ class YugiohPlatformApp(tk.Tk):
 
         # Status Badges
         self.stats_box = ttk.Frame(header_frame)
-        self.stats_box.pack(side=tk.RIGHT, pady=4)
+        self.wizard_btn = tk.Button(
+            self.stats_box,
+            text="🪄 Setup Wizard",
+            command=self.open_setup_wizard,
+            bg="#8b5cf6",
+            fg="#ffffff",
+            activebackground="#7c3aed",
+            activeforeground="#ffffff",
+            font=("Segoe UI", 9, "bold"),
+            relief="flat",
+            padx=10,
+            pady=3
+        )
+        self.wizard_btn.pack(side=tk.RIGHT, padx=6)
 
         self.sim_status_badge = tk.Label(
             self.stats_box,
@@ -409,6 +422,14 @@ class YugiohPlatformApp(tk.Tk):
         )
         if file_path:
             self.run_cli(["import", file_path])
+
+    def open_setup_wizard(self):
+        """Opens the step-by-step Server Setup Wizard."""
+        try:
+            from setup_wizard import ServerSetupWizard
+            ServerSetupWizard(self)
+        except Exception as e:
+            self.log_message(f"[-] Error opening Setup Wizard: {e}")
 
     def refresh_all_status(self):
         """Refreshes status in console and header."""

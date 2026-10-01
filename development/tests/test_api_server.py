@@ -71,3 +71,23 @@ def test_decks_endpoint():
     assert response.status_code == 200
     decks = response.json()
     assert isinstance(decks, list)
+
+
+def test_shared_manifest_endpoint():
+    """Verify client expansion sync manifest endpoint."""
+    response = client.get("/api/shared/manifest")
+    assert response.status_code == 200
+    data = response.json()
+    assert "version" in data
+    assert "has_cdb" in data
+    assert "scripts_count" in data
+    assert "scripts_zip_url" in data
+
+
+def test_shared_cdb_endpoint():
+    """Verify downloading custom_cards.cdb."""
+    response = client.get("/api/shared/cdb")
+    assert response.status_code in (200, 404)
+    if response.status_code == 200:
+        assert response.headers["content-type"] == "application/octet-stream"
+

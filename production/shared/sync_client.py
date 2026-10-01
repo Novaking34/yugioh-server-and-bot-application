@@ -56,8 +56,74 @@ def find_game_directory() -> Optional[str]:
     return None
 
 
-def install_to_client(client_dir: str):
-    """Copies CDB, Lua scripts, and decks into the specified game client directory."""
+def sync_from_remote(server_url: str, client_dir: str):
+    """Downloads CDB, scripts zip, and decks directly from a remote web catalog server."""
+    import urllib.request
+    import json
+    import zipfile
+    import io
+
+    server_url = server_url.rstrip("/")
+    manifest_url = f"{server_url}/api/shared/manifest"
+    print(f"\n[*] Connecting to remote server at {manifest_url}...")
+
+    try:
+        req = urllib.request.Request(manifest_url, headers={"User-Agent": "YGO-Client-Sync/1.2"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            manifest = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"[-] Failed to fetch manifest from {server_url}: {e}")
+        return False
+
+    print(f"[+] Connected! Remote card manifest: version {manifest.get('version')}")
+
+    target_expansions = os.path.join(client_dir, "expansions")
+    target_scripts = os.path.join(target_expansions, "scripts")
+    target_decks = os.path.join(client_dir, "deck")
+    os.makedirs(target_scripts, exist_ok=True)
+    os.makedirs(target_decks, exist_ok=True)
+
+    # 1. Download CDB
+    cdb_url = f"{server_url}{manifest.get('cdb_download_url', '/api/shared/cdb')}"
+    print(f"[*] Downloading custom_cards.cdb from {cdb_url}...")
+    dest_cdb = os.path.join(target_expansions, "custom_cards.cdb")
+    urllib.request.urlretrieve(cdb_url, dest_cdb)
+    size_kb = os.path.getsize(dest_cdb) / 1024
+    print(f"  [+] Saved {dest_cdb} ({size_kb:.1f} KB)")
+
+    # 2. Download and extract Lua scripts zip
+    scripts_url = f"{server_url}{manifest.get('scripts_zip_url', '/api/shared/scripts_zip')}"
+    print(f"[*] Downloading Lua effect scripts from {scripts_url}...")
+    with urllib.request.urlopen(scripts_url, timeout=15) as resp:
+        zip_data = resp.read()
+    with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
+        zf.extractall(target_scripts)
+        print(f"  [+] Extracted {len(zf.namelist())} Lua scripts to {target_scripts}/")
+
+    # 3. Download decklists
+    decks_api = f"{server_url}{manifest.get('decks_download_url', '/api/shared/decks')}"
+    try:
+        with urllib.request.urlopen(decks_api, timeout=10) as resp:
+            decks_list = json.loads(resp.read().decode("utf-8"))
+        for d in decks_list:
+            d_url = f"{server_url}{d['download_url']}"
+            d_dest = os.path.join(target_decks, d['filename'])
+            urllib.request.urlretrieve(d_url, d_dest)
+        print(f"  [+] Downloaded {len(decks_list)} decks to {target_decks}/")
+    except Exception as e:
+        print(f"  [!] Note: could not fetch remote deck list: {e}")
+
+    print("\n" + "=" * 65)
+    print("🎉 SUCCESS! Remote custom card pool has been synchronized.")
+    print("=" * 65)
+    return True
+
+
+def install_to_client(client_dir: str, server_url: Optional[str] = None):
+    """Copies CDB, Lua scripts, and decks from local shared package or remote server."""
+    if server_url:
+        return sync_from_remote(server_url, client_dir)
+
     print(f"\n[*] Target Game Client: {client_dir}")
 
     # 1. Target folders

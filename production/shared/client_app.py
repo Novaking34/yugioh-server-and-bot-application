@@ -77,11 +77,21 @@ class PlayerClientApp(tk.Tk):
         header = ttk.Frame(self, style="Surface.TFrame", padding=15)
         header.pack(fill=tk.X, padx=15, pady=(15, 10))
 
-        title_lbl = ttk.Label(header, text="🌌 Yu-Gi-Oh! Custom Card Expansion Client", style="Header.TLabel")
+        header_left = ttk.Frame(header, style="Surface.TFrame")
+        header_left.pack(side=tk.LEFT)
+
+        title_lbl = ttk.Label(header_left, text="🌌 Yu-Gi-Oh! Custom Card Expansion Client", style="Header.TLabel")
         title_lbl.pack(anchor=tk.W)
 
-        sub_lbl = ttk.Label(header, text="Sync custom card expansions & connect to live duels seamlessly.", style="Sub.TLabel")
+        sub_lbl = ttk.Label(header_left, text="Sync custom card expansions & connect to live duels seamlessly.", style="Sub.TLabel")
         sub_lbl.pack(anchor=tk.W, pady=(2, 0))
+
+        wizard_btn = tk.Button(
+            header, text="🪄 Quick-Start Wizard", command=self._open_wizard,
+            bg="#8b5cf6", fg="#ffffff", activebackground="#7c3aed",
+            font=("Segoe UI", 9, "bold"), relief=tk.FLAT, padx=12, pady=5
+        )
+        wizard_btn.pack(side=tk.RIGHT)
 
         # 2. Game Client Detection Frame
         client_frame = ttk.Frame(self, style="Surface.TFrame", padding=12)
@@ -143,11 +153,18 @@ class PlayerClientApp(tk.Tk):
         btn_frame.pack(fill=tk.X, padx=15, pady=5)
 
         sync_btn = tk.Button(
-            btn_frame, text="⚡ 1-Click Install to Game", command=self._sync_expansions_thread,
+            btn_frame, text="⚡ 1-Click Install (Local)", command=self._sync_expansions_thread,
             bg=self.success_color, fg="#ffffff", activebackground="#2ea043",
             relief=tk.FLAT, font=("Segoe UI", 10, "bold"), padx=12, pady=6
         )
         sync_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        remote_sync_btn = tk.Button(
+            btn_frame, text="🌐 Sync from Server (HTTP)", command=self._sync_remote_thread,
+            bg="#1f6feb", fg="#ffffff", activebackground="#388bfd",
+            relief=tk.FLAT, font=("Segoe UI", 10, "bold"), padx=12, pady=6
+        )
+        remote_sync_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         web_btn = tk.Button(
             btn_frame, text="📖 Open Web Catalog", command=self._open_web_catalog,
@@ -259,6 +276,165 @@ class PlayerClientApp(tk.Tk):
                 self.after(0, lambda: messagebox.showerror("Sync Error", str(e)))
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _sync_remote_thread(self):
+        cdir = self.client_dir.get().strip()
+        host = self.server_ip.get().strip() or "localhost"
+        url = f"http://{host}:{DEFAULT_WEB_PORT}"
+
+        if not cdir or not os.path.isdir(cdir):
+            messagebox.showerror("Error", "Please select a valid EDOPro/YGOPro game client directory first.")
+            return
+
+        def worker():
+            self.log_message(f"\n[*] Connecting to remote server at {url}...")
+            try:
+                import sync_client
+                ok = sync_client.sync_from_remote(url, cdir)
+                if ok:
+                    self.log_message("[+] Remote card pool synchronized successfully!")
+                    self.after(0, lambda: messagebox.showinfo(
+                        "Success",
+                        f"Custom cards and scripts fetched from {url} and installed into:\n{cdir}\n\nYou're ready to duel!"
+                    ))
+                else:
+                    self.log_message(f"[-] Could not connect to remote catalog server at {url}.")
+                    self.after(0, lambda: messagebox.showerror(
+                        "Connection Error",
+                        f"Could not reach remote server at {url}.\nMake sure the host is running and port {DEFAULT_WEB_PORT} is accessible."
+                    ))
+            except Exception as e:
+                self.log_message(f"[-] Error syncing from server: {e}")
+                self.after(0, lambda: messagebox.showerror("Sync Error", str(e)))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _open_wizard(self):
+        PlayerSetupWizardDialog(self)
+
+
+class PlayerSetupWizardDialog(tk.Toplevel):
+    """Step-by-step player setup wizard for configuring game directories and installing cards."""
+    def __init__(self, parent: PlayerClientApp):
+        super().__init__(parent)
+        self.parent_app = parent
+        self.title("Yu-Gi-Oh! Player Quick-Start Wizard")
+        self.geometry("640x440")
+        self.minsize(580, 380)
+
+        self.bg_color = "#0d1117"
+        self.surface_color = "#161b22"
+        self.text_color = "#c9d1d9"
+        self.accent_color = "#58a6ff"
+        self.success_color = "#238636"
+
+        self.configure(bg=self.bg_color)
+        self.current_step = 0
+
+        self._build_ui()
+        self._show_step(0)
+
+    def _build_ui(self):
+        header = tk.Frame(self, bg=self.surface_color, padx=15, pady=10)
+        header.pack(fill=tk.X)
+
+        self.lbl_title = tk.Label(header, text="Player Quick-Start Wizard", font=("Segoe UI", 12, "bold"), fg=self.accent_color, bg=self.surface_color)
+        self.lbl_title.pack(anchor=tk.W)
+
+        self.content = tk.Frame(self, bg=self.bg_color, padx=20, pady=15)
+        self.content.pack(fill=tk.BOTH, expand=True)
+
+        footer = tk.Frame(self, bg=self.surface_color, padx=15, pady=10)
+        footer.pack(fill=tk.X, side=tk.BOTTOM)
+
+        self.btn_next = tk.Button(footer, text="Next >", command=self._next, bg=self.accent_color, fg="#ffffff", font=("Segoe UI", 9, "bold"), padx=12, pady=4, relief=tk.FLAT)
+        self.btn_next.pack(side=tk.RIGHT)
+
+        self.btn_prev = tk.Button(footer, text="< Back", command=self._prev, bg="#21262d", fg=self.text_color, padx=10, pady=4, relief=tk.FLAT)
+        self.btn_prev.pack(side=tk.RIGHT, padx=6)
+
+    def _show_step(self, step: int):
+        self.current_step = step
+        for w in self.content.winfo_children():
+            w.destroy()
+
+        self.btn_prev.config(state=tk.NORMAL if step > 0 else tk.DISABLED)
+
+        if step == 0:
+            self.lbl_title.config(text="Step 1: Select Game Client Directory")
+            tk.Label(
+                self.content,
+                text="Please select or verify the path to your EDOPro / Project Ignis folder:",
+                bg=self.bg_color, fg=self.text_color, font=("Segoe UI", 10)
+            ).pack(anchor=tk.W, pady=(0, 10))
+
+            entry = tk.Entry(self.content, textvariable=self.parent_app.client_dir, font=("Consolas", 10), bg="#05070a", fg="#ffffff", relief=tk.FLAT)
+            entry.pack(fill=tk.X, pady=5, ipady=4)
+
+            btn_box = tk.Frame(self.content, bg=self.bg_color)
+            btn_box.pack(fill=tk.X, pady=5)
+
+            tk.Button(
+                btn_box, text="🔍 Auto-Detect", command=self.parent_app._detect_initial_path,
+                bg="#21262d", fg=self.accent_color, font=("Segoe UI", 9, "bold"), relief=tk.FLAT, padx=10, pady=4
+            ).pack(side=tk.LEFT, padx=(0, 8))
+
+            tk.Button(
+                btn_box, text="📁 Browse...", command=self.parent_app._browse_directory,
+                bg="#21262d", fg=self.text_color, relief=tk.FLAT, padx=10, pady=4
+            ).pack(side=tk.LEFT)
+
+        elif step == 1:
+            self.lbl_title.config(text="Step 2: Choose Install Method & Install")
+            tk.Label(
+                self.content,
+                text="Click either button to install custom cards into your game:",
+                bg=self.bg_color, fg=self.text_color, font=("Segoe UI", 10)
+            ).pack(anchor=tk.W, pady=(0, 15))
+
+            tk.Button(
+                self.content, text="⚡ 1-Click Install (from local package)",
+                command=self.parent_app._sync_expansions_thread,
+                bg=self.success_color, fg="#ffffff", font=("Segoe UI", 10, "bold"),
+                relief=tk.FLAT, padx=12, pady=6
+            ).pack(anchor=tk.W, pady=6)
+
+            tk.Button(
+                self.content, text="🌐 Sync Over Network (from remote server)",
+                command=self.parent_app._sync_remote_thread,
+                bg="#1f6feb", fg="#ffffff", font=("Segoe UI", 10, "bold"),
+                relief=tk.FLAT, padx=12, pady=6
+            ).pack(anchor=tk.W, pady=6)
+
+        elif step == 2:
+            self.lbl_title.config(text="Step 3: Connect & Duel Online")
+            self.btn_next.config(text="Finish")
+            tk.Label(
+                self.content,
+                text="🎉 You're all set! Follow these steps in EDOPro:\n\n"
+                     "1. Open EDOPro and select Multiplayer -> Duel Online.\n"
+                     "2. Choose Direct Connect / IP Connection.\n"
+                     f"3. Host: {self.parent_app.server_ip.get().strip()} | Port: {self.parent_app.server_port.get().strip()}\n"
+                     "4. Select your custom deck and begin!",
+                bg=self.bg_color, fg=self.text_color, justify=tk.LEFT, font=("Segoe UI", 10)
+            ).pack(anchor=tk.W, pady=(0, 15))
+
+            tk.Button(
+                self.content, text="📋 Copy Connection Details",
+                command=self.parent_app._copy_connection_info,
+                bg="#21262d", fg=self.accent_color, font=("Segoe UI", 9, "bold"),
+                relief=tk.FLAT, padx=10, pady=5
+            ).pack(anchor=tk.W)
+
+    def _next(self):
+        if self.current_step < 2:
+            self._show_step(self.current_step + 1)
+        else:
+            self.destroy()
+
+    def _prev(self):
+        if self.current_step > 0:
+            self._show_step(self.current_step - 1)
 
 
 def main():

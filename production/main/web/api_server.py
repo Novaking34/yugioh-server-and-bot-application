@@ -15,19 +15,28 @@ Or via master CLI:
 """
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from typing import Optional, List, Dict, Any
 import os
 import sys
+import io
+import zipfile
 
 # Resolve base directories
 try:
     from config.paths import (
         BASE_DIR, STORY_DB_PATH, TEMPLATES_DIR, TOOLS_DIR,
-        CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR
+        CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR, SCRIPTS_DIR
     )
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
+    TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
+    CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
+    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
+    EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
+    SCRIPTS_DIR = os.path.join(EXPANSIONS_DIR, "scripts")
     STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
     TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
     TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
@@ -241,17 +250,47 @@ def list_shared_decks() -> List[Dict[str, Any]]:
     return deck_files
 
 
-@app.get("/api/shared/decks/{filename}", summary="Download specific .ydk deck file")
-def download_deck(filename: str):
-    """Downloads a .ydk deck file."""
-    safe_name = os.path.basename(filename)
-    path = os.path.join(DECKS_DIR, safe_name)
-    if os.path.exists(path) and path.endswith(".ydk"):
-        return FileResponse(path=path, filename=safe_name, media_type="text/plain")
-    raise HTTPException(status_code=404, detail=f"Deck file {safe_name} not found.")
+@app.get("/api/shared/manifest", summary="Retrieve expansion package manifest for client synchronization")
+def get_shared_manifest() -> Dict[str, Any]:
+    """Provides metadata for player clients to synchronize custom cards and scripts over the network."""
+    scripts_list = [f for f in os.listdir(SCRIPTS_DIR) if f.endswith(".lua")] if os.path.exists(SCRIPTS_DIR) else []
+    deck_files = [f for f in os.listdir(DECKS_DIR) if f.endswith(".ydk")] if os.path.exists(DECKS_DIR) else []
+
+    return {
+        "version": "1.2.0",
+        "has_cdb": os.path.exists(CDB_OUTPUT_PATH),
+        "cdb_size_bytes": os.path.getsize(CDB_OUTPUT_PATH) if os.path.exists(CDB_OUTPUT_PATH) else 0,
+        "cdb_download_url": "/api/shared/cdb",
+        "scripts_count": len(scripts_list),
+        "scripts_zip_url": "/api/shared/scripts_zip",
+        "decks_count": len(deck_files),
+        "decks_download_url": "/api/shared/decks"
+    }
+
+
+@app.get("/api/shared/scripts_zip", summary="Download all Lua effect scripts as a zip archive")
+def download_scripts_zip():
+    """Bundles all Lua effect scripts into an in-memory zip archive for player clients."""
+    if not os.path.exists(SCRIPTS_DIR):
+        raise HTTPException(status_code=404, detail="Scripts directory not found.")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for fname in os.listdir(SCRIPTS_DIR):
+            if fname.endswith(".lua"):
+                fpath = os.path.join(SCRIPTS_DIR, fname)
+                zip_file.write(fpath, arcname=fname)
+
+    zip_buffer.seek(0)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=scripts.zip"}
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=True)
+
 
