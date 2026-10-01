@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yu-Gi-Oh! Custom Card Catalog & Story Engine</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --gold: #d29922;
+            --card-monster: #c97434;
+            --card-spell: #1d9e74;
+            --card-trap: #bc3576;
+            --card-xyz: #111111;
+            --card-link: #0055aa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 24px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 { color: #f0f6fc; font-size: 24px; }
+        .badge {
+            background: #238636;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+        .search-bar {
+            flex: 1;
+            min-width: 280px;
+            max-width: 500px;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .filter-select {
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .card-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            background: #21262d;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #f0f6fc;
+        }
+        .tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .tag-monster { background: var(--card-monster); color: white; }
+        .tag-spell { background: var(--card-spell); color: white; }
+        .tag-trap { background: var(--card-trap); color: white; }
+        .stats-box {
+            background: #090d13;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #8b949e;
+        }
+        .stats-box span { color: #f0f6fc; font-weight: 600; }
+        .effect-box {
+            font-size: 13px;
+            background: #0d1117;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+        }
+        .lore-box {
+            font-size: 12px;
+            font-style: italic;
+            color: #8b949e;
+            border-top: 1px dashed var(--border);
+            padding-top: 8px;
+            margin-top: auto;
+        }
+        .db-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 10px;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .db-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>🌌 Yu-Gi-Oh! Story & Custom Card Engine</h1>
+            <p style="color: #8b949e; font-size: 13px; margin-top: 4px;">Synchronized with Duelingbook & Live Duel Simulator</p>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <span class="badge">Simulator Port: 7911</span>
+            <span class="badge" style="background: #1f6feb;">Discord Bot Ready</span>
+        </div>
+    </header>
+
+    <div class="controls">
+        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search cards by name, effect text, or lore backstory..." oninput="filterCards()">
+        <select id="typeFilter" class="filter-select" onchange="filterCards()">
+            <option value="">All Card Types</option>
+            <option value="Monster">Monsters</option>
+            <option value="Spell">Spells</option>
+            <option value="Trap">Traps</option>
+        </select>
+    </div>
+
+    <div class="grid" id="cardsGrid">
+        <p style="color: #8b949e;">Loading custom card pool...</p>
+    </div>
+
+    <script>
+        let allCards = [];
+
+        async function loadCards() {
+            try {
+                const res = await fetch('/api/cards');
+                allCards = await res.json();
+                renderCards(allCards);
+            } catch (err) {
+                document.getElementById('cardsGrid').innerHTML = '<p style="color: #f85149;">Failed to load cards from server.</p>';
+            }
+        }
+
+        function renderCards(cards) {
+            const grid = document.getElementById('cardsGrid');
+            if (cards.length === 0) {
+                grid.innerHTML = '<p style="color: #8b949e;">No matching cards found.</p>';
+                return;
+            }
+            grid.innerHTML = cards.map(c => {
+                const tagClass = 'tag-' + (c.card_type ? c.card_type.toLowerCase() : 'monster');
+                const thumb = c.image_url || 'https://via.placeholder.com/60/21262d/8b949e?text=YGO';
+                let stats = '';
+                if (c.card_type === 'Monster') {
+                    stats = `<span>${c.attribute || ''}</span> • <span>${c.monster_type || ''}</span> | Level/Rank/Link: <span>${c.level_or_rank_or_link || 0}</span> | ATK: <span>${c.atk}</span> / DEF: <span>${c.def !== null && c.def !== undefined ? c.def : 'LINK'}</span>`;
+                } else {
+                    stats = `<span>${c.card_subtype || 'Normal'} ${c.card_type}</span>`;
+                }
+
+                return `
+                <div class="card">
+                    <div>
+                        <div class="card-header">
+                            <img src="${thumb}" class="card-thumb" onerror="this.src='https://via.placeholder.com/60/21262d/8b949e?text=YGO'">
+                            <div>
+                                <div class="card-title">${c.name}</div>
+                                <span class="tag ${tagClass}">${c.card_subtype || 'Normal'} ${c.card_type}</span>
+                            </div>
+                        </div>
+                        <div class="stats-box">${stats}</div>
+                        <div class="effect-box">${c.effect_text}</div>
+                    </div>
+                    <div>
+                        <div class="lore-box">"${c.lore_text || 'No lore recorded.'}"</div>
+                        <a href="${c.duelingbook_url || '#'}" target="_blank" class="db-link">🔗 View on Duelingbook ↗</a>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function filterCards() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            const filtered = allCards.filter(c => {
+                const matchesQuery = (
+                    (c.name && c.name.toLowerCase().includes(q)) ||
+                    (c.effect_text && c.effect_text.toLowerCase().includes(q)) ||
+                    (c.lore_text && c.lore_text.toLowerCase().includes(q))
+                );
+                const matchesType = !typeFilter || (c.card_type === typeFilter);
+                return matchesQuery && matchesType;
+            });
+            renderCards(filtered);
+        }
+
+        loadCards();
+    </script>
+</body>
+</html>

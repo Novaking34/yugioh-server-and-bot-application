@@ -1,193 +1,239 @@
 #!/usr/bin/env python3
 """
-CDB Builder for Yu-Gi-Oh Game Simulators (YGOPro / EDOPro / Koishi / Project Ignis).
-Builds or synchronizes custom cards from ygo_story.db into custom_cards.cdb.
+=============================================================================
+Yu-Gi-Oh! Simulator SQLite CDB Builder & Synchronizer
+=============================================================================
+This tool compiles custom card entries from the main relational Story Database
+(`story_database/ygo_story.db`) into an official YGOPro / EDOPro SQLite `.cdb`
+file (`server-data/expansions/custom_cards.cdb`).
+
+How the YGOPro CDB Binary Format Works:
+---------------------------------------
+Every YGOPro duel simulator (including ocgcore, EDOPro, Project Ignis, and Koishi)
+reads its card database from SQLite files ending in `.cdb`. A CDB file has
+exactly two relational tables:
+
+1. `datas`: Stores numerical parameters, stats, bitwise classifications, and IDs:
+   - `id`: Unique 8-digit card passcode (primary key).
+   - `ot`: Origin/Format (1=OCG, 2=TCG, 3=Anime, 4=Custom/Beta).
+   - `alias`: Used for alternate artworks or name sharing (e.g. Harpie Lady 1 -> 2).
+   - `setcode`: Archetype membership bitmask (e.g. 0x101f for "Starforged").
+   - `type`: Bitmask of card categories (Monster, Spell, Trap, Xyz, Link, etc.).
+   - `atk`: Attack points (-2 for ?, 0 for 0, positive integers for stats).
+   - `def`: Defense points (-2 for ?). Note: FOR LINK MONSTERS, this field holds
+     the active Link Arrows bitmask instead of defense points!
+   - `level`: Monster Level or Rank or Link Rating. For Pendulum Monsters, this
+     field encodes both Pendulum Scales and the Level using bit-packing:
+     `((left_scale << 24) | (right_scale << 16) | level)`.
+   - `race`: Monster Race/Species bitmask (Warrior, Dragon, Spellcaster, etc.).
+   - `attribute`: Monster Elemental Attribute bitmask (LIGHT, DARK, FIRE, etc.).
+   - `category`: Effect category bitmask (Destruction, Search, Banish, etc.).
+
+2. `texts`: Stores the user-facing text, name, effect, and dialog strings:
+   - `id`: Matching card passcode (primary key).
+   - `name`: Display name of the card.
+   - `desc`: Complete effect text (or Pendulum effect + Monster effect combined).
+   - `str1` through `str16`: String descriptions referenced by Lua scripts when
+     prompting players for multiple choice effect selections.
+=============================================================================
 """
 
 import sqlite3
 import os
 import sys
+from typing import Optional, Tuple
 
+# Resolve project base directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STORY_DB_PATH = os.path.join(BASE_DIR, "story_database", "ygo_story.db")
 CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "server-data", "expansions", "custom_cards.cdb")
 
-# YGOPro bitmasks
-TYPE_MONSTER    = 0x1
-TYPE_SPELL      = 0x2
-TYPE_TRAP       = 0x4
-TYPE_NORMAL     = 0x10
-TYPE_EFFECT     = 0x20
-TYPE_FUSION     = 0x40
-TYPE_RITUAL     = 0x80
-TYPE_TRAPMONSTER= 0x100
-TYPE_SPIRIT     = 0x200
-TYPE_UNION      = 0x400
-TYPE_DUAL       = 0x800
-TYPE_TUNER      = 0x1000
-TYPE_SYNCHRO    = 0x2000
-TYPE_TOKEN      = 0x4000
-TYPE_QUICKPLAY  = 0x10000
-TYPE_CONTINUOUS = 0x20000
-TYPE_EQUIP      = 0x40000
-TYPE_FIELD      = 0x80000
-TYPE_COUNTER    = 0x100000
-TYPE_FLIP       = 0x200000
-TYPE_TOON       = 0x400000
-TYPE_XYZ        = 0x800000
-TYPE_PENDULUM   = 0x1000000
-TYPE_SPECIAL    = 0x2000000
-TYPE_LINK       = 0x4000000
+# Import centralized YGOPro constants
+sys.path.append(os.path.join(BASE_DIR, "tools"))
+from constants import (
+    TYPE_MONSTER, TYPE_SPELL, TYPE_TRAP, TYPE_NORMAL, TYPE_EFFECT,
+    TYPE_FUSION, TYPE_RITUAL, TYPE_SYNCHRO, TYPE_XYZ, TYPE_PENDULUM, TYPE_LINK,
+    TYPE_TUNER, TYPE_QUICKPLAY, TYPE_CONTINUOUS, TYPE_EQUIP, TYPE_FIELD, TYPE_COUNTER,
+    ATTRIBUTE_MAP, RACE_MAP, LINK_ARROW_MAP
+)
 
-ATTRIBUTE_EARTH   = 0x01
-ATTRIBUTE_WATER   = 0x02
-ATTRIBUTE_FIRE    = 0x04
-ATTRIBUTE_WIND    = 0x08
-ATTRIBUTE_LIGHT   = 0x10
-ATTRIBUTE_DARK    = 0x20
-ATTRIBUTE_DIVINE  = 0x40
 
-RACE_WARRIOR      = 0x1
-RACE_SPELLCASTER  = 0x2
-RACE_FAIRY        = 0x4
-RACE_FIEND        = 0x8
-RACE_ZOMBIE       = 0x10
-RACE_MACHINE      = 0x20
-RACE_AQUA         = 0x40
-RACE_PYRO         = 0x80
-RACE_ROCK         = 0x100
-RACE_WINGEDBEAST  = 0x200
-RACE_PLANT        = 0x400
-RACE_INSECT       = 0x800
-RACE_THUNDER      = 0x1000
-RACE_DRAGON       = 0x2000
-RACE_BEAST        = 0x4000
-RACE_BEASTWARRIOR = 0x8000
-RACE_DINOSAUR     = 0x10000
-RACE_FISH         = 0x20000
-RACE_SEASERPENT   = 0x40000
-RACE_REPTILE      = 0x80000
-RACE_PSYCHIC      = 0x100000
-RACE_DIVINEBEAST  = 0x200000
-RACE_CREATORGOD   = 0x400000
-RACE_WYRM         = 0x800000
-RACE_CYBERSE      = 0x1000000
-RACE_ILLUSION     = 0x2000000
-
-# Link arrows bitmasks
-LINK_B   = 0o001
-LINK_BL  = 0o002
-LINK_BR  = 0o004
-LINK_L   = 0o010
-LINK_R   = 0o040
-LINK_T   = 0o100
-LINK_TL  = 0o200
-LINK_TR  = 0o400
-
-LINK_MAP = {
-    'B': LINK_B, 'BL': LINK_BL, 'BR': LINK_BR,
-    'L': LINK_L, 'R': LINK_R,
-    'T': LINK_T, 'TL': LINK_TL, 'TR': LINK_TR,
-    'BOTTOM': LINK_B, 'BOTTOM-LEFT': LINK_BL, 'BOTTOM-RIGHT': LINK_BR,
-    'TOP': LINK_T, 'TOP-LEFT': LINK_TL, 'TOP-RIGHT': LINK_TR
-}
-
-def parse_card_type(ctype, csubtype):
-    val = 0
-    ctype_l = (ctype or '').lower()
-    csub_l = (csubtype or '').lower()
+def parse_card_type(card_type: Optional[str], card_subtype: Optional[str]) -> int:
+    """
+    Computes the composite bitmask for `datas.type` from card classification strings.
     
-    if ctype_l == 'monster':
+    Example:
+        ("Monster", "Effect Xyz") -> TYPE_MONSTER | TYPE_EFFECT | TYPE_XYZ
+        ("Spell", "Field")        -> TYPE_SPELL | TYPE_FIELD
+    """
+    val = 0
+    ctype_lower = (card_type or '').strip().lower()
+    csub_lower = (card_subtype or '').strip().lower()
+
+    if ctype_lower == 'monster':
         val |= TYPE_MONSTER
-        if 'effect' in csub_l: val |= TYPE_EFFECT
-        elif 'normal' in csub_l: val |= TYPE_NORMAL
-        if 'fusion' in csub_l: val |= TYPE_FUSION
-        if 'synchro' in csub_l: val |= TYPE_SYNCHRO
-        if 'xyz' in csub_l: val |= TYPE_XYZ
-        if 'link' in csub_l: val |= TYPE_LINK
-        if 'ritual' in csub_l: val |= TYPE_RITUAL
-        if 'pendulum' in csub_l: val |= TYPE_PENDULUM
-        if 'tuner' in csub_l: val |= TYPE_TUNER
-    elif ctype_l == 'spell':
+        # Subtype flags for monsters
+        if 'effect' in csub_lower:
+            val |= TYPE_EFFECT
+        elif 'normal' in csub_lower:
+            val |= TYPE_NORMAL
+
+        if 'fusion' in csub_lower:
+            val |= TYPE_FUSION
+        if 'synchro' in csub_lower:
+            val |= TYPE_SYNCHRO
+        if 'xyz' in csub_lower:
+            val |= TYPE_XYZ
+        if 'link' in csub_lower:
+            val |= TYPE_LINK
+        if 'ritual' in csub_lower:
+            val |= TYPE_RITUAL
+        if 'pendulum' in csub_lower:
+            val |= TYPE_PENDULUM
+        if 'tuner' in csub_lower:
+            val |= TYPE_TUNER
+
+    elif ctype_lower == 'spell':
         val |= TYPE_SPELL
-        if 'quick' in csub_l: val |= TYPE_QUICKPLAY
-        elif 'continuous' in csub_l: val |= TYPE_CONTINUOUS
-        elif 'field' in csub_l: val |= TYPE_FIELD
-        elif 'equip' in csub_l: val |= TYPE_EQUIP
-        elif 'ritual' in csub_l: val |= TYPE_RITUAL
-        else: val |= TYPE_NORMAL
-    elif ctype_l == 'trap':
+        if 'quick' in csub_lower:
+            val |= TYPE_QUICKPLAY
+        elif 'continuous' in csub_lower:
+            val |= TYPE_CONTINUOUS
+        elif 'field' in csub_lower:
+            val |= TYPE_FIELD
+        elif 'equip' in csub_lower:
+            val |= TYPE_EQUIP
+        elif 'ritual' in csub_lower:
+            val |= TYPE_RITUAL
+        else:
+            val |= TYPE_NORMAL
+
+    elif ctype_lower == 'trap':
         val |= TYPE_TRAP
-        if 'counter' in csub_l: val |= TYPE_COUNTER
-        elif 'continuous' in csub_l: val |= TYPE_CONTINUOUS
-        else: val |= TYPE_NORMAL
+        if 'counter' in csub_lower:
+            val |= TYPE_COUNTER
+        elif 'continuous' in csub_lower:
+            val |= TYPE_CONTINUOUS
+        else:
+            val |= TYPE_NORMAL
+
     return val
 
-def parse_attribute(attr):
-    mapping = {
-        'earth': ATTRIBUTE_EARTH, 'water': ATTRIBUTE_WATER,
-        'fire': ATTRIBUTE_FIRE, 'wind': ATTRIBUTE_WIND,
-        'light': ATTRIBUTE_LIGHT, 'dark': ATTRIBUTE_DARK,
-        'divine': ATTRIBUTE_DIVINE
-    }
-    return mapping.get((attr or '').lower(), 0)
 
-def parse_race(race):
-    mapping = {
-        'warrior': RACE_WARRIOR, 'spellcaster': RACE_SPELLCASTER,
-        'fairy': RACE_FAIRY, 'fiend': RACE_FIEND, 'zombie': RACE_ZOMBIE,
-        'machine': RACE_MACHINE, 'aqua': RACE_AQUA, 'pyro': RACE_PYRO,
-        'rock': RACE_ROCK, 'wingedbeast': RACE_WINGEDBEAST,
-        'winged beast': RACE_WINGEDBEAST, 'plant': RACE_PLANT,
-        'insect': RACE_INSECT, 'thunder': RACE_THUNDER,
-        'dragon': RACE_DRAGON, 'beast': RACE_BEAST,
-        'beastwarrior': RACE_BEASTWARRIOR, 'beast-warrior': RACE_BEASTWARRIOR,
-        'dinosaur': RACE_DINOSAUR, 'fish': RACE_FISH,
-        'seaserpent': RACE_SEASERPENT, 'sea serpent': RACE_SEASERPENT,
-        'reptile': RACE_REPTILE, 'psychic': RACE_PSYCHIC,
-        'wyrm': RACE_WYRM, 'cyberse': RACE_CYBERSE, 'illusion': RACE_ILLUSION
-    }
-    return mapping.get((race or '').lower(), 0)
-
-def parse_level(level, scale, ctype, csubtype, link_arrows):
-    if not level:
+def parse_attribute(attribute_str: Optional[str]) -> int:
+    """
+    Maps an attribute name (e.g., 'LIGHT', 'DARK') to its ocgcore integer bitmask.
+    Returns 0 if attribute is unspecified or invalid.
+    """
+    if not attribute_str:
         return 0
-    csub_l = (csubtype or '').lower()
+    return ATTRIBUTE_MAP.get(attribute_str.strip().lower(), 0)
+
+
+def parse_race(race_str: Optional[str]) -> int:
+    """
+    Maps a monster type/race name (e.g., 'Warrior', 'Dragon') to its ocgcore integer bitmask.
+    Returns 0 if race is unspecified or invalid.
+    """
+    if not race_str:
+        return 0
+    return RACE_MAP.get(race_str.strip().lower(), 0)
+
+
+def parse_level_and_scale(
+    level: Optional[int],
+    scale: Optional[int],
+    card_subtype: Optional[str]
+) -> int:
+    """
+    Encodes Level, Rank, Link Rating, and Pendulum Scales into `datas.level`.
     
-    # If link monster, def is arrow mask and level is link rating
-    if 'link' in csub_l:
+    YGOPro Level Bit-Packing Format:
+    - Bits 0-7   (0xFF): Monster Level / Rank / Link Rating
+    - Bits 16-23 (0xFF0000): Right Pendulum Scale
+    - Bits 24-31 (0xFF000000): Left Pendulum Scale
+    
+    For Link Monsters, the level column stores purely the integer Link Rating (e.g. 2 for Link-2).
+    """
+    if level is None:
+        return 0
+
+    csub_lower = (card_subtype or '').lower()
+    
+    # Link monsters store raw link rating without scale packing
+    if 'link' in csub_lower:
         return int(level)
-        
-    val = int(level) & 0xFF
+
+    # Standard level/rank fits into the lowest byte (0xFF)
+    packed_value = int(level) & 0xFF
+
+    # If pendulum monster, pack scales into bytes 3 and 4
     if scale is not None:
         left_scale = (int(scale) & 0xFF) << 24
         right_scale = (int(scale) & 0xFF) << 16
-        val |= (left_scale | right_scale)
-    return val
+        packed_value |= (left_scale | right_scale)
 
-def parse_link_arrows(arrows_str):
+    return packed_value
+
+
+def parse_link_arrows(arrows_str: Optional[str]) -> int:
+    """
+    Converts a comma- or semicolon-separated string of Link arrows (e.g. 'BL,BR,T')
+    into the octal bitmask expected in `datas.def` for Link Monsters.
+    """
     if not arrows_str:
         return 0
-    val = 0
-    parts = [p.strip().upper() for p in arrows_str.replace(';', ',').split(',')]
-    for p in parts:
-        if p in LINK_MAP:
-            val |= LINK_MAP[p]
-    return val
 
-def build_cdb(story_db=STORY_DB_PATH, cdb_out=CDB_OUTPUT_PATH):
-    print(f"[*] Building CDB from {story_db} -> {cdb_out}...")
-    os.makedirs(os.path.dirname(cdb_out), exist_ok=True)
+    arrow_bitmask = 0
+    parts = [p.strip().upper() for p in arrows_str.replace(';', ',').split(',') if p.strip()]
+    for p in parts:
+        if p in LINK_ARROW_MAP:
+            arrow_bitmask |= LINK_ARROW_MAP[p]
+
+    return arrow_bitmask
+
+
+def format_card_description(effect_text: str, pendulum_effect: Optional[str]) -> str:
+    """
+    Formats the card description for the `texts.desc` column.
+    If the card is a Pendulum Monster, standard YGOPro format separates the
+    Pendulum Effect and Monster Effect with bracketed headings and dashes.
+    """
+    clean_monster = (effect_text or "").strip()
+    if pendulum_effect and pendulum_effect.strip():
+        clean_pendulum = pendulum_effect.strip()
+        return (
+            f"[ Pendulum Effect ]\n"
+            f"{clean_pendulum}\n"
+            f"----------------------------------------\n"
+            f"[ Monster Effect ]\n"
+            f"{clean_monster}"
+        )
+    return clean_monster
+
+
+def build_cdb(
+    story_db_path: str = STORY_DB_PATH,
+    cdb_output_path: str = CDB_OUTPUT_PATH
+) -> int:
+    """
+    Reads all custom cards from `story_database/ygo_story.db` and writes them
+    into the YGOPro simulator SQLite `.cdb` file at `server-data/expansions/custom_cards.cdb`.
     
-    # Connect to story database
-    story_conn = sqlite3.connect(story_db)
+    Returns:
+        int: The number of cards compiled into the CDB.
+    """
+    print(f"[*] Starting CDB compilation: {story_db_path} -> {cdb_output_path}")
+    os.makedirs(os.path.dirname(cdb_output_path), exist_ok=True)
+
+    # 1. Connect to source Story Database
+    story_conn = sqlite3.connect(story_db_path)
     story_cur = story_conn.cursor()
-    
-    # Connect / create CDB
-    cdb_conn = sqlite3.connect(cdb_out)
+
+    # 2. Connect to target CDB database and initialize tables
+    cdb_conn = sqlite3.connect(cdb_output_path)
     cdb_cur = cdb_conn.cursor()
-    
-    # Create standard YGOPro CDB schema
+
     cdb_cur.execute("""
         CREATE TABLE IF NOT EXISTS datas (
             id integer primary key,
@@ -203,6 +249,7 @@ def build_cdb(story_db=STORY_DB_PATH, cdb_out=CDB_OUTPUT_PATH):
             category integer
         )
     """)
+
     cdb_cur.execute("""
         CREATE TABLE IF NOT EXISTS texts (
             id integer primary key,
@@ -214,58 +261,62 @@ def build_cdb(story_db=STORY_DB_PATH, cdb_out=CDB_OUTPUT_PATH):
             str13 text, str14 text, str15 text, str16 text
         )
     """)
-    
+
+    # 3. Fetch all custom cards from Story DB
     story_cur.execute("""
         SELECT id, name, card_type, card_subtype, attribute, monster_type,
                level_or_rank_or_link, scale, atk, def, link_arrows,
                effect_text, pendulum_effect
         FROM custom_cards
+        ORDER BY id ASC
     """)
-    
     cards = story_cur.fetchall()
-    count = 0
-    
+    compiled_count = 0
+
     for card in cards:
         (cid, name, ctype, csubtype, attribute, monster_type,
          level, scale, atk, defense, link_arrows, effect_text, pendulum_effect) = card
-        
+
+        # Compute YGOPro binary flags
         c_type = parse_card_type(ctype, csubtype)
         c_attr = parse_attribute(attribute)
         c_race = parse_race(monster_type)
-        c_lvl = parse_level(level, scale, ctype, csubtype, link_arrows)
-        
+        c_lvl = parse_level_and_scale(level, scale, csubtype)
         c_atk = atk if atk is not None else 0
-        
-        # Link monster defense field holds link arrows
+
+        # In YGOPro, Link monsters store the link arrows bitmask in the defense column
         if (csubtype or '').lower() == 'link':
             c_def = parse_link_arrows(link_arrows)
         else:
             c_def = defense if defense is not None else 0
-            
-        full_desc = effect_text
-        if pendulum_effect:
-            full_desc = f"[ Pendulum Effect ]\n{pendulum_effect}\n----------------------------------------\n[ Monster Effect ]\n{effect_text}"
-            
-        # Insert / replace into datas
+
+        full_desc = format_card_description(effect_text, pendulum_effect)
+
+        # 4. Insert or update entry in datas table
+        # ot=4 represents Custom Card format in ocgcore
         cdb_cur.execute("""
             INSERT OR REPLACE INTO datas (
                 id, ot, alias, setcode, type, atk, def, level, race, attribute, category
             ) VALUES (?, 4, 0, 0, ?, ?, ?, ?, ?, ?, 0)
         """, (cid, c_type, c_atk, c_def, c_lvl, c_race, c_attr))
-        
-        # Insert / replace into texts
+
+        # 5. Insert or update entry in texts table
         cdb_cur.execute("""
             INSERT OR REPLACE INTO texts (
                 id, name, desc
             ) VALUES (?, ?, ?)
         """, (cid, name, full_desc))
-        
-        count += 1
-        
+
+        compiled_count += 1
+
+    # Commit changes and clean up
     cdb_conn.commit()
     cdb_conn.close()
     story_conn.close()
-    print(f"[+] Successfully synchronized {count} cards into {cdb_out}!")
+
+    print(f"[+] Successfully compiled {compiled_count} cards into {cdb_output_path}!")
+    return compiled_count
+
 
 if __name__ == "__main__":
     build_cdb()
