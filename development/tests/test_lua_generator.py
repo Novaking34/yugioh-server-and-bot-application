@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for tools/lua_generator.py procedure builders, effect parsers,
+Unit tests for development/tools/lua_generator.py procedure builders, effect parsers,
 and syntax verification with luac.
 """
 

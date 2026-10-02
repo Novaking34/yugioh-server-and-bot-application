@@ -47,7 +47,7 @@ def export_deck(deck_id: int, output_path: Optional[str] = None) -> Optional[str
 
     Args:
         deck_id: The integer ID in the `decks` table.
-        output_path: Optional custom destination path. If None, saves to `server-data/decks/`.
+        output_path: Optional custom destination path. If None, saves to `production/shared/decks/`.
 
     Returns:
         str: Absolute path of the generated .ydk file, or None if deck not found.

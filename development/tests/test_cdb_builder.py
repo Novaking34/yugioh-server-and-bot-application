@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for tools/cdb_builder.py parsing functions and binary encoding.
+Unit tests for development/tools/cdb_builder.py parsing functions and binary encoding.
 """
 
 import pytest

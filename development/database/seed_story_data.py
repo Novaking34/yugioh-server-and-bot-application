@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 """
-Seed script to initialize ygo_story.db with sample lore arcs, factions,
-story duelists, custom cards (with Duelingbook attributes), and decks.
+=============================================================================
+Yu-Gi-Oh! Platform - Story Database Seeder & Bootstrap Pipeline
+=============================================================================
+Initializes the SQLite Story Database (`production/main/web/ygo_story.db`)
+with standard schemas, sample lore sagas, duelist profiles, archetypes/factions,
+custom card entries (with full Duelingbook metadata), and pre-made story decks.
+
+Usage:
+    python3 development/database/seed_story_data.py
+    # Or via master CLI:
+    ./manage.sh sync
+=============================================================================
 """
 
 import sqlite3
 import os
 import sys
 
-# Resolve project paths
+# Resolve project paths with config.paths fallback
 try:
     from config.paths import STORY_DB_PATH, SCHEMA_PATH
     DB_PATH = STORY_DB_PATH

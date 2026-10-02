@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Unit and integration tests for story_database/api_server.py FastAPI endpoints.
+Unit and integration tests for production/main/web/api_server.py FastAPI endpoints.
 """
 
 import pytest
 import sys
 import os
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT_DIR not in sys.path:

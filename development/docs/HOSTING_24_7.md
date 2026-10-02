@@ -111,7 +111,7 @@ sudo apt-get update && sudo apt-get install -y git docker.io docker-compose-v2 p
 git clone <YOUR_REPO_URL> yugioh-server
 cd yugioh-server
 ./manage.sh install
-sudo ./production/main/systemd/install_services.sh
+sudo ./packages/server/systemd/install_services.sh
 ```
 
 ---
@@ -162,7 +162,7 @@ To securely expose the Web Catalog & REST API without exposing your home IP:
 
 ## 🛠️ Managing 24/7 Services with Systemd
 
-Once services are installed via `sudo ./production/main/systemd/install_services.sh`:
+Once services are installed via `sudo ./packages/server/systemd/install_services.sh`:
 
 | Action | Command |
 | --- | --- |

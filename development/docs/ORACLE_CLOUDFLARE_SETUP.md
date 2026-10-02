@@ -146,7 +146,7 @@ You can expose the Web Catalog & Card Sync Manifest to a public HTTPS URL instan
 ```bash
 ./manage.sh tunnel
 # Or directly:
-./production/main/setup_cloudflare_tunnel.sh --quick
+./packages/server/scripts/setup_cloudflare_tunnel.sh --quick
 ```
 
 **Output:**
@@ -161,7 +161,7 @@ Card Manifest Sync API:  https://mystic-dragon-realm.trycloudflare.com/api/manif
 =====================================================================
 ```
 
-*The script automatically updates `production/shared/config.json` with this URL so player clients download custom cards over HTTPS.*
+*The script automatically updates `config/client/config.json` with this URL so player clients download custom cards over HTTPS.*
 
 ---
 

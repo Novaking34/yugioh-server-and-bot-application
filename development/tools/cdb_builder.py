@@ -4,8 +4,8 @@
 Yu-Gi-Oh! Simulator SQLite CDB Builder & Synchronizer
 =============================================================================
 This tool compiles custom card entries from the main relational Story Database
-(`story_database/ygo_story.db`) into an official YGOPro / EDOPro SQLite `.cdb`
-file (`server-data/expansions/custom_cards.cdb`).
+(`production/main/web/ygo_story.db`) into an official YGOPro / EDOPro SQLite `.cdb`
+file (`production/shared/expansions/custom_cards.cdb`).
 
 How the YGOPro CDB Binary Format Works:
 ---------------------------------------
@@ -224,8 +224,8 @@ def build_cdb(
     cdb_output_path: str = CDB_OUTPUT_PATH
 ) -> int:
     """
-    Reads all custom cards from `story_database/ygo_story.db` and writes them
-    into the YGOPro simulator SQLite `.cdb` file at `server-data/expansions/custom_cards.cdb`.
+    Reads all custom cards from `production/main/web/ygo_story.db` and writes them
+    into the YGOPro simulator SQLite `.cdb` file at `production/shared/expansions/custom_cards.cdb`.
     
     Returns:
         int: The number of cards compiled into the CDB.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for tools/constants.py bitmasks and identifier mappings.
+Unit tests for development/tools/constants.py bitmasks and identifier mappings.
 """
 
 import pytest

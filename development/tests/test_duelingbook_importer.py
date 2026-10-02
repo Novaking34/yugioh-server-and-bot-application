@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for tools/duelingbook_importer.py and tools/export_deck.py.
+Unit tests for development/tools/duelingbook_importer.py and development/tools/export_deck.py.
 """
 
 import pytest
