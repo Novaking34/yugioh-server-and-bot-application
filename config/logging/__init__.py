@@ -1,28 +1,17 @@
-#!/usr/bin/env python3
 """
 =============================================================================
-Yu-Gi-Oh! Platform - Host Server Production Logging Interface
+Yu-Gi-Oh! Platform - Centralized Platform Logging Package
 =============================================================================
-Re-exports the centralized platform logging subsystem from `config.logging`:
+Exports:
 - `get_logger`: Retrieve or create structured, multi-target logger.
 - `audit_operation`: Context manager measuring elapsed time and logging failures.
 - `log_diagnostic_snapshot`: Log DiagnosticResult instances into log stream.
 - `ColoredConsoleFormatter`: ANSI terminal log formatter.
 - `StructuredJSONFormatter`: Single-line JSON log formatter for telemetry.
-
-Maintained for full backward compatibility across all production imports.
 =============================================================================
 """
 
-import sys
-import os
-
-# Ensure repository root is in sys.path
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
-
-from config.logging import (
+from .logger import (
     get_logger,
     audit_operation,
     log_diagnostic_snapshot,

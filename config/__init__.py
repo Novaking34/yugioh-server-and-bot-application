@@ -81,7 +81,17 @@ from config.bot import (
     BOT_CONFIG,
 )
 
+from config.logging import (
+    get_logger,
+    audit_operation,
+    log_diagnostic_snapshot,
+)
+
 __all__ = [
+    # Centralized Logger & Telemetry
+    "get_logger",
+    "audit_operation",
+    "log_diagnostic_snapshot",
     # Global Settings Singleton
     "settings",
     "Settings",

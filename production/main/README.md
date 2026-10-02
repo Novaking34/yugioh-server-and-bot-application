@@ -8,13 +8,14 @@ The `production/main/` directory contains the host-side server runtime, services
 
 | Component / Subdirectory | Classification | Primary Responsibility |
 | :--- | :--- | :--- |
-| [`logger.py`](file:///home/professorseanex/yugioh-server/production/main/logger.py) | Logging Framework | Thread-safe, rotating multi-target logging (stdout + `logs/*.log` + JSON mode) |
-| [`app.py`](file:///home/professorseanex/yugioh-server/production/main/app.py) | Desktop GUI | Native Tkinter Platform Manager control panel |
-| [`setup_wizard.py`](file:///home/professorseanex/yugioh-server/production/main/setup_wizard.py) | Setup Interface | Step-by-step administrator configuration wizard for `.env` and ports |
+| [`logger.py`](file:///home/professorseanex/yugioh-server/production/main/logger.py) | Logging Forwarder | Backward-compatible re-export from centralized [`config.logging`](file:///home/professorseanex/yugioh-server/config/logging/) |
+| [`app.py`](file:///home/professorseanex/yugioh-server/production/main/app.py) | Entry Point | Fast launcher delegating to [`gui.app`](file:///home/professorseanex/yugioh-server/production/main/gui/app.py) |
+| [`setup_wizard.py`](file:///home/professorseanex/yugioh-server/production/main/setup_wizard.py) | Entry Point | Fast launcher delegating to [`gui.setup_wizard`](file:///home/professorseanex/yugioh-server/production/main/gui/setup_wizard.py) |
+| [`gui/`](file:///home/professorseanex/yugioh-server/production/main/gui/) | GUI Subsystem | Encapsulated Desktop Platform Manager, Setup Wizard, and UI assets |
 | [`web/`](file:///home/professorseanex/yugioh-server/production/main/web/) | Web Service | FastAPI card catalog, deck viewer, lore portal, and expansion sync API (Port 8000) |
 | [`discord_bot/`](file:///home/professorseanex/yugioh-server/production/main/discord_bot/) | Bot Service | The Great Kasutamaiza modular Discord duel engine and card lookup bot |
 | [`simulator/`](file:///home/professorseanex/yugioh-server/production/main/simulator/) | Duel Engine | Docker Compose configuration and container orchestration for live duels (Port 7911 / 7922) |
-| [`assets/`](file:///home/professorseanex/yugioh-server/production/main/assets/) | Media Assets | Platform application icons, logos, and UI imagery |
+| [`assets/`](file:///home/professorseanex/yugioh-server/production/main/assets/) | Media Assets | Platform application icons, logos, and UI imagery (mirrored in `gui/assets/`) |
 
 ---
 
