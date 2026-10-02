@@ -243,6 +243,31 @@ function s.attachop{idx}(e,tp,eg,ep,ev,re,r,rp)
 end""")
                 continue
 
+            # --- Pattern D: Continuous Targeting Protection ---
+            if "cannot be targeted" in clause_lower:
+                eff_code = f"""\t-- Effect {idx}: Cannot be targeted by opponent's card effects
+\tlocal e{idx}=Effect.CreateEffect(c)
+\te{idx}:SetType(EFFECT_TYPE_SINGLE)
+\te{idx}:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+\te{idx}:SetRange(LOCATION_MZONE)
+\te{idx}:SetCode(EFFECT_CANNOT_BE_EFFECT_TARGET)
+\te{idx}:SetValue(aux.tgoval)
+\tc:RegisterEffect(e{idx})"""
+                self.effects.append(eff_code)
+                continue
+
+            # --- Pattern E: Battle / Effect Indestructibility ---
+            if "cannot be destroyed by battle" in clause_lower and "would be destroyed" not in clause_lower:
+                eff_code = f"""\t-- Effect {idx}: Cannot be destroyed by battle
+\tlocal e{idx}=Effect.CreateEffect(c)
+\te{idx}:SetType(EFFECT_TYPE_SINGLE)
+\te{idx}:SetRange(LOCATION_MZONE)
+\te{idx}:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
+\te{idx}:SetValue(1)
+\tc:RegisterEffect(e{idx})"""
+                self.effects.append(eff_code)
+                continue
+
             # --- Standard Activated Effects (Quick, Trigger on-summon, Ignition) ---
             is_quick = bool("quick effect" in clause_lower or (self.ctype_lower == "spell" and "quick" in self.csub_lower) or self.ctype_lower == "trap")
             is_on_summon = bool("normal or special summoned" in clause_lower or "link summoned" in clause_lower or "when this card is activated" in clause_lower)
@@ -291,7 +316,7 @@ end""")
 
             # Once per turn limit
             if is_hard_opt:
-                eff_lines.append(f"\te{idx}:SetCountLimit(1,id)")
+                eff_lines.append(f"\te{idx}:SetCountLimit(1, id)")
             elif "once per turn" in clause_lower:
                 eff_lines.append(f"\te{idx}:SetCountLimit(1)")
 

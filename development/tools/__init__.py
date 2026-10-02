@@ -25,8 +25,9 @@ from .constants import (
 
 from .cdb_builder import build_cdb, parse_card_type
 from .export_deck import export_deck, export_all_decks, export_player_deck
-from .duelingbook_importer import import_from_json_file, import_card_dict
+from .duelingbook_importer import import_from_json_file, import_card_data, import_card_dict
 from .lua_generator import generate_lua_for_card, generate_all_scripts
+from .debug_diagnostics import DiagnosticResult, PlatformDiagnostics
 
 __all__ = [
     "build_cdb",
@@ -35,9 +36,12 @@ __all__ = [
     "export_all_decks",
     "export_player_deck",
     "import_from_json_file",
+    "import_card_data",
     "import_card_dict",
     "generate_lua_for_card",
     "generate_all_scripts",
+    "DiagnosticResult",
+    "PlatformDiagnostics",
     "TYPE_MONSTER", "TYPE_SPELL", "TYPE_TRAP", "TYPE_NORMAL", "TYPE_EFFECT",
     "TYPE_FUSION", "TYPE_RITUAL", "TYPE_SYNCHRO", "TYPE_XYZ", "TYPE_PENDULUM", "TYPE_LINK",
     "TYPE_TUNER", "TYPE_QUICKPLAY", "TYPE_CONTINUOUS", "TYPE_EQUIP", "TYPE_FIELD", "TYPE_COUNTER",

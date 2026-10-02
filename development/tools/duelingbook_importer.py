@@ -105,7 +105,8 @@ def import_card_data(
     faction_id: Optional[int] = None,
     character_id: Optional[int] = None,
     db_path: str = STORY_DB_PATH,
-    sync_simulator: bool = True
+    sync_simulator: bool = True,
+    conn: Optional[sqlite3.Connection] = None
 ) -> int:
     """
     Imports a single card from a dictionary, commits to the Story DB,
@@ -118,21 +119,35 @@ def import_card_data(
         character_id: Optional ID of the signature duelist.
         db_path: Path to the SQLite story database.
         sync_simulator: Whether to automatically rebuild CDB and Lua files.
+        conn: Optional active sqlite3 connection (if provided, caller manages lifecycle).
 
     Returns:
         int: The resolved card passcode / ID.
     """
-    conn = sqlite3.connect(db_path)
+    should_close = False
+    if conn is None:
+        conn = sqlite3.connect(db_path)
+        should_close = True
     cur = conn.cursor()
 
     name = (data.get("name") or "").strip()
     if not name:
-        conn.close()
+        if should_close:
+            conn.close()
         raise ValueError("Card name is required.")
 
-    # Determine unique passcode
-    cid = data.get("id") or data.get("serial_number")
-    if not cid or int(cid) < 1000:
+    # Determine unique passcode (protecting against non-numeric Duelingbook IDs)
+    raw_id = data.get("passcode") or data.get("serial_number") or data.get("id")
+    cid = None
+    if raw_id is not None:
+        try:
+            parsed_id = int(raw_id)
+            if parsed_id >= 1000:
+                cid = parsed_id
+        except (ValueError, TypeError):
+            cid = None
+
+    if cid is None:
         # Check if card already exists by name
         cur.execute("SELECT id FROM custom_cards WHERE name = ?", (name,))
         existing = cur.fetchone()
@@ -140,8 +155,6 @@ def import_card_data(
             cid = existing[0]
         else:
             cid = generate_custom_passcode(conn)
-    else:
-        cid = int(cid)
 
     # Classifications
     card_type, card_subtype = resolve_card_classification(data)
@@ -183,15 +196,12 @@ def import_card_data(
         character_id, story_sig
     ))
 
-    # Synchronize Full-Text Search index
-    cur.execute("DELETE FROM cards_fts WHERE rowid = ?", (cid,))
-    cur.execute("""
-        INSERT INTO cards_fts (rowid, name, effect_text, lore_text, card_type, monster_type)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (cid, name, effect_text, story_lore, card_type, monster_type))
+    # Synchronize Full-Text Search index (FTS5 external content rebuild)
+    cur.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
 
     conn.commit()
-    conn.close()
+    if should_close:
+        conn.close()
 
     # Synchronize with YGOPro simulator if requested
     if sync_simulator:
@@ -233,6 +243,10 @@ def import_from_json_file(file_path: str, sync_simulator: bool = True) -> List[i
 
     print(f"[+] Imported {len(imported_ids)} cards from {file_path}")
     return imported_ids
+
+
+# Backward compatibility alias
+import_card_dict = import_card_data
 
 
 if __name__ == "__main__":

@@ -577,6 +577,15 @@ def cmd_install() -> None:
     print("  ./manage.sh status     # Checks comprehensive platform status")
 
 
+def cmd_diagnose(extra_args: Optional[List[str]] = None) -> int:
+    """Run comprehensive platform diagnostic auditor and failpoint inspector."""
+    print_header("Platform Diagnostics & Failpoint Auditor")
+    from development.tools.debug_diagnostics import PlatformDiagnostics, print_diagnostic_report
+    diag = PlatformDiagnostics()
+    results = diag.run_all()
+    return print_diagnostic_report(results)
+
+
 # =============================================================================
 # SECTION 9: CLI Argument Parser & Router
 # =============================================================================
@@ -593,6 +602,7 @@ Platform Commands:
   stop                  Stop live simulator container
   restart               Restart live simulator container
   sync                  Rebuild simulator custom_cards.cdb and Lua effect scripts
+  diagnose [args...]    Run system diagnostics and failpoint inspection tool
   import <file.json>    Import Duelingbook JSON cards into database and simulator
   export-decks          Export character story decks to standard .ydk format
   export-player <uid>   Export a Discord player's active deck to .ydk format
@@ -626,6 +636,8 @@ Platform Commands:
         sys.exit(cmd_restart())
     elif cmd == "sync":
         cmd_sync()
+    elif cmd in ("diagnose", "diag", "debug"):
+        sys.exit(cmd_diagnose(extra))
     elif cmd == "import":
         cmd_import(extra[0] if extra else "")
     elif cmd == "export-decks":
