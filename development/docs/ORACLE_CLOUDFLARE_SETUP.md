@@ -116,8 +116,8 @@ WEB_PORT="8000"
 EOF
 
 # 3. Run the automated deployment script
-chmod +x production/main/deploy_oracle_cloud.sh
-sudo ./production/main/deploy_oracle_cloud.sh
+chmod +x packages/server/deploy_oracle_cloud.sh
+sudo ./packages/server/deploy_oracle_cloud.sh
 ```
 
 ### What `deploy_oracle_cloud.sh` does automatically

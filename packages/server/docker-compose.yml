@@ -1,0 +1,15 @@
+services:
+  ygoserver:
+    image: ${DOCKER_IMAGE:-professorseanex/ygoserver:latest}
+    container_name: ygo-simulator-server
+    restart: unless-stopped
+    ports:
+      - "7911:7911"
+      - "7922:7922"
+    volumes:
+      - ./production/main/simulator/config:/ygoserver/config
+      - ./production/shared/expansions:/ygoserver/ygopro/expansions
+      - ./production/shared/decks:/ygoserver/decks
+      - ./production/main/simulator/replays:/ygoserver/replays
+    environment:
+      - TZ=UTC

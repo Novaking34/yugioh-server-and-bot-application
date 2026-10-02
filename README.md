@@ -40,6 +40,12 @@ cd /home/professorseanex/yugioh-server
 # Import custom cards from a Duelingbook JSON export
 ./manage.sh import /path/to/duelingbook_cards.json
 
+# Build standalone distribution packages in dist/ (.zip for client, .tar.gz for server)
+./manage.sh package
+
+# Launch Cloudflare HTTPS Tunnel for Web Catalog
+./manage.sh tunnel
+
 # Export character story decks or player custom decks to .ydk format
 ./manage.sh export-decks
 ./manage.sh export-player <discord_user_id>
@@ -96,21 +102,24 @@ The server runs an automated rule-enforcement duel engine container (`ocgcore`) 
 
 ### Sharing Custom Card Expansions (For Players & Friends)
 
-All files needed for other players to duel on this server are organized in `production/shared/`:
+All files needed for other players to duel on this server are organized in the [`packages/client/`](file:///home/professorseanex/yugioh-server/packages/client/) installation package:
 
-- **Compiled Card Database:** `production/shared/expansions/custom_cards.cdb`
-- **Lua Effect Scripts:** `production/shared/expansions/scripts/c<id>.lua`
-- **Sample & Story Decks:** `production/shared/decks/*.ydk`
+- **Windows:** Double-click `packages/client/install_client.bat`
+- **Linux / macOS:** Run `./packages/client/install_client.sh`
+- **Player GUI:** Run `launch_client.bat` or `./launch_client.sh`
 
-Players can install everything in one click:
+To generate standalone distributable zip and tarball archives for players and servers:
 
 ```bash
-cd production/shared
-./install_client.sh    # On Linux / Mac
-python sync_client.py   # On Windows
+./manage.sh package
 ```
 
-See [CLIENT_GUIDE.md](file:///home/professorseanex/yugioh-server/production/shared/CLIENT_GUIDE.md) for full instructions.
+Distributable archives are output to `dist/`:
+
+- `dist/ygo-client-package.zip`: Standalone zip archive for players (includes custom cards, scripts, decks, and installers).
+- `dist/ygo-server-package.tar.gz`: Standalone tarball for server hosts (includes Docker manifests, systemd services, and cloud scripts).
+
+See [`packages/README.md`](file:///home/professorseanex/yugioh-server/packages/README.md) and [`development/docs/PACKAGING_AND_DISTRIBUTION.md`](file:///home/professorseanex/yugioh-server/development/docs/PACKAGING_AND_DISTRIBUTION.md) for full instructions.
 
 ---
 
@@ -184,58 +193,48 @@ A responsive web dashboard runs locally at:
 
 ## 🗂️ 5. Project Directory Structure
 
-```bash
+```text
 /home/professorseanex/yugioh-server/
+├── pyproject.toml                     # Modern PEP 517/518 Python packaging metadata
+├── setup.py                           # Setuptools installation script (pip install -e .)
 ├── README.md                          # Platform Documentation & Guide
 ├── requirements.txt                   # Platform Python Dependencies
 ├── manage.sh                          # Master CLI Controller & Installer Wrapper
 ├── manage.py                          # Master Python Controller Engine
 ├── docker-compose.yml                 # Live Duel Simulator Container (Port 7911 / 7922)
+├── thelandofkustomazi.com.zone        # Symlink -> packages/server/thelandofkustomazi.com.zone
 ├── config/
 │   └── paths.py                       # Centralized Path Resolution Module
+├── packages/                          # Standalone Installation Packages
+│   ├── README.md                      # Packages Overview & Distribution Guide
+│   ├── server/                        # Server & Host 24/7 Installation Package
+│   │   ├── README.md                  # Server deployment & operations guide
+│   │   ├── deploy_oracle_cloud.sh     # Turnkey installer for Oracle Cloud / Ubuntu VM
+│   │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel installer
+│   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS updater
+│   │   ├── thelandofkustomazi.com.zone # BIND DNS zone file
+│   │   ├── docker-compose.yml         # Container orchestration manifest
+│   │   └── systemd/                   # 24/7 background systemd units & installer
+│   └── client/                        # Player & Client Distribution Package
+│       ├── README.md                  # Player setup & connection guide
+│       ├── install_client.bat         # Windows 1-click installer
+│       ├── install_client.sh          # Linux / macOS 1-click installer
+│       ├── launch_client.bat          # Windows launcher for Player GUI
+│       ├── launch_client.sh           # Linux / macOS launcher for Player GUI
+│       ├── sync_client.py             # EDOPro card & script synchronizer
+│       ├── client_app.py              # Player Desktop GUI Control Panel
+│       └── config.json                # Live server connection manifest
+├── dist/                              # Standalone release packages (built via ./manage.sh package)
+│   ├── ygo-client-package.zip         # Pre-packaged distribution for players (.zip)
+│   └── ygo-server-package.tar.gz      # Pre-packaged deployment for servers (.tar.gz)
 ├── production/
-│   ├── main/                          # Host Server Services
-│   │   ├── app.py                     # Desktop GUI Platform Manager
-│   │   ├── assets/                    # Platform Graphics & Icon
-│   │   ├── discord_bot/               # Modular Discord Story & Duel Bot
-│   │   │   ├── bot.py                 # Bot Runner
-│   │   │   ├── config.py              # Configuration & Token Resolution
-│   │   │   ├── utils.py               # Card Embeds & Color Palettes
-│   │   │   └── cogs/                  # Modular Command Cogs
-│   │   ├── simulator/                 # Live Duel Simulator Container Data
-│   │   │   ├── config/                # Simulator Room, Net & Admin Configuration
-│   │   │   └── replays/               # Saved Duel Replays (.yrp)
-│   │   └── web/                       # FastAPI Web Catalog & Lore Dashboard
-│   │       ├── api_server.py          # REST API & Web Dashboard Endpoints
-│   │       ├── database.py            # SQLite Connection & Session Manager
-│   │       ├── models.py              # Pydantic v2 Request/Response Schemas
-│   │       ├── templates/             # Web Dashboard HTML/JS Template
-│   │       └── ygo_story.db           # Live SQLite Lore & Card Database
-│   └── shared/                        # Client / Player Distribution Package
-│       ├── CLIENT_GUIDE.md            # Player Connection & Installation Guide
-│       ├── install_client.sh          # One-Click Linux/Mac Client Installer
-│       ├── sync_client.py             # Cross-Platform EDOPro Card Synchronizer
-│       ├── expansions/                # Simulator Expansion Files
-│       │   ├── custom_cards.cdb       # Compiled SQLite Simulator Card Database
-│       │   └── scripts/               # Lua Effect Scripts (c<id>.lua)
-│       └── decks/                     # Pre-Made & Exported Character .ydk Decks
+│   ├── main/                          # Host Server Services (app.py, discord_bot/, simulator/, web/)
+│   └── shared/                        # Client / Player Distribution (expansions/, decks/)
 ├── development/                       # Development Tools, Tests & Pipeline
 │   ├── database/                      # Schema & Seeding Tools
-│   │   ├── schema.sql                 # Relational Database Schema & FTS5 Index
-│   │   └── seed_story_data.py         # Sample Lore, Faction & Card Seeder
 │   ├── docs/                          # Architecture & Developer Documentation
 │   ├── tests/                         # Pytest Unit Test Suite
-│   │   ├── test_api_server.py         # FastAPI REST Endpoint Tests
-│   │   ├── test_cdb_builder.py        # CDB Binary Encoding Tests
-│   │   ├── test_constants.py          # Bitmask & Flag Tests
-│   │   ├── test_duelingbook_importer.py # Duelingbook Parser Tests
-│   │   └── test_lua_generator.py      # Lua Effect Generator Tests
 │   └── tools/                         # Card Generation & Sync Tools
-│       ├── cdb_builder.py             # YGOPro/EDOPro .cdb SQLite Compiler
-│       ├── constants.py               # Centralized YGOPro Bitmasks & Mappings
-│       ├── duelingbook_importer.py    # Duelingbook JSON Parser & Pipeline Sync
-│       ├── export_deck.py             # Standard .ydk Deck Exporter
-│       └── lua_generator.py           # Modular ocgcore Lua Effect Generator
 └── venv/                              # Isolated Python 3 Virtual Environment
 ```
 

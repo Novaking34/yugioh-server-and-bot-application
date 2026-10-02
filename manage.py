@@ -30,7 +30,9 @@ if BASE_DIR not in sys.path:
 from config.paths import (
     STORY_DB_PATH, CDB_OUTPUT_PATH, SCRIPTS_DIR, DECKS_DIR,
     TOOLS_DIR, TESTS_DIR, APP_PY_PATH, BOT_DIR, SCHEMA_PATH,
-    SEED_SCRIPT_PATH, PROD_MAIN_DIR, ensure_directories
+    SEED_SCRIPT_PATH, PROD_MAIN_DIR, EXPANSIONS_DIR,
+    PACKAGES_DIR, SERVER_PACKAGE_DIR, CLIENT_PACKAGE_DIR, DIST_DIR,
+    ensure_directories
 )
 
 # Terminal color constants
@@ -289,18 +291,81 @@ def cmd_install():
     print("  ./manage.sh web        # Starts web catalog at http://localhost:8000")
     print("  ./manage.sh bot        # Starts Discord bot")
     print("  ./manage.sh tunnel     # Launches Cloudflare HTTPS Tunnel for Web Catalog")
+    print("  ./manage.sh package    # Bundles client (.zip) and server (.tar.gz) release packages")
     print("  ./manage.sh app        # Starts Desktop GUI")
     print("  ./manage.sh status     # Checks status")
 
 
 def cmd_tunnel(extra: Optional[List[str]] = None):
     """Launch or manage Cloudflare Tunnel for secure remote card syncing."""
-    tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.sh")
+    tunnel_script = os.path.join(SERVER_PACKAGE_DIR, "setup_cloudflare_tunnel.sh")
+    if not os.path.exists(tunnel_script):
+        tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.sh")
     if not os.path.exists(tunnel_script):
         print(f"{RED}[-] Error: Cloudflare Tunnel script not found at {tunnel_script}{NC}")
         sys.exit(1)
     args = [tunnel_script] + (extra or [])
     os.execv(tunnel_script, args)
+
+
+def cmd_package():
+    """Build standalone installation packages (.zip and .tar.gz) in dist/."""
+    import zipfile
+    import tarfile
+
+    print(f"{BOLD}{BLUE}=== 📦 Yu-Gi-Oh! Platform Packaging & Distribution Builder ==={NC}\n")
+    ensure_directories()
+
+    # 1. First ensure CDB and decks are freshly compiled
+    cmd_sync()
+    cmd_export_decks()
+
+    os.makedirs(DIST_DIR, exist_ok=True)
+    client_zip_path = os.path.join(DIST_DIR, "ygo-client-package.zip")
+    server_tar_path = os.path.join(DIST_DIR, "ygo-server-package.tar.gz")
+
+    # 2. Build Client Package (.zip)
+    print(f"\n{BLUE}[*] Packaging Player Client Distribution -> {os.path.relpath(client_zip_path, BASE_DIR)}...{NC}")
+    with zipfile.ZipFile(client_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Add client files from packages/client/
+        for root, dirs, files in os.walk(CLIENT_PACKAGE_DIR):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.join("ygo-client-package", os.path.relpath(file_path, CLIENT_PACKAGE_DIR))
+                zf.write(file_path, arcname)
+
+        # Add compiled expansions/
+        if os.path.exists(EXPANSIONS_DIR):
+            for root, dirs, files in os.walk(EXPANSIONS_DIR):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.join("ygo-client-package", "expansions", os.path.relpath(file_path, EXPANSIONS_DIR))
+                    zf.write(file_path, arcname)
+
+        # Add decks/
+        if os.path.exists(DECKS_DIR):
+            for root, dirs, files in os.walk(DECKS_DIR):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.join("ygo-client-package", "decks", os.path.relpath(file_path, DECKS_DIR))
+                    zf.write(file_path, arcname)
+
+    client_size_mb = os.path.getsize(client_zip_path) / (1024 * 1024)
+    print(f"{GREEN}[+] Client package built: {client_zip_path} ({client_size_mb:.2f} MB){NC}")
+
+    # 3. Build Server Package (.tar.gz)
+    print(f"\n{BLUE}[*] Packaging Host Server Deployment -> {os.path.relpath(server_tar_path, BASE_DIR)}...{NC}")
+    with tarfile.open(server_tar_path, "w:gz") as tf:
+        tf.add(SERVER_PACKAGE_DIR, arcname="ygo-server-package")
+
+    server_size_kb = os.path.getsize(server_tar_path) / 1024
+    print(f"{GREEN}[+] Server package built: {server_tar_path} ({server_size_kb:.1f} KB){NC}")
+
+    print(f"\n{BOLD}{GREEN}🎉 Release packages created successfully in dist/:{NC}")
+    print(f"  • {BOLD}Player Client:{NC} {client_zip_path}")
+    print(f"    (Extract and run install_client.bat or install_client.sh)")
+    print(f"  • {BOLD}Host Server:{NC}   {server_tar_path}")
+    print(f"    (Extract and run sudo ./deploy_oracle_cloud.sh on any Ubuntu/Debian server)\n")
 
 
 def main():
@@ -322,6 +387,7 @@ Commands:
   web                   Start local web card catalog & dashboard (Port 8000)
   bot                   Launch modular Discord story & duel bot
   tunnel                Launch Cloudflare HTTPS Tunnel for Web Catalog & Sync
+  package               Build standalone installation packages in dist/
   app                   Launch native desktop control panel application
   install               Initialize directory layout, database, CDB, and Lua scripts
         """
@@ -362,6 +428,8 @@ Commands:
         cmd_bot()
     elif cmd == "tunnel":
         cmd_tunnel(extra)
+    elif cmd in ("package", "bundle", "dist"):
+        cmd_package()
     elif cmd in ("app", "gui"):
         cmd_app()
     elif cmd in ("install", "setup"):

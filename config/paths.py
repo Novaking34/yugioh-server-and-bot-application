@@ -50,6 +50,12 @@ SCHEMA_PATH = os.path.join(DATABASE_DIR, "schema.sql")
 SEED_SCRIPT_PATH = os.path.join(DATABASE_DIR, "seed_story_data.py")
 DOCS_DIR = os.path.join(DEV_DIR, "docs")
 
+# Packaging & Distribution (Root Installation Packages & Release Archives)
+PACKAGES_DIR = os.path.join(BASE_DIR, "packages")
+SERVER_PACKAGE_DIR = os.path.join(PACKAGES_DIR, "server")
+CLIENT_PACKAGE_DIR = os.path.join(PACKAGES_DIR, "client")
+DIST_DIR = os.path.join(BASE_DIR, "dist")
+
 
 def ensure_directories():
     """Ensure all required runtime directories exist."""
@@ -64,7 +70,11 @@ def ensure_directories():
         TOOLS_DIR,
         TESTS_DIR,
         DATABASE_DIR,
-        DOCS_DIR
+        DOCS_DIR,
+        PACKAGES_DIR,
+        SERVER_PACKAGE_DIR,
+        CLIENT_PACKAGE_DIR,
+        DIST_DIR
     ]
     for d in dirs:
         os.makedirs(d, exist_ok=True)

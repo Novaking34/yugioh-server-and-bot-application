@@ -1,0 +1,16 @@
+[Unit]
+Description=Yu-Gi-Oh! Discord Story & Duel Bot
+After=network.target ygo-simulator.service
+
+[Service]
+Type=simple
+User=professorseanex
+WorkingDirectory=/home/professorseanex/yugioh-server
+ExecStart=/home/professorseanex/yugioh-server/venv/bin/python3 /home/professorseanex/yugioh-server/production/main/discord_bot/bot.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/professorseanex/yugioh-server/.env
+
+[Install]
+WantedBy=multi-user.target

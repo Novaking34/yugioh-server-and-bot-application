@@ -62,31 +62,27 @@ Oracle Cloud Infrastructure (OCI) offers an **Always Free** tier that includes:
    sudo netfilter-persistent save 2>/dev/null || sudo iptables-save | sudo tee /etc/iptables/rules.v4
    ```
 
-5. **Clone Repository & Run 1-Click Installer:**
+5. **Clone Repository & Run Turn-Key Server Deployment Package:**
 
    ```bash
    git clone <YOUR_GIT_REPO_URL> yugioh-server
-   cd yugioh-server
-   ./manage.sh install
+   cd yugioh-server/packages/server
+   sudo ./deploy_oracle_cloud.sh
    ```
+
+   *This script automatically configures iptables, installs Docker and system packages, initializes the database, compiles custom cards, starts the container, and registers all 24/7 systemd background services.*
 
 6. **Configure Discord Bot Token in `.env`:**
 
    ```bash
-   nano .env
+   nano /home/ubuntu/yugioh-server/.env
    # Add:
    DISCORD_BOT_TOKEN="your_token_here"
    DISCORD_GUILD_ID="your_guild_id_here"
+   sudo systemctl restart ygo-bot
    ```
 
-7. **Enable 24/7 Systemd Background Services:**
-
-   ```bash
-   sudo ./production/main/systemd/install_services.sh
-   sudo systemctl start ygo-simulator ygo-web ygo-bot
-   ```
-
-8. **Check Live Status:**
+7. **Check Live Status:**
 
    ```bash
    ./manage.sh status

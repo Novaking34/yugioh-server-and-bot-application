@@ -1,0 +1,16 @@
+[Unit]
+Description=Yu-Gi-Oh! Cloudflare HTTPS Tunnel
+After=network.target ygo-web.service
+Requires=ygo-web.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/yugioh-server
+ExecStart=/usr/local/bin/cloudflared tunnel --url http://localhost:8000
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
