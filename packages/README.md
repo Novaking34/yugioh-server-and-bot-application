@@ -1,6 +1,6 @@
 # 📦 Yu-Gi-Oh! Platform Installation & Distribution Packages
 
-This directory contains standalone, self-contained installation packages for deploying the platform host server and distributing the client expansions to players.
+This directory contains standalone, self-contained packages for deploying the platform host server and distributing client expansions to players.
 
 ---
 
@@ -8,30 +8,39 @@ This directory contains standalone, self-contained installation packages for dep
 
 ```bash
 packages/
-├── README.md                      # Packaging system documentation (this file)
-├── server/                        # Server & Host 24/7 Installation Package
-│   ├── README.md                  # Comprehensive server deployment & operations guide
-│   ├── deploy_oracle_cloud.sh     # Automated turn-key installer for Oracle Cloud / Ubuntu VM
-│   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel setup & management
-│   ├── update_duckdns.sh          # DuckDNS dynamic DNS auto-updater
-│   ├── thelandofkustomazi.com.zone # BIND DNS zone file for Cloudflare DNS import
-│   ├── docker-compose.yml         # Container orchestration manifest for duel engine
-│   └── systemd/                   # 24/7 background systemd services
-│       ├── install_services.sh    # Automated systemd service installer
-│       ├── ygo-simulator.service  # Duel engine container service
-│       ├── ygo-web.service        # FastAPI web catalog & REST API
-│       ├── ygo-bot.service        # The Great Kasutamaiza Discord bot
-│       └── ygo-tunnel.service     # Cloudflare Tunnel daemon
+├── README.md                          # Packaging subsystem documentation (this file)
+├── server/                            # Server & Host 24/7 Installation Package
+│   ├── README.md                      # Comprehensive server deployment & operations guide
+│   ├── deploy_oracle_cloud.sh         # Automated turn-key installer for Oracle Cloud / Ubuntu VM
+│   ├── docker-compose.yml             # Symlink to project root docker-compose.yml
+│   ├── thelandofkustomazi.com.zone    # Symlink to config/dns/thelandofkustomazi.com.zone
+│   ├── setup_cloudflare_tunnel.sh     # Convenience symlink to scripts/setup_cloudflare_tunnel.sh
+│   ├── update_duckdns.sh              # Convenience symlink to scripts/update_duckdns.sh
+│   ├── scripts/                       # Dedicated networking & DNS automation scripts
+│   │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel setup & management
+│   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS auto-updater
+│   │   └── README.md                  # Scripts documentation and CLI flags guide
+│   └── systemd/                       # 24/7 background systemd services
+│       ├── install_services.sh        # Automated systemd service installer
+│       ├── ygo-simulator.service      # Duel engine container unit (TCP 7911/7922)
+│       ├── ygo-web.service            # FastAPI web catalog & REST API (Port 8000)
+│       ├── ygo-bot.service            # The Great Kasutamaiza Discord bot unit
+│       ├── ygo-tunnel.service         # Cloudflare Tunnel daemon unit
+│       └── README.md                  # Systemd service documentation & operations
 │
-└── client/                        # Player & Client Distribution Package
-    ├── README.md                  # Player setup & connection guide
-    ├── install_client.sh          # Linux / macOS one-click installer
-    ├── install_client.bat         # Windows one-click installer
-    ├── launch_client.sh           # Linux / macOS launcher for Player GUI
-    ├── launch_client.bat          # Windows launcher for Player GUI
-    ├── sync_client.py             # EDOPro card database & expansion synchronizer
-    ├── client_app.py              # Native desktop player control panel (Tkinter)
-    └── config.json                # Live server connection endpoints manifest
+└── client/                            # Player & Client Distribution Package
+    ├── README.md                      # Player setup & connection guide
+    ├── config.json                    # Symlink to config/client/config.json
+    ├── install_client.sh              # Linux / macOS one-click installer
+    ├── install_client.bat             # Windows one-click installer
+    ├── launch_client.sh               # Linux / macOS launcher for Player GUI
+    ├── launch_client.bat              # Windows launcher for Player GUI
+    ├── __main__.py                    # Direct Python package execution (`python -m packages.client`)
+    └── src/                           # Client Python application source code
+        ├── __init__.py                # Package exports & initialization
+        ├── sync_client.py             # EDOPro card database & expansion synchronizer
+        ├── client_app.py              # Native desktop player control panel (Tkinter)
+        └── README.md                  # Internal source architecture documentation
 ```
 
 ---
@@ -58,7 +67,7 @@ To duel on this server using **EDOPro / Project Ignis** or **YGOPro**:
 1. Double-click `install_client.bat` to automatically install the custom card database (`.cdb`), Lua effect scripts, and character decks.
 2. Double-click `launch_client.bat` to open the Player Control Panel.
 
-### Linux / macOS
+### Linux / macOS / Steam Deck
 
 ```bash
 cd packages/client
@@ -72,10 +81,9 @@ For full details and direct IP connect settings, see [`packages/client/README.md
 
 ## 📦 Building Distributable Release Archives
 
-The master controller can bundle these packages into clean release archives in `dist/`:
+The master controller bundles these packages into clean release archives in `dist/`:
 
 ```bash
-# From repository root:
 ./manage.sh package
 ```
 
@@ -83,3 +91,4 @@ This generates:
 
 1. `dist/ygo-client-package.zip`: Pre-packaged with the latest compiled `custom_cards.cdb`, Lua effect scripts, decklists, and one-click installers for distribution to players.
 2. `dist/ygo-server-package.tar.gz`: Pre-packaged host server deployment package with all scripts, systemd units, Docker manifests, and DNS zone configurations.
+3. `dist/SHA256SUMS.txt`: Cryptographic SHA-256 verification digests.

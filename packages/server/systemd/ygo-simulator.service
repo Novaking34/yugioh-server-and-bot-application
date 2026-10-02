@@ -1,3 +1,12 @@
+# =============================================================================
+# Systemd Service Unit: Yu-Gi-Oh! Live Duel Simulator Container (ocgcore)
+# =============================================================================
+# Manages the 24/7 lifecycle of the Docker Compose simulator container:
+# - Binds TCP 7911 (raw game client duel socket)
+# - Binds TCP 7922 (room manager dashboard & websocket)
+# - Auto-starts on boot after Docker daemon is ready
+# =============================================================================
+
 [Unit]
 Description=Yu-Gi-Oh! Live Duel Simulator Container (ocgcore)
 After=docker.service

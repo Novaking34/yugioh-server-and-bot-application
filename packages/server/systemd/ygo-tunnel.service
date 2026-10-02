@@ -1,3 +1,11 @@
+# =============================================================================
+# Systemd Service Unit: Yu-Gi-Oh! Cloudflare HTTPS Tunnel Daemon
+# =============================================================================
+# Runs a dedicated cloudflared tunnel daemon for the Web Card Catalog (Port 8000).
+# Note: For production Named Tunnels, cloudflared is typically run via the
+# native cloudflared service (systemctl status cloudflared).
+# =============================================================================
+
 [Unit]
 Description=Yu-Gi-Oh! Cloudflare HTTPS Tunnel
 After=network.target ygo-web.service
@@ -5,8 +13,8 @@ Requires=ygo-web.service
 
 [Service]
 Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/yugioh-server
+User=professorseanex
+WorkingDirectory=/home/professorseanex/yugioh-server
 ExecStart=/usr/local/bin/cloudflared tunnel --url http://localhost:8000
 Restart=always
 RestartSec=5

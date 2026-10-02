@@ -21,6 +21,9 @@ config/
 ├── client/                # Game client connection & distribution manifests
 │   ├── config.json        # Live server connection manifest & updater URLs
 │   └── README.md          # Client manifest documentation & schema guide
+├── dns/                   # Domain & DNS zone file configurations
+│   ├── thelandofkustomazi.com.zone # BIND RFC 1035 zone file for Cloudflare/BIND9
+│   └── README.md          # DNS routing & proxy status documentation
 └── simulator/             # ocgcore live duel server configuration package
     ├── config.json        # Simulator room rules, ports, timers, and banlists
     ├── admin_user.json    # In-game moderator credentials & access levels
@@ -36,7 +39,7 @@ config/
 
 All platform subsystems resolve their settings through a strictly-ordered 4-tier hierarchy:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Operating System Environment Variables (Highest Priority)│
 │    e.g., export DISCORD_BOT_TOKEN="abc..."                  │

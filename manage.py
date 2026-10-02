@@ -506,7 +506,7 @@ def cmd_package() -> None:
 
     # Step 3: Build Host Server Package (.tar.gz)
     print(f"\n{BLUE}[*] Packaging Host Server Deployment -> {os.path.relpath(server_tar_path, BASE_DIR)}...{NC}")
-    with tarfile.open(server_tar_path, "w:gz") as tf:
+    with tarfile.open(server_tar_path, "w:gz", dereference=True) as tf:
         tf.add(SERVER_PACKAGE_DIR, arcname="ygo-server-package")
 
     server_size_kb = os.path.getsize(server_tar_path) / 1024

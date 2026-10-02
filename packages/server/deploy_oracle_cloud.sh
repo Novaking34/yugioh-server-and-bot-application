@@ -8,13 +8,13 @@
 # Automates:
 # 1. System packages & build prerequisites (Python 3, Docker, Git, Firewall)
 # 2. Oracle VM internal firewall & iptables opening for:
-#    - TCP 7911 (Duel Simulator Engine / EDOPro protocol)
-#    - TCP 7922 (Room Manager / WebSocket)
-#    - TCP 8000 (Web Card Catalog & Expansion Sync API)
-# 3. Python virtual environment & dependencies installation
-# 4. Custom card database initialization & card compilation
-# 5. Live simulator container configuration & startup
-# 6. 24/7 Systemd background service daemon setup & auto-start on boot
+#    - TCP 7911 (Duel Simulator Engine / EDOPro raw socket protocol)
+#    - TCP 7922 (Room Manager / WebSocket dashboard)
+#    - TCP 8000 (FastAPI Web Card Catalog & Expansion Sync API)
+# 3. Python virtual environment & dependency installation (pip install -e .)
+# 4. Custom card database initialization & compilation (CDB & Lua scripts)
+# 5. Live simulator container configuration & startup (via Docker Compose)
+# 6. 24/7 Systemd background service daemon setup & auto-start on machine boot
 #
 # Usage:
 #   chmod +x deploy_oracle_cloud.sh
@@ -23,7 +23,7 @@
 
 set -e
 
-# Visual styling
+# Visual formatting constants
 BOLD="\033[1m"
 GREEN="\033[0;32m"
 BLUE="\033[0;34m"
@@ -41,8 +41,30 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 REAL_USER="${SUDO_USER:-$USER}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
+# Canonical directory resolution supporting execution through symlinks
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+# Walk up to find project root (where .env or manage.sh resides)
+SEARCH_DIR="$SCRIPT_DIR"
+BASE_DIR=""
+for i in 1 2 3 4; do
+    if [ -f "$SEARCH_DIR/.env" ] || [ -f "$SEARCH_DIR/manage.sh" ]; then
+        BASE_DIR="$SEARCH_DIR"
+        break
+    fi
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+done
+
+if [ -z "$BASE_DIR" ]; then
+    BASE_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+fi
 
 echo -e "${BLUE}[*] Deploying for host user: ${GREEN}$REAL_USER${NC}"
 echo -e "${BLUE}[*] Repository base path:    ${GREEN}$BASE_DIR${NC}"
@@ -88,8 +110,8 @@ fi
 # -----------------------------------------------------------------------------
 echo ""
 echo -e "${BOLD}${BLUE}[2/6] Configuring Oracle Cloud OS Firewall rules...${NC}"
-# Oracle Cloud Ubuntu images drop non-port-22 incoming traffic by default in iptables INPUT chain.
-# We explicitly allow ports 7911, 7922, and 8000.
+# Oracle Cloud Ubuntu images drop incoming traffic by default in iptables INPUT chain.
+# Explicitly allow ports 22 (SSH), 7911 (Duel), 7922 (Room), and 8000 (API).
 PORTS=(22 7911 7922 8000)
 
 for PORT in "${PORTS[@]}"; do
@@ -131,6 +153,7 @@ sudo -u "$REAL_USER" "$VENV_DIR/bin/pip" install --upgrade pip
 if [ -f "$BASE_DIR/requirements.txt" ]; then
     sudo -u "$REAL_USER" "$VENV_DIR/bin/pip" install -r "$BASE_DIR/requirements.txt"
 fi
+sudo -u "$REAL_USER" "$VENV_DIR/bin/pip" install -e "$BASE_DIR"
 echo -e "${GREEN}[+] Python virtual environment ready.${NC}"
 
 # -----------------------------------------------------------------------------
@@ -146,7 +169,10 @@ echo -e "${GREEN}[+] Custom card catalog and expansions compiled.${NC}"
 # -----------------------------------------------------------------------------
 echo ""
 echo -e "${BOLD}${BLUE}[5/6] Registering 24/7 Systemd Services...${NC}"
-SYSTEMD_DIR="$BASE_DIR/production/main/systemd"
+SYSTEMD_DIR="$BASE_DIR/packages/server/systemd"
+if [ ! -d "$SYSTEMD_DIR" ]; then
+    SYSTEMD_DIR="$BASE_DIR/production/main/systemd"
+fi
 
 for SERVICE in ygo-simulator.service ygo-web.service ygo-bot.service; do
     if [ -f "$SYSTEMD_DIR/$SERVICE" ]; then

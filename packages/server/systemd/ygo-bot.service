@@ -1,3 +1,12 @@
+# =============================================================================
+# Systemd Service Unit: Yu-Gi-Oh! Discord Story & Duel Bot
+# =============================================================================
+# Manages The Great Kasutamaiza modular Discord bot daemon:
+# - Connects to Discord Gateway with message & command intents
+# - Synchronizes 21+ application slash commands (/) with target Guild
+# - Auto-restarts within 5 seconds in case of unhandled network dropouts
+# =============================================================================
+
 [Unit]
 Description=Yu-Gi-Oh! Discord Story & Duel Bot
 After=network.target ygo-simulator.service

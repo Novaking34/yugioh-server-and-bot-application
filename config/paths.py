@@ -52,6 +52,10 @@ SIMULATOR_BADWORDS_JSON: str = os.path.join(SIMULATOR_CONFIG_DIR, "badwords.json
 SIMULATOR_DIALOGUES_JSON: str = os.path.join(SIMULATOR_CONFIG_DIR, "dialogues.json")
 SIMULATOR_TIPS_JSON: str = os.path.join(SIMULATOR_CONFIG_DIR, "tips.json")
 
+# DNS & domain configuration folder and BIND zone file
+DNS_CONFIG_DIR: str = os.path.join(CONFIG_DIR, "dns")
+DNS_ZONE_FILE_PATH: str = os.path.join(DNS_CONFIG_DIR, "thelandofkustomazi.com.zone")
+
 # =============================================================================
 # 3. Top-Level Architectural Folders
 # =============================================================================
@@ -124,6 +128,7 @@ def get_all_runtime_directories() -> List[str]:
         CONFIG_DIR,
         BOT_CONFIG_DIR,
         CLIENT_CONFIG_DIR,
+        DNS_CONFIG_DIR,
         SIMULATOR_CONFIG_DIR,
         SIMULATOR_REPLAYS_DIR,
         EXPANSIONS_DIR,
