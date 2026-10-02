@@ -6,7 +6,7 @@ Provides a unified access point for all configuration layers:
 1. Canonical Filesystem Paths (config.paths)
 2. Strongly-Typed Environment & Network Settings (config.settings)
 3. Discord Bot Identity & Command Profiles (config.bot)
-4. Client JSON Connection Manifest (config/client.json)
+4. Client JSON Connection Manifest (config/client/config.json)
 5. Live Duel Simulator Settings (config/simulator/)
 =============================================================================
 """
@@ -14,7 +14,9 @@ Provides a unified access point for all configuration layers:
 from config.paths import (
     BASE_DIR,
     CONFIG_DIR,
+    CLIENT_CONFIG_DIR,
     CLIENT_CONFIG_PATH,
+    BOT_CONFIG_DIR,
     BOT_EXAMPLE_CONFIG_PATH,
     ENV_FILE_PATH,
     ENV_EXAMPLE_PATH,
@@ -95,7 +97,9 @@ __all__ = [
     # Path Constants
     "BASE_DIR",
     "CONFIG_DIR",
+    "CLIENT_CONFIG_DIR",
     "CLIENT_CONFIG_PATH",
+    "BOT_CONFIG_DIR",
     "BOT_EXAMPLE_CONFIG_PATH",
     "ENV_FILE_PATH",
     "ENV_EXAMPLE_PATH",
@@ -140,4 +144,5 @@ __all__ = [
     "get_all_runtime_directories",
     "ensure_directories",
 ]
+
 

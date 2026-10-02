@@ -31,8 +31,14 @@ if BASE_DIR not in sys.path:
 # 2. Configuration Subsystem Paths (config/)
 # =============================================================================
 CONFIG_DIR: str = os.path.join(BASE_DIR, "config")
-CLIENT_CONFIG_PATH: str = os.path.join(CONFIG_DIR, "client.json")
-BOT_EXAMPLE_CONFIG_PATH: str = os.path.join(CONFIG_DIR, "bot.example.json")
+
+# Client connection manifest folder & file
+CLIENT_CONFIG_DIR: str = os.path.join(CONFIG_DIR, "client")
+CLIENT_CONFIG_PATH: str = os.path.join(CLIENT_CONFIG_DIR, "config.json")
+
+# Discord bot configuration folder & template
+BOT_CONFIG_DIR: str = os.path.join(CONFIG_DIR, "bot")
+BOT_EXAMPLE_CONFIG_PATH: str = os.path.join(BOT_CONFIG_DIR, "config.example.json")
 
 # Environment secret files
 ENV_FILE_PATH: str = os.path.join(BASE_DIR, ".env")
@@ -116,6 +122,8 @@ def get_all_runtime_directories() -> List[str]:
     """
     return [
         CONFIG_DIR,
+        BOT_CONFIG_DIR,
+        CLIENT_CONFIG_DIR,
         SIMULATOR_CONFIG_DIR,
         SIMULATOR_REPLAYS_DIR,
         EXPANSIONS_DIR,
