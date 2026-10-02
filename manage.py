@@ -473,9 +473,12 @@ def cmd_package() -> None:
     # Step 2: Build Player Client Package (.zip)
     print(f"\n{BLUE}[*] Packaging Player Client Distribution -> {os.path.relpath(client_zip_path, BASE_DIR)}...{NC}")
     with zipfile.ZipFile(client_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        # Add client installer files from packages/client/
+        # Add client installer files from packages/client/ (excluding bytecode caches)
         for root, dirs, files in os.walk(CLIENT_PACKAGE_DIR):
-            for file in files:
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for file in sorted(files):
+                if file.endswith((".pyc", ".pyo")):
+                    continue
                 file_path = os.path.join(root, file)
                 arcname = os.path.join("ygo-client-package", os.path.relpath(file_path, CLIENT_PACKAGE_DIR))
                 zf.write(file_path, arcname)
