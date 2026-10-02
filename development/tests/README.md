@@ -30,6 +30,7 @@ Unlike conventional tests designed merely to pass with shallow assertions, this 
 | [`test_diagnostics.py`](file:///home/professorseanex/yugioh-server/development/tests/test_diagnostics.py) | Asserts that `debug_diagnostics.py` accurately catches DB corruption, scale limits, and bad YDK decks | `development/tools/debug_diagnostics.py` |
 | [`test_duelingbook_importer.py`](file:///home/professorseanex/yugioh-server/development/tests/test_duelingbook_importer.py) | Passcode range (`50,000,000` - `59,999,999`), collision retries, path traversal sanitization, FTS5 sync | `development/tools/duelingbook_importer.py` |
 | [`test_lua_generator.py`](file:///home/professorseanex/yugioh-server/development/tests/test_lua_generator.py) | Xyz/Link/Pendulum/Synchro procedures, HOPT limits, targeting/battle protection, luac syntax validation | `development/tools/lua_generator.py` |
+| [`test_production_logger.py`](file:///home/professorseanex/yugioh-server/development/tests/test_production_logger.py) | Multi-target rotating file logging, JSON telemetry mode, audit context manager, safe .env persistence | `production/main/logger.py`, `production/main/setup_wizard.py` |
 
 ---
 

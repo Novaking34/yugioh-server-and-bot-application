@@ -63,6 +63,8 @@ PROD_DIR: str = os.path.join(BASE_DIR, "production")
 DEV_DIR: str = os.path.join(BASE_DIR, "development")
 PACKAGES_DIR: str = os.path.join(BASE_DIR, "packages")
 DIST_DIR: str = os.path.join(BASE_DIR, "dist")
+LOGS_DIR: str = os.path.join(BASE_DIR, "logs")
+
 
 # =============================================================================
 # 4. Production Main: Host Server Services (production/main/)
@@ -144,6 +146,7 @@ def get_all_runtime_directories() -> List[str]:
         SERVER_PACKAGE_DIR,
         CLIENT_PACKAGE_DIR,
         DIST_DIR,
+        LOGS_DIR,
     ]
 
 

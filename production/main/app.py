@@ -25,21 +25,21 @@ import sys
 import re
 import webbrowser
 import sqlite3
+import shutil
 from typing import Optional, Callable
 
-# Resolve base directories
-try:
-    from config.paths import BASE_DIR, STORY_DB_PATH, ICON_PATH
-except ImportError:
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
-    ICON_PATH = os.path.join(BASE_DIR, "production", "main", "assets", "icon.png")
+# Centralized paths and logging
+from config.paths import BASE_DIR, STORY_DB_PATH, ICON_PATH
+from production.main.logger import get_logger, audit_operation
+
+logger = get_logger("platform_gui", service="GUI")
 
 MANAGE_PY = os.path.join(BASE_DIR, "manage.py")
 MANAGE_SH = os.path.join(BASE_DIR, "manage.sh")
 
 # Regex pattern to strip ANSI terminal escape sequences from shell output
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
 
 
 def clean_ansi(text: str) -> str:
@@ -228,9 +228,11 @@ class YugiohPlatformApp(tk.Tk):
         # Group 4: Diagnostics & Testing
         ttk.Label(controls_inner, text="QUALITY & DIAGNOSTICS", font=("Segoe UI", 8, "bold"), foreground="#8b949e").pack(anchor=tk.W, pady=(0, 6))
 
+        ttk.Button(controls_inner, text="🩺 Run Diagnostics", style="Action.TButton", command=lambda: self.run_cli(["diagnose"])).pack(fill=tk.X, pady=(0, 6))
         ttk.Button(controls_inner, text="🧪 Run Unit Tests", style="Action.TButton", command=lambda: self.run_cli(["test"])).pack(fill=tk.X, pady=(0, 6))
         ttk.Button(controls_inner, text="🔍 Validate Lua Scripts", style="Action.TButton", command=lambda: self.run_cli(["validate-lua"])).pack(fill=tk.X, pady=(0, 6))
         ttk.Button(controls_inner, text="📊 Refresh Status", style="Action.TButton", command=self.refresh_all_status).pack(fill=tk.X, pady=(0, 6))
+
 
         # Right Column: Real-Time Console Log
         console_container = tk.Frame(body_frame, bg=self.surface_color, highlightbackground=self.border_color, highlightthickness=1)
@@ -338,6 +340,7 @@ class YugiohPlatformApp(tk.Tk):
         Cross-platform compatible on Windows, macOS, and Linux.
         """
         cmd = [sys.executable, MANAGE_PY] + args
+        logger.info(f"GUI initiating CLI operation: python manage.py {' '.join(args)}")
 
         def worker():
             self.after(0, lambda: self.log_message(f"\n$ python manage.py {' '.join(args)}"))
@@ -359,6 +362,7 @@ class YugiohPlatformApp(tk.Tk):
                 proc.stdout.close()
                 proc.wait()
 
+                logger.info(f"CLI command 'python manage.py {' '.join(args)}' exited with code {proc.returncode}")
                 self.after(0, lambda: self.log_message(f"[Process finished with exit code {proc.returncode}]"))
                 self.after(0, self.refresh_quick_stats)
 
@@ -366,6 +370,7 @@ class YugiohPlatformApp(tk.Tk):
                     self.after(0, on_complete)
 
             except Exception as e:
+                logger.error(f"GUI failed to execute command {' '.join(args)}: {e}", exc_info=True)
                 self.after(0, lambda: self.log_message(f"[-] Execution error: {e}"))
 
         threading.Thread(target=worker, daemon=True).start()
@@ -405,14 +410,16 @@ class YugiohPlatformApp(tk.Tk):
         self.run_cli(["bot"])
 
     def open_docker_desktop(self):
-        """Launches the Docker Desktop GUI."""
+        """Launches the Docker Desktop GUI across Windows, macOS, or Linux."""
         self.log_message("[*] Launching Docker Desktop application...")
-        desktop_bin = "/opt/docker-desktop/bin/docker-desktop"
-        if os.path.exists(desktop_bin):
+        desktop_bin = shutil.which("docker-desktop") or "/opt/docker-desktop/bin/docker-desktop"
+        if os.path.exists(desktop_bin) or shutil.which("docker-desktop"):
             subprocess.Popen([desktop_bin], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.log_message("[+] Docker Desktop GUI launched.")
+            logger.info("Launched Docker Desktop GUI.")
         else:
-            self.log_message("[-] Docker Desktop binary not found at /opt/docker-desktop/bin/docker-desktop.")
+            self.log_message("[-] Docker Desktop binary not found in system PATH.")
+            logger.warning("Docker Desktop binary not found.")
 
     def import_json_dialog(self):
         """Opens a file dialog to pick a Duelingbook JSON export and imports it."""
@@ -427,9 +434,12 @@ class YugiohPlatformApp(tk.Tk):
     def open_setup_wizard(self):
         """Opens the step-by-step Server Setup Wizard."""
         try:
-            from setup_wizard import ServerSetupWizard
-            ServerSetupWizard(self)
+            from production.main.setup_wizard import build_gui_wizard
+            WizardClass = build_gui_wizard()
+            WizardClass(self)
+            logger.info("Opened Server Setup Wizard from GUI.")
         except Exception as e:
+            logger.error(f"Error opening Setup Wizard: {e}", exc_info=True)
             self.log_message(f"[-] Error opening Setup Wizard: {e}")
 
     def refresh_all_status(self):
