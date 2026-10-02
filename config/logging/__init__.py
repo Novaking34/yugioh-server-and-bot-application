@@ -18,6 +18,12 @@ from .logger import (
     ColoredConsoleFormatter,
     StructuredJSONFormatter,
 )
+from .log_tool import (
+    get_log_stats,
+    tail_log,
+    query_logs,
+    clean_logs,
+)
 
 __all__ = [
     "get_logger",
@@ -25,4 +31,8 @@ __all__ = [
     "log_diagnostic_snapshot",
     "ColoredConsoleFormatter",
     "StructuredJSONFormatter",
+    "get_log_stats",
+    "tail_log",
+    "query_logs",
+    "clean_logs",
 ]

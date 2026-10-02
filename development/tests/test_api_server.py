@@ -39,6 +39,19 @@ def test_dashboard_endpoint():
     assert "Yu-Gi-Oh!" in response.text
 
 
+def test_status_and_health_endpoints():
+    """Verify /api/status and /api/health endpoints return telemetry with database and expansion state."""
+    for endpoint in ["/api/status", "/api/health"]:
+        response = client.get(endpoint)
+        assert response.status_code == 200, f"Endpoint {endpoint} failed with {response.status_code}"
+        data = response.json()
+        assert data["status"] in ("healthy", "degraded")
+        assert data["service"] == "WEB_CATALOG"
+        assert "database" in data
+        assert "expansions" in data
+        assert isinstance(data["database"]["cards"], int)
+
+
 # =============================================================================
 # 2. Card Catalog & Search API Tests
 # =============================================================================

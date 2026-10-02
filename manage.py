@@ -586,6 +586,13 @@ def cmd_diagnose(extra_args: Optional[List[str]] = None) -> int:
     return print_diagnostic_report(results)
 
 
+def cmd_logs(extra_args: Optional[List[str]] = None) -> None:
+    """Inspect and manage multi-target platform logs via config.logging.log_tool."""
+    from config.logging import log_tool
+    sys.argv = ["log_tool"] + (extra_args if extra_args else ["stats"])
+    log_tool.main()
+
+
 # =============================================================================
 # SECTION 9: CLI Argument Parser & Router
 # =============================================================================
@@ -603,6 +610,7 @@ Platform Commands:
   restart               Restart live simulator container
   sync                  Rebuild simulator custom_cards.cdb and Lua effect scripts
   diagnose [args...]    Run system diagnostics and failpoint inspection tool
+  logs [subcommand...]  Inspect logs (stats, tail -s <service>, query, clean)
   import <file.json>    Import Duelingbook JSON cards into database and simulator
   export-decks          Export character story decks to standard .ydk format
   export-player <uid>   Export a Discord player's active deck to .ydk format
@@ -638,6 +646,8 @@ Platform Commands:
         cmd_sync()
     elif cmd in ("diagnose", "diag", "debug"):
         sys.exit(cmd_diagnose(extra))
+    elif cmd in ("logs", "log"):
+        cmd_logs(extra)
     elif cmd == "import":
         cmd_import(extra[0] if extra else "")
     elif cmd == "export-decks":

@@ -151,3 +151,37 @@ def test_save_env_values_preserves_unrelated_settings():
     finally:
         if os.path.exists(env_path):
             os.remove(env_path)
+
+
+# =============================================================================
+# 5. Log Inspector & Telemetry Tool Tests
+# =============================================================================
+
+def test_log_tool_stats_tail_and_query():
+    """Verify that log_tool functions accurately inspect logs and return query results."""
+    from config.logging import get_log_stats, tail_log, query_logs
+
+    # Log an identifiable probe message
+    unique_keyword = "probe_telemetry_event_98765"
+    test_logger = get_logger("probe_logger", service="TOOLS")
+    test_logger.info(f"Special probe: {unique_keyword}")
+    for h in test_logger.handlers:
+        h.flush()
+
+    # 1. Stats test
+    stats = get_log_stats()
+    assert isinstance(stats, list)
+    assert len(stats) > 0, "Expected at least 1 log file in stats"
+    filenames = [s["filename"] for s in stats]
+    assert "combined.log" in filenames
+
+    # 2. Tail test
+    tail_entries = tail_log(service="tools", lines=10)
+    assert isinstance(tail_entries, list)
+    assert any(unique_keyword in line for line in tail_entries)
+
+    # 3. Query test
+    query_results = query_logs(keyword=unique_keyword, limit=5)
+    assert len(query_results) >= 1
+    assert any(unique_keyword in r["raw"] for r in query_results)
+

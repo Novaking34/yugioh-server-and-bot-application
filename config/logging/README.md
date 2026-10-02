@@ -73,3 +73,24 @@ Configure logging behavior via `.env` or system environment:
 
 * `LOG_LEVEL`: Minimum severity to log (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). Default: `INFO`.
 * `LOG_FORMAT`: Format style (`text` with ANSI colors or `json` for automated observability pipelines). Default: `text`.
+
+---
+
+## 🛠️ Log Management & Telemetry CLI Tool (`log_tool.py`)
+
+A dedicated CLI management tool is included in `config/logging/log_tool.py`:
+
+```bash
+# View storage statistics, line counts, and error counts across all log files:
+python3 -m config.logging.log_tool stats
+
+# Tail the most recent lines of a service log:
+python3 -m config.logging.log_tool tail --service web -n 50
+
+# Query logs filtering by severity level, service, or keyword:
+python3 -m config.logging.log_tool query --level ERROR --limit 25
+python3 -m config.logging.log_tool query --keyword "passcode"
+
+# Safely truncate all log files (free up disk space):
+python3 -m config.logging.log_tool clean --confirm
+```

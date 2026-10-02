@@ -37,14 +37,16 @@ except ImportError:
     DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
     EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
     SCRIPTS_DIR = os.path.join(EXPANSIONS_DIR, "scripts")
-    STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
-    TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
-    TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
-    CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
-    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
-    EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
 
 DB_PATH = STORY_DB_PATH
+
+# Centralized platform logging
+try:
+    from config.logging import get_logger
+    logger = get_logger("web_api", service="WEB")
+except ImportError:
+    import logging
+    logger = logging.getLogger("web_api")
 
 # Import modular database helpers and Pydantic models
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -82,6 +84,44 @@ def serve_dashboard():
         with open(template_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse("<h2>Error: Dashboard template not found.</h2>", status_code=500)
+
+
+@app.get("/api/status", summary="Server Health & Subsystem Telemetry")
+@app.get("/api/health", summary="Health Check Alias")
+def get_server_status() -> Dict[str, Any]:
+    """Returns platform status, database connectivity, and expansion statistics."""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM custom_cards")
+        card_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM decks")
+        deck_count = cur.fetchone()[0]
+        conn.close()
+        db_ok = True
+    except Exception as e:
+        logger.error(f"Health check database query failed: {e}")
+        card_count = 0
+        deck_count = 0
+        db_ok = False
+
+    cdb_ready = os.path.exists(CDB_OUTPUT_PATH)
+    cdb_size = os.path.getsize(CDB_OUTPUT_PATH) if cdb_ready else 0
+
+    return {
+        "status": "healthy" if db_ok else "degraded",
+        "service": "WEB_CATALOG",
+        "version": "1.2.0",
+        "database": {
+            "connected": db_ok,
+            "cards": card_count,
+            "decks": deck_count,
+        },
+        "expansions": {
+            "cdb_available": cdb_ready,
+            "cdb_size_bytes": cdb_size,
+        }
+    }
 
 
 # =============================================================================
