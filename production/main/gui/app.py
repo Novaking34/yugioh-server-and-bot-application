@@ -16,8 +16,18 @@ Provides point-and-click control over:
 =============================================================================
 """
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+try:
+    import tkinter as tk
+    from tkinter import ttk, filedialog, messagebox
+    TKINTER_AVAILABLE = True
+    _BaseTk = tk.Tk
+except ImportError:
+    tk = None  # type: ignore
+    ttk = None  # type: ignore
+    filedialog = None  # type: ignore
+    messagebox = None  # type: ignore
+    TKINTER_AVAILABLE = False
+    _BaseTk = object  # type: ignore
 import subprocess
 import threading
 import os
@@ -47,12 +57,18 @@ def clean_ansi(text: str) -> str:
     return ANSI_ESCAPE.sub('', text)
 
 
-class YugiohPlatformApp(tk.Tk):
+class YugiohPlatformApp(_BaseTk):
     """
     Main desktop window application for managing the Yu-Gi-Oh! server platform.
     """
 
     def __init__(self):
+        if not TKINTER_AVAILABLE:
+            raise RuntimeError(
+                "Tkinter is not installed or available on this system.\n"
+                "- On Ubuntu/Debian: sudo apt-get install -y python3-tk\n"
+                "- On headless servers/VPS: use the CLI tools (e.g. ./manage.sh setup --cli)"
+            )
         super().__init__()
 
         self.title("Yu-Gi-Oh! Platform Manager")
@@ -449,6 +465,12 @@ class YugiohPlatformApp(tk.Tk):
 
 
 def main():
+    if not TKINTER_AVAILABLE:
+        print("[!] Error: Tkinter desktop GUI library is not installed on this system.")
+        print("    - On Linux/Ubuntu: sudo apt-get install -y python3-tk")
+        print("    - For headless environments, manage the server via CLI:")
+        print("      ./manage.sh status | ./manage.sh setup --cli | ./manage.sh diagnose")
+        sys.exit(1)
     app = YugiohPlatformApp()
     app.mainloop()
 

@@ -11,7 +11,11 @@ Encapsulates administrative desktop applications and setup wizards:
 =============================================================================
 """
 
-from .app import YugiohPlatformApp
+try:
+    from .app import YugiohPlatformApp
+except Exception:
+    YugiohPlatformApp = None  # type: ignore
+
 from .setup_wizard import (
     build_gui_wizard,
     run_cli_wizard,
