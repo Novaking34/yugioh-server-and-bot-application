@@ -1,6 +1,6 @@
 # 🧪 Automated Diagnostic Test Suite & Debugging Framework (`development/tests/`)
 
-The `development/tests/` directory provides an automated diagnostic testing and debugging suite powered by **Pytest**. 
+The `development/tests/` directory provides an automated diagnostic testing and debugging suite powered by **Pytest**.
 
 Unlike conventional tests designed merely to pass with shallow assertions, this suite is deliberately engineered as an **actionable debugging and failpoint isolation system**. Tests assert boundary limits, bitwise orthogonality, schema integrity, and security vulnerabilities—surfacing clear diagnostic messages when failpoints occur.
 
@@ -75,15 +75,18 @@ pytest -k "cdb or lua or bitmask"
 ## 🔍 Key Diagnostic Assertions & Failpoints
 
 ### A. Binary Encoding & Bitwise Orthogonality
+
 * **Primary Types**: Asserts that `TYPE_MONSTER`, `TYPE_SPELL`, and `TYPE_TRAP` share 0 overlapping bits.
 * **Link Compass Geometry**: Asserts that the 8 compass arrows sum to octal `0o757` (`495` dec). In ocgcore's 3x3 keypad layout, center position `5` (octal `0o020` / `16` dec) is omitted because a card cannot point to itself.
 * **Pendulum Scales**: Asserts that Left and Right Scales (`0` - `13`) pack into bits 24-31 and 16-23 without colliding with the Level bits (0-15).
 
 ### B. Security & Input Sanitization
+
 * **SQL Injection**: Asserts that `/api/cards/search` safely handles SQL injection attempts (`' OR 1=1 --`) without syntax errors or data exfiltration.
 * **Path Traversal**: Asserts that `sanitize_filename()` strips `../` and dangerous filesystem characters (`<>:"/\\|?*`).
 
 ### C. ocgcore Lua Effect Generation & Syntax
+
 * **Summoning Procedures**: Asserts generation of `Xyz.AddProcedure`, `Link.AddProcedure`, `Synchro.AddProcedure`, and `Pendulum.AddProcedure`.
 * **Protection Effects**: Asserts continuous targeting immunity (`EFFECT_CANNOT_BE_EFFECT_TARGET`) and battle destruction protection (`EFFECT_INDESTRUCTABLE_BATTLE`).
 * **Bytecode Compilation**: Validates generated Lua scripts with `luac -p` to guarantee syntax correctness before deployment.
