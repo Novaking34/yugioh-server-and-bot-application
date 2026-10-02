@@ -10,14 +10,12 @@ local s, id = GetID()
 function s.initial_effect(c)
 	Link.AddProcedure(c,aux.FilterBoolFunctionEx(Card.IsType,TYPE_EFFECT),3,4)
 	c:EnableReviveLimit()
-	-- Effect 1: Cannot be destroyed by battle with monsters summoned fr...
+	-- Effect 1: Cannot be destroyed by battle
 	local e1=Effect.CreateEffect(c)
-	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetCategory(CATEGORY_DESTROY)
-	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetRange(LOCATION_MZONE)
-	e1:SetTarget(s.target1)
-	e1:SetOperation(s.operation1)
+	e1:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
+	e1:SetValue(1)
 	c:RegisterEffect(e1)
 
 	-- Effect 2: (Quick Effect): You can target 1 card in your opponent'...
@@ -47,13 +45,6 @@ function s.initial_effect(c)
 	local e3b=e3:Clone()
 	e3b:SetCode(EVENT_SPSUMMON_SUCCESS)
 	c:RegisterEffect(e3b)
-end
-
-function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation1(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
 end
 
 function s.target2(e,tp,eg,ep,ev,re,r,rp,chk,chkc)

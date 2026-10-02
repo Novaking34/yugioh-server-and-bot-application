@@ -593,6 +593,13 @@ def cmd_logs(extra_args: Optional[List[str]] = None) -> None:
     log_tool.main()
 
 
+def cmd_tracker(extra_args: Optional[List[str]] = None) -> None:
+    """Manage master card tracker, Google Sheets export, and artwork downloads."""
+    from development.tools import tracker_sync
+    sys.argv = ["tracker_sync"] + (extra_args if extra_args else ["verify"])
+    tracker_sync.main()
+
+
 # =============================================================================
 # SECTION 9: CLI Argument Parser & Router
 # =============================================================================
@@ -611,6 +618,7 @@ Platform Commands:
   sync                  Rebuild simulator custom_cards.cdb and Lua effect scripts
   diagnose [args...]    Run system diagnostics and failpoint inspection tool
   logs [subcommand...]  Inspect logs (stats, tail -s <service>, query, clean)
+  tracker [action...]   Manage Google Sheets tracker (upgrade, import, download-images, verify)
   import <file.json>    Import Duelingbook JSON cards into database and simulator
   export-decks          Export character story decks to standard .ydk format
   export-player <uid>   Export a Discord player's active deck to .ydk format
@@ -648,6 +656,8 @@ Platform Commands:
         sys.exit(cmd_diagnose(extra))
     elif cmd in ("logs", "log"):
         cmd_logs(extra)
+    elif cmd in ("tracker", "sheets"):
+        cmd_tracker(extra)
     elif cmd == "import":
         cmd_import(extra[0] if extra else "")
     elif cmd == "export-decks":

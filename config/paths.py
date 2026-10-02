@@ -96,6 +96,8 @@ PROD_SHARED_DIR: str = os.path.join(PROD_DIR, "shared")
 EXPANSIONS_DIR: str = os.path.join(PROD_SHARED_DIR, "expansions")
 CDB_OUTPUT_PATH: str = os.path.join(EXPANSIONS_DIR, "custom_cards.cdb")
 SCRIPTS_DIR: str = os.path.join(EXPANSIONS_DIR, "scripts")
+PICS_DIR: str = os.path.join(EXPANSIONS_DIR, "pics")
+THUMBNAILS_DIR: str = os.path.join(PICS_DIR, "thumbnail")
 DECKS_DIR: str = os.path.join(PROD_SHARED_DIR, "decks")
 
 # =============================================================================
@@ -115,6 +117,7 @@ CHECKSUMS_PATH: str = os.path.join(DIST_DIR, "SHA256SUMS.txt")
 TOOLS_DIR: str = os.path.join(DEV_DIR, "tools")
 TESTS_DIR: str = os.path.join(DEV_DIR, "tests")
 DATABASE_DIR: str = os.path.join(DEV_DIR, "database")
+TRACKERS_DIR: str = os.path.join(DEV_DIR, "trackers")
 SCHEMA_PATH: str = os.path.join(DATABASE_DIR, "schema.sql")
 SEED_SCRIPT_PATH: str = os.path.join(DATABASE_DIR, "seed_story_data.py")
 DOCS_DIR: str = os.path.join(DEV_DIR, "docs")
@@ -135,12 +138,15 @@ def get_all_runtime_directories() -> List[str]:
         SIMULATOR_REPLAYS_DIR,
         EXPANSIONS_DIR,
         SCRIPTS_DIR,
+        PICS_DIR,
+        THUMBNAILS_DIR,
         DECKS_DIR,
         TEMPLATES_DIR,
         ASSETS_DIR,
         TOOLS_DIR,
         TESTS_DIR,
         DATABASE_DIR,
+        TRACKERS_DIR,
         DOCS_DIR,
         PACKAGES_DIR,
         SERVER_PACKAGE_DIR,

@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS custom_cards (
     signature_character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
     story_significance TEXT,                 -- Role (e.g. "Ace Card", "Boss Monster", "Starter")
     
+    -- Card Set, Packaging & Release Tracker Fields
+    set_number TEXT,                         -- Card code in expansion set (e.g. "TLOK-001")
+    set_code TEXT,                           -- Expansion set abbreviation (e.g. "TLOK")
+    rarity TEXT DEFAULT 'Common',            -- Ultra Rare, Secret Rare, Super Rare, Common
+    archetype TEXT,                          -- Core Archetype (e.g. "Kasutamaiza")
+    banlist_status TEXT DEFAULT 'Unlimited', -- Unlimited, Semi-Limited, Limited, Forbidden
+    playtesting_status TEXT DEFAULT 'In Testing', -- In Testing, Approved, Needs Revision
+    local_image_path TEXT,                   -- Local image file path (e.g. "production/shared/expansions/pics/50000101.jpg")
+    script_file TEXT,                        -- Lua effect script path (e.g. "c50000101.lua")
+    script_status TEXT DEFAULT 'Draft',      -- Implemented, Draft, Stub, Vanilla
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

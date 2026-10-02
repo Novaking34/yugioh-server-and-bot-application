@@ -237,11 +237,11 @@ class PlatformDiagnostics:
                     elif (attr_val & (attr_val - 1)) != 0:
                         res.add_failpoint(f"{prefix}: Attribute value {hex(attr_val)} is not a single-bit power of 2.")
 
-                # 5. ATK / DEF boundary check
+                # 5. ATK / DEF boundary check (-2 represents ? in YGOPro)
                 if ctype and ctype.lower() == "monster":
-                    if atk is not None and (atk < -1 or atk > 99999):
+                    if atk is not None and (atk < -2 or atk > 99999):
                         res.add_warning(f"{prefix}: Unusual ATK value: {atk}.")
-                    if defense is not None and "link" not in (csub or "").lower() and (defense < -1 or defense > 99999):
+                    if defense is not None and "link" not in (csub or "").lower() and (defense < -2 or defense > 99999):
                         res.add_warning(f"{prefix}: Unusual DEF value: {defense}.")
 
         except Exception as e:
