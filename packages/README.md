@@ -12,15 +12,18 @@ packages/
 ├── server/                            # Server & Host 24/7 Installation Package
 │   ├── README.md                      # Comprehensive server deployment & operations guide
 │   ├── deploy_oracle_cloud.sh         # Automated turn-key installer for Oracle Cloud / Ubuntu VM
-│   ├── docker-compose.yml             # Symlink to project root docker-compose.yml
-│   ├── thelandofkustomazi.com.zone    # Symlink to config/dns/thelandofkustomazi.com.zone
-│   ├── setup_cloudflare_tunnel.sh     # Convenience symlink to scripts/setup_cloudflare_tunnel.sh
-│   ├── update_duckdns.sh              # Convenience symlink to scripts/update_duckdns.sh
+│   ├── docker-compose.yml             # Container orchestration manifest (symlink to root)
+│   ├── start_server.bat               # Windows server host launcher & service controller
+│   ├── start_server.sh                # Linux/macOS local server host launcher & controller
 │   ├── scripts/                       # Dedicated networking & DNS automation scripts
-│   │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel setup & management
-│   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS auto-updater
+│   │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel manager (Linux/macOS)
+│   │   ├── setup_cloudflare_tunnel.bat# Cloudflare Tunnel manager (Windows Batch)
+│   │   ├── setup_cloudflare_tunnel.ps1# Cloudflare Tunnel manager (Windows PowerShell)
+│   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS auto-updater (Linux/macOS)
+│   │   ├── update_duckdns.bat         # DuckDNS dynamic DNS auto-updater (Windows Batch)
+│   │   ├── update_duckdns.ps1         # DuckDNS dynamic DNS auto-updater (Windows PowerShell)
 │   │   └── README.md                  # Scripts documentation and CLI flags guide
-│   └── systemd/                       # 24/7 background systemd services
+│   └── systemd/                       # 24/7 background systemd services (Linux)
 │       ├── install_services.sh        # Automated systemd service installer
 │       ├── ygo-simulator.service      # Duel engine container unit (TCP 7911/7922)
 │       ├── ygo-web.service            # FastAPI web catalog & REST API (Port 8000)

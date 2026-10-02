@@ -1,1 +1,0 @@
-scripts/update_duckdns.sh

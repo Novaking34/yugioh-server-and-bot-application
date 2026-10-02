@@ -425,16 +425,28 @@ def cmd_tunnel(extra: Optional[List[str]] = None) -> None:
     """Launch or manage the Cloudflare HTTPS Tunnel for remote card syncing.
     
     Args:
-        extra (Optional[List[str]]): Additional arguments forwarded to setup_cloudflare_tunnel.sh.
+        extra (Optional[List[str]]): Additional arguments forwarded to setup_cloudflare_tunnel script.
     """
-    tunnel_script = os.path.join(SERVER_PACKAGE_DIR, "setup_cloudflare_tunnel.sh")
+    scripts_dir = os.path.join(SERVER_PACKAGE_DIR, "scripts")
+    if sys.platform == "win32":
+        tunnel_script = os.path.join(scripts_dir, "setup_cloudflare_tunnel.bat")
+        if not os.path.exists(tunnel_script):
+            tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.bat")
+    else:
+        tunnel_script = os.path.join(scripts_dir, "setup_cloudflare_tunnel.sh")
+        if not os.path.exists(tunnel_script):
+            tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.sh")
+
     if not os.path.exists(tunnel_script):
-        tunnel_script = os.path.join(PROD_MAIN_DIR, "setup_cloudflare_tunnel.sh")
-    if not os.path.exists(tunnel_script):
-        print(f"{RED}[-] Error: Cloudflare Tunnel script not found.{NC}")
+        print(f"{RED}[-] Error: Cloudflare Tunnel script not found at {tunnel_script}.{NC}")
         sys.exit(1)
+
     args = [tunnel_script] + (extra or [])
-    os.execv(tunnel_script, args)
+    if sys.platform == "win32":
+        res = subprocess.run(args)
+        sys.exit(res.returncode)
+    else:
+        os.execv(tunnel_script, args)
 
 
 # =============================================================================
