@@ -1,15 +1,58 @@
+# =============================================================================
+# Yu-Gi-Oh! Live Duel Simulator & Server Orchestration
+# =============================================================================
+# Docker Compose configuration for the automated ocgcore rule-enforcing
+# duel engine container.
+#
+# Container Responsibilities:
+# 1. Listen for raw TCP game client connections on Port 7911 (EDOPro / YGOPro).
+# 2. Host the interactive Web Room Manager on Port 7922.
+# 3. Mount live custom card expansions (CDB SQLite database and Lua effect scripts).
+# 4. Mount character and player decklists (.ydk files).
+# 5. Persist recorded duel replays (.yrp) to disk.
+# =============================================================================
+
 services:
   ygoserver:
+    # Docker Hub image repository; defaults to professorseanex/ygoserver:latest
+    # Override by setting DOCKER_IMAGE in your .env file if running custom builds.
     image: ${DOCKER_IMAGE:-professorseanex/ygoserver:latest}
     container_name: ygo-simulator-server
+    
+    # 24/7 Resilience: Automatically restart container if host reboots or process crashes
     restart: unless-stopped
+
+    # Network Ports Mapping:
+    # - Port 7911 (TCP): Primary game client duel socket (EDOPro / Project Ignis / YGOPro)
+    #   [NOTE]: When routing through firewalls (Cloudflare/OCI), this port MUST be RAW TCP
+    #           (DNS-Only / Grey Cloud in Cloudflare, NOT HTTP-proxied).
+    # - Port 7922 (TCP): Web Room Manager dashboard & WebSocket spectator feed.
     ports:
       - "7911:7911"
       - "7922:7922"
+
+    # Volume Mounts (Host Path -> Container Path):
     volumes:
-      - ./production/main/simulator/config:/ygoserver/config
-      - ./production/shared/expansions:/ygoserver/ygopro/expansions
-      - ./production/shared/decks:/ygoserver/decks
-      - ./production/main/simulator/replays:/ygoserver/replays
+      # Simulator configuration: room parameters, chat filters, and admin credentials
+      - ./production/main/simulator/config:/ygoserver/config:rw
+      
+      # Custom Card Expansions: compiled custom_cards.cdb and generated c<id>.lua scripts
+      - ./production/shared/expansions:/ygoserver/ygopro/expansions:ro
+      
+      # Shared & Story Decks: character deck profiles (.ydk format)
+      - ./production/shared/decks:/ygoserver/decks:ro
+      
+      # Duel Replays: persisted binary replay files (.yrp) generated after each match
+      - ./production/main/simulator/replays:/ygoserver/replays:rw
+
+    # Runtime Environment Variables
     environment:
       - TZ=UTC
+
+    # Production Logging Safeguards:
+    # Limit container log growth to prevent disk saturation on 24/7 cloud hosts (OCI Free Tier)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

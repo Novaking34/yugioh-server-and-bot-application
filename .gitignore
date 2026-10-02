@@ -1,12 +1,28 @@
 # =============================================================================
-# Python & Bytecode
+# Yu-Gi-Oh! Platform - Git Ignore Rules
 # =============================================================================
+# Protects repository integrity by excluding:
+# - Python bytecode and compiled C extensions
+# - Virtual environments and package build directories
+# - Release archives in dist/
+# - Environment files, Discord bot tokens, and sensitive secrets
+# - OS-specific metadata and IDE workspace settings
+# - Runtime log files and large binary duel replays (.yrp)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Python Bytecode, Caching & Compiled Binaries
+# -----------------------------------------------------------------------------
 __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# -----------------------------------------------------------------------------
+# 2. Package Builds, Distributions & Setuptools Artifacts
+# -----------------------------------------------------------------------------
 build/
 develop-eggs/
 dist/
@@ -22,33 +38,49 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.whl
 
-# Virtual Environments
+# -----------------------------------------------------------------------------
+# 3. Python Virtual Environments
+# -----------------------------------------------------------------------------
 venv/
 env/
 ENV/
 .venv/
+env.bak/
+venv.bak/
 
-# Testing & Cache
+# -----------------------------------------------------------------------------
+# 4. Automated Testing, Coverage & Linters
+# -----------------------------------------------------------------------------
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
 .nox/
+.ruff_cache/
+.mypy_cache/
 
-# =============================================================================
-# Secrets & Environment Configurations
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 5. Secrets, Tokens & Environment Configurations
+# -----------------------------------------------------------------------------
 .env
 .env.*
 *.token
+*.pem
+*.key
 discord_bot/config.json
 production/main/discord_bot/config.json
 
-# =============================================================================
-# Operating System & IDE Files
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 6. Operating System & Editor Metadata
+# -----------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 .idea/
@@ -56,10 +88,12 @@ desktop.ini
 *.swp
 *.swo
 *~
+*.bak
 
-# =============================================================================
-# Runtime Logs & Duel Replays
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 7. Runtime Server Logs & Match Replays
+# -----------------------------------------------------------------------------
 *.log
+logs/
 production/main/simulator/replays/*.yrp
 !production/main/simulator/replays/.gitkeep

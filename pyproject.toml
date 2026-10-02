@@ -1,4 +1,12 @@
+# =============================================================================
+# Yu-Gi-Oh! Platform - Modern Python Packaging Metadata (PEP 517 / 518 / 621)
+# =============================================================================
+# Configures declarative package specifications, build backend, dependencies,
+# entry points, and test runner configurations for pip and modern build tools.
+# =============================================================================
+
 [build-system]
+# Standard build requirements for building wheels and editable installs
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -11,8 +19,23 @@ authors = [
     { name = "professorseanex" }
 ]
 requires-python = ">=3.9"
-keywords = ["yugioh", "simulator", "discord-bot", "fastapi", "duelingbook", "edopro"]
+keywords = [
+    "yugioh",
+    "simulator",
+    "discord-bot",
+    "fastapi",
+    "duelingbook",
+    "edopro",
+    "ocgcore",
+    "lore",
+]
+
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Topic :: Games/Entertainment :: Board Games",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -20,28 +43,54 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
-    "Topic :: Games/Entertainment :: Board Games",
 ]
+
+# Core platform dependencies required for runtime operation
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn>=0.30.0",
-    "pydantic>=2.8.0",
-    "python-dotenv>=1.0.0",
-    "httpx>=0.27.0",
-    "requests>=2.31.0",
-    "discord.py>=2.3.0",
-    "aiosqlite>=0.20.0",
-    "pillow>=10.0.0",
+    "fastapi>=0.115.0",      # Interactive card catalog and REST API server
+    "uvicorn>=0.30.0",      # Production ASGI web server engine
+    "pydantic>=2.8.0",      # Data validation models for card lore and decks
+    "python-dotenv>=1.0.0",  # Automated environment variable resolution
+    "httpx>=0.27.0",        # Async HTTP client for test suite and API requests
+    "requests>=2.31.0",     # HTTP library for client card sync downloads
+    "discord.py>=2.3.0",    # Modular Discord bot runner and slash command framework
+    "aiosqlite>=0.20.0",    # Asynchronous SQLite driver for non-blocking bot queries
+    "pillow>=10.0.0",       # Image processing library for card thumbnails
 ]
 
 [project.optional-dependencies]
+# Dependencies for running unit and integration test suites
 dev = [
     "pytest>=8.0.0",
 ]
 
+[project.urls]
+# Official repository and web URLs
+"Homepage" = "https://thelandofkustomazi.com"
+"Repository" = "https://github.com/Novaking34/yugioh-server-and-bot-application"
+"Bug Tracker" = "https://github.com/Novaking34/yugioh-server-and-bot-application/issues"
+"Documentation" = "https://github.com/Novaking34/yugioh-server-and-bot-application/blob/master/README.md"
+
 [project.scripts]
+# Command line entry point installed into Python's bin/ or Scripts/
 ygo-manage = "manage:main"
 
 [tool.setuptools]
+# Expose the master controller as a top-level module
 py-modules = ["manage"]
-packages = ["config", "development", "production", "packages"]
+# Package discovery directories
+packages = [
+    "config",
+    "development",
+    "production",
+    "packages",
+]
+
+[tool.pytest.ini_options]
+# Pytest test discovery settings
+minversion = "8.0"
+testpaths = ["development/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

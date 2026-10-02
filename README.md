@@ -195,14 +195,16 @@ A responsive web dashboard runs locally at:
 
 ```text
 /home/professorseanex/yugioh-server/
+├── .env                               # Environment secrets & credentials (local/ignored)
+├── .gitignore                         # Git exclusion rules for artifacts & secrets
+├── README.md                          # Master platform documentation & guide
+├── requirements.txt                   # Platform Python dependencies
+├── manage.sh                          # Master CLI controller & automated installer (Linux/macOS)
+├── manage.bat                         # Master CLI controller wrapper (Windows)
+├── manage.py                          # Master Python controller & orchestration engine
 ├── pyproject.toml                     # Modern PEP 517/518 Python packaging metadata
 ├── setup.py                           # Setuptools installation script (pip install -e .)
-├── README.md                          # Platform Documentation & Guide
-├── requirements.txt                   # Platform Python Dependencies
-├── manage.sh                          # Master CLI Controller & Installer Wrapper
-├── manage.py                          # Master Python Controller Engine
 ├── docker-compose.yml                 # Live Duel Simulator Container (Port 7911 / 7922)
-├── thelandofkustomazi.com.zone        # Symlink -> packages/server/thelandofkustomazi.com.zone
 ├── config/
 │   └── paths.py                       # Centralized Path Resolution Module
 ├── packages/                          # Standalone Installation Packages
