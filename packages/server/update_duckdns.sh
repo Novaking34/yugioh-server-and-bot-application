@@ -5,12 +5,16 @@
 # Keeps thelandofkustomazi.duckdns.org updated with current public IP
 # =============================================================================
 
-DOMAIN="thelandofkustomazi"
 BASE_DIR="$(dirname "$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")")"
 ENV_FILE="$BASE_DIR/.env"
 
+DOMAIN="thelandofkustomazi"
 TOKEN=""
 if [ -f "$ENV_FILE" ]; then
+    ENV_DOMAIN=$(grep -E '^DUCKDNS_DOMAIN=' "$ENV_FILE" | cut -d '=' -f 2- | tr -d '"' | tr -d "'")
+    if [ -n "$ENV_DOMAIN" ]; then
+        DOMAIN="$ENV_DOMAIN"
+    fi
     TOKEN=$(grep -E '^DUCKDNS_TOKEN=' "$ENV_FILE" | cut -d '=' -f 2- | tr -d '"' | tr -d "'")
 fi
 
