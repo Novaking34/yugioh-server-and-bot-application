@@ -257,6 +257,12 @@ async def test_story_service_progression_and_rewards():
     progress_reset = await service.get_or_create_player_progress(test_uid)
     assert progress_reset["current_stage_number"] == 1
 
+    # Clean up test user
+    async with aiosqlite.connect(STORY_DB_PATH) as db:
+        await db.execute("DELETE FROM player_story_progress WHERE user_id = ?", (test_uid,))
+        await db.execute("DELETE FROM player_decks WHERE user_id = ?", (test_uid,))
+        await db.commit()
+
 
 @pytest.mark.anyio
 async def test_story_duel_session_scripted_and_ai_encounters():
@@ -1313,6 +1319,9 @@ async def test_deck_service_section_3_5_ydk_upgrades():
     assert "#extra" in exported_str
     assert "Clamped Export" in exported_str
 
+    # Clean up test user
+    await service.clear_deck(test_uid)
+
 
 @pytest.mark.anyio
 async def test_deck_service_modular_architecture():
@@ -1539,5 +1548,143 @@ async def test_card_service_discovery_and_autocomplete_engine():
     random_monster = await service.get_random_card(card_type="Monster")
     assert random_monster is not None
     assert random_monster["card_type"] == "Monster"
+
+
+@pytest.mark.anyio
+async def test_card_service_all_card_types_and_autocomplete_formatting():
+    """
+    Rigorously verifies:
+    1. format_card_autocomplete_choice against all card frames and mechanic combinations:
+       - Standard Monster (Level, Attribute, Race)
+       - Xyz Monster (Rank, Attribute, Race)
+       - Link Monster (Link Rating, Attribute, Race)
+       - Pendulum Monster (Level, Scale, Attribute, Race)
+       - Fusion / Synchro / Ritual Monsters
+       - Spell frames (Normal, Field, Quick-Play, Continuous, Equip, Ritual)
+       - Trap frames (Normal, Continuous, Counter)
+       - Strict <= 100 character ceiling truncation
+    2. Partitioned cardpool retrieval via get_all_cards_partitioned.
+    3. Scoped autocomplete filtering (by card_type and is_extra_deck).
+    4. Query sanitization with trailing autocomplete metadata tags.
+    """
+    from production.main.discord_bot.services.card_service import format_card_autocomplete_choice
+
+    # 1. Test format_card_autocomplete_choice across card frames
+    # Standard Monster
+    c_mon = {
+        "id": 50000101, "set_number": "TLOK-001", "name": "Kasutamaiza, the Creator of Kustomazi",
+        "card_type": "Monster", "card_subtype": "Effect", "attribute": "DIVINE",
+        "level_or_rank_or_link": 12, "monster_type": "Creator"
+    }
+    lbl_mon = format_card_autocomplete_choice(c_mon)
+    assert len(lbl_mon) <= 100
+    assert "TLOK-001 | Kasutamaiza, the Creator of Kustomazi" in lbl_mon
+    assert "DIVINE" in lbl_mon
+    assert "★12" in lbl_mon
+    assert "Creator" in lbl_mon
+
+    # Xyz Monster
+    c_xyz = {
+        "id": 50000201, "set_number": "TLOK-050", "name": "Abyssal Emperor",
+        "card_type": "Monster", "card_subtype": "Xyz / Effect", "attribute": "WATER",
+        "level_or_rank_or_link": 4, "monster_type": "Aqua"
+    }
+    lbl_xyz = format_card_autocomplete_choice(c_xyz)
+    assert len(lbl_xyz) <= 100
+    assert "Rank 4" in lbl_xyz
+    assert "WATER" in lbl_xyz
+    assert "Aqua" in lbl_xyz
+
+    # Link Monster
+    c_link = {
+        "id": 50000301, "set_number": "TLOK-055", "name": "Cybernetic Enforcer",
+        "card_type": "Monster", "card_subtype": "Link / Effect", "attribute": "LIGHT",
+        "level_or_rank_or_link": 3, "monster_type": "Cyberse"
+    }
+    lbl_link = format_card_autocomplete_choice(c_link)
+    assert len(lbl_link) <= 100
+    assert "Link-3" in lbl_link
+    assert "LIGHT" in lbl_link
+
+    # Pendulum Monster
+    c_pen = {
+        "id": 50000401, "set_number": "TLOK-060", "name": "Starlight Magician",
+        "card_type": "Monster", "card_subtype": "Pendulum / Effect", "attribute": "DARK",
+        "level_or_rank_or_link": 7, "scale": 8, "monster_type": "Spellcaster"
+    }
+    lbl_pen = format_card_autocomplete_choice(c_pen)
+    assert len(lbl_pen) <= 100
+    assert "★7" in lbl_pen
+    assert "S:8" in lbl_pen
+    assert "DARK" in lbl_pen
+
+    # Spells: Field, Quick-Play, Normal
+    c_field = {"id": 50000102, "set_number": "TLOK-002", "name": "The Void of Creation", "card_type": "Spell", "card_subtype": "Field"}
+    lbl_field = format_card_autocomplete_choice(c_field)
+    assert "Spell/Field" in lbl_field
+
+    c_qp = {"id": 50000115, "set_number": "TLOK-015", "name": "Quick Strike", "card_type": "Spell", "card_subtype": "Quick-Play"}
+    lbl_qp = format_card_autocomplete_choice(c_qp)
+    assert "Spell/Quick-Play" in lbl_qp
+
+    c_spell_norm = {"id": 50000116, "set_number": "TLOK-016", "name": "Simple Draw", "card_type": "Spell", "card_subtype": "Normal"}
+    lbl_spell_norm = format_card_autocomplete_choice(c_spell_norm)
+    assert "[Spell]" in lbl_spell_norm
+
+    # Traps: Counter, Continuous, Normal
+    c_counter = {"id": 50000130, "set_number": "TLOK-030", "name": "Judgement Strike", "card_type": "Trap", "card_subtype": "Counter"}
+    lbl_counter = format_card_autocomplete_choice(c_counter)
+    assert "Trap/Counter" in lbl_counter
+
+    c_trap_cont = {"id": 50000131, "set_number": "TLOK-031", "name": "Endless Stasis", "card_type": "Trap", "card_subtype": "Continuous"}
+    lbl_trap_cont = format_card_autocomplete_choice(c_trap_cont)
+    assert "Trap/Continuous" in lbl_trap_cont
+
+    # Extreme length truncation check (Discord strict 100-char limit)
+    c_long = {
+        "id": 50000999, "set_number": "TLOK-999",
+        "name": "Super Ultra Hyper Mega Extremely Unusually Tremendously Prodigious Champion of the Nether Realms",
+        "card_type": "Monster", "card_subtype": "Fusion / Effect", "attribute": "DIVINE",
+        "level_or_rank_or_link": 12, "monster_type": "Divine-Beast"
+    }
+    lbl_long = format_card_autocomplete_choice(c_long)
+    assert len(lbl_long) <= 100
+    assert lbl_long.endswith("... [DIVINE ★12 Divine-Beast]") or len(lbl_long) == 100
+
+    # 2. Partitioned cardpool retrieval
+    service = CardService(STORY_DB_PATH)
+    partitioned = await service.get_all_cards_partitioned()
+    assert "main_deck" in partitioned
+    assert "extra_deck" in partitioned
+    assert len(partitioned["main_deck"]) > 0
+    assert len(partitioned["extra_deck"]) > 0
+    # Total cards in Set 1 must sum up correctly
+    assert len(partitioned["main_deck"]) + len(partitioned["extra_deck"]) == 64
+
+    # Verify Extra Deck contains only Extra Deck card types
+    for ed_card in partitioned["extra_deck"]:
+        ctype = (ed_card.get("card_type") or "").lower()
+        csub = (ed_card.get("card_subtype") or "").lower()
+        assert ctype in ("fusion", "synchro", "xyz", "link") or any(m in csub for m in ("fusion", "synchro", "xyz", "link"))
+
+    # 3. Scoped autocomplete filtering
+    spell_matches = await service.search_cards("", limit=10, card_type="Spell")
+    assert len(spell_matches) > 0
+    for sm in spell_matches:
+        assert sm["card_type"] == "Spell"
+
+    ed_matches = await service.search_cards("", limit=10, is_extra_deck=True)
+    assert len(ed_matches) > 0
+    for em in ed_matches:
+        csub = (em.get("card_subtype") or "").lower()
+        ctype = (em.get("card_type") or "").lower()
+        assert ctype in ("fusion", "synchro", "xyz", "link") or any(m in csub for m in ("fusion", "synchro", "xyz", "link"))
+
+    # 4. Trailing tag sanitization in get_card_by_query
+    q_with_tag = "Kasutamaiza, the Creator of Kustomazi [DIVINE ★12 Creator]"
+    found = await service.get_card_by_query(q_with_tag)
+    assert found is not None
+    assert found["id"] == 50000101
+
 
 

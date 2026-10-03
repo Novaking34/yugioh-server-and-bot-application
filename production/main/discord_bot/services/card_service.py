@@ -165,6 +165,88 @@ class MetaOverviewDict(TypedDict):
     most_victorious: List[CardUsageStatsDict]
 
 
+# -----------------------------------------------------------------------------
+# Sub-Block 2.8: Real-time Autocomplete Formatter
+# -----------------------------------------------------------------------------
+def format_card_autocomplete_choice(card: Dict[str, Any]) -> str:
+    """
+    Builds a rich, compact single-line label for Discord autocomplete choice menus.
+    Enforces Discord's strict 100-character ceiling while displaying frame mechanics:
+    - Monsters: [ATTR Lv/Rk/Link Type] (e.g. [DIVINE ★12 Creator], [DARK Rank 4 Dragon], [LIGHT Link-3 Cyberse])
+    - Pendulum: includes scale e.g. [DARK ★4 S:8 Spellcaster]
+    - Spells: [Spell/Field], [Spell/Quick-Play], [Spell/Continuous], etc.
+    - Traps: [Trap/Counter], [Trap/Continuous], etc.
+    """
+    card_type = (card.get("card_type") or "").strip()
+    subtype = (card.get("card_subtype") or "").strip()
+    set_num = (card.get("set_number") or "").strip()
+    cid = card.get("id")
+    prefix = set_num if set_num else (f"[{cid}]" if cid else "")
+    name = (card.get("name") or "").strip()
+
+    descriptor_parts: List[str] = []
+
+    if card_type.lower() == "monster":
+        attr = card.get("attribute")
+        if attr:
+            descriptor_parts.append(str(attr).upper())
+
+        lvl = card.get("level_or_rank_or_link") if card.get("level_or_rank_or_link") is not None else card.get("level")
+        subtype_lower = subtype.lower()
+        if "link" in subtype_lower:
+            descriptor_parts.append(f"Link-{lvl}" if lvl is not None else "Link")
+        elif "xyz" in subtype_lower:
+            descriptor_parts.append(f"Rank {lvl}" if lvl is not None else "Xyz")
+        else:
+            if lvl is not None:
+                descriptor_parts.append(f"★{lvl}")
+
+        scale = card.get("scale")
+        if scale is not None and ("pendulum" in subtype_lower or scale > 0):
+            descriptor_parts.append(f"S:{scale}")
+
+        mtype = card.get("monster_type")
+        if mtype:
+            descriptor_parts.append(str(mtype))
+        elif subtype and subtype_lower not in ("normal", "effect"):
+            clean_sub = subtype.split("/")[0].strip()
+            if clean_sub.lower() not in ("normal", "effect"):
+                descriptor_parts.append(clean_sub)
+
+    elif card_type.lower() == "spell":
+        if subtype and subtype.lower() != "normal":
+            clean_sub = subtype.replace(" / ", "/").strip()
+            descriptor_parts.append(f"Spell/{clean_sub}")
+        else:
+            descriptor_parts.append("Spell")
+
+    elif card_type.lower() == "trap":
+        if subtype and subtype.lower() != "normal":
+            clean_sub = subtype.replace(" / ", "/").strip()
+            descriptor_parts.append(f"Trap/{clean_sub}")
+        else:
+            descriptor_parts.append("Trap")
+    else:
+        if card_type:
+            descriptor_parts.append(card_type)
+        if subtype:
+            descriptor_parts.append(subtype)
+
+    tag = f" [{' '.join(descriptor_parts)}]" if descriptor_parts else ""
+    full_label = f"{prefix} | {name}{tag}" if prefix else f"{name}{tag}"
+
+    if len(full_label) > 100:
+        overhead = len(f"{prefix} | ") if prefix else 0
+        tag_len = len(tag)
+        available_name = 100 - overhead - tag_len - 3
+        if available_name >= 8:
+            full_label = f"{prefix} | {name[:available_name]}...{tag}" if prefix else f"{name[:available_name]}...{tag}"
+        else:
+            full_label = full_label[:97] + "..."
+
+    return full_label
+
+
 # =============================================================================
 # BLOCK 3: BODY BLOCK (Core CardService Engine Translation Unit)
 # =============================================================================
@@ -192,6 +274,25 @@ class CardService:
                 WHERE c.id = ?
                 LIMIT 1
             """, (card_id,))
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+    async def get_card_by_set_number(self, set_number: str) -> Optional[Dict[str, Any]]:
+        """
+        Direct lookup for a single card by its official set number (e.g. TLOK-001).
+        Case-insensitive and whitespace-tolerant.
+        """
+        clean = set_number.strip()
+        if not clean:
+            return None
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute(f"""
+                SELECT {CARD_RECORD_PROJECTION}
+                {CARD_RECORD_JOINS}
+                WHERE LOWER(c.set_number) = LOWER(?)
+                LIMIT 1
+            """, (clean,))
             row = await cur.fetchone()
             return dict(row) if row else None
 
@@ -226,6 +327,14 @@ class CardService:
             rest = raw_str[raw_str.index("]") + 1:].strip()
             if rest:
                 found = await self.get_card_by_query(rest)
+                if found:
+                    return found
+
+        # Strip trailing autocomplete metadata tags e.g. "Card Name [Spell/Field]" or "Card Name [DIVINE ★12 Creator]"
+        if raw_str.endswith("]") and " [" in raw_str:
+            without_tag = raw_str[:raw_str.rindex(" [")].strip()
+            if without_tag:
+                found = await self.get_card_by_query(without_tag)
                 if found:
                     return found
 
@@ -276,12 +385,25 @@ class CardService:
         attribute: Optional[str] = None,
         archetype: Optional[str] = None,
         monster_type: Optional[str] = None,
+        level: Optional[int] = None,
+        min_level: Optional[int] = None,
+        max_level: Optional[int] = None,
+        scale: Optional[int] = None,
+        min_atk: Optional[int] = None,
+        max_atk: Optional[int] = None,
+        min_def: Optional[int] = None,
+        max_def: Optional[int] = None,
         rarity: Optional[str] = None,
+        is_extra_deck: Optional[bool] = None,
         limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        Discovers cards matching multiple optional filter criteria
-        (card_type, subtype, attribute, archetype, monster_type/race, rarity).
+        Discovers cards matching comprehensive game mechanics and criteria:
+        - Primary frame: card_type ("Monster", "Spell", "Trap")
+        - Mechanics/subtypes: card_subtype ("Ritual", "Fusion", "Synchro", "Xyz", "Link", "Pendulum", "Field", "Quick-Play", "Counter"...)
+        - Battle stats: level/rank/link, min/max level, scale, min/max ATK, min/max DEF
+        - Universe: attribute, archetype, monster_type (race), rarity
+        - Zone: is_extra_deck (True = Fusion/Synchro/Xyz/Link; False = Main Deck)
         """
         conditions = []
         params: List[Any] = []
@@ -301,9 +423,45 @@ class CardService:
         if monster_type:
             conditions.append("LOWER(c.monster_type) = LOWER(?)")
             params.append(monster_type)
+        if level is not None:
+            conditions.append("c.level_or_rank_or_link = ?")
+            params.append(level)
+        if min_level is not None:
+            conditions.append("c.level_or_rank_or_link >= ?")
+            params.append(min_level)
+        if max_level is not None:
+            conditions.append("c.level_or_rank_or_link <= ?")
+            params.append(max_level)
+        if scale is not None:
+            conditions.append("c.scale = ?")
+            params.append(scale)
+        if min_atk is not None:
+            conditions.append("c.atk >= ?")
+            params.append(min_atk)
+        if max_atk is not None:
+            conditions.append("c.atk <= ?")
+            params.append(max_atk)
+        if min_def is not None:
+            conditions.append("c.def >= ?")
+            params.append(min_def)
+        if max_def is not None:
+            conditions.append("c.def <= ?")
+            params.append(max_def)
         if rarity:
             conditions.append("LOWER(c.rarity) = LOWER(?)")
             params.append(rarity)
+        if is_extra_deck is not None:
+            extra_cond = """(
+                LOWER(c.card_type) IN ('fusion', 'synchro', 'xyz', 'link') OR
+                LOWER(c.card_subtype) LIKE '%fusion%' OR
+                LOWER(c.card_subtype) LIKE '%synchro%' OR
+                LOWER(c.card_subtype) LIKE '%xyz%' OR
+                LOWER(c.card_subtype) LIKE '%link%'
+            )"""
+            if is_extra_deck:
+                conditions.append(extra_cond)
+            else:
+                conditions.append(f"NOT {extra_cond}")
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         limit_clause = f"LIMIT {int(limit)}" if limit and limit > 0 else ""
@@ -320,14 +478,46 @@ class CardService:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
+    async def get_extra_deck_cards(self) -> List[Dict[str, Any]]:
+        """Retrieves all registered Extra Deck cards (Fusion, Synchro, Xyz, Link)."""
+        return await self.get_cards_by_filter(is_extra_deck=True)
+
+    async def get_main_deck_cards(self) -> List[Dict[str, Any]]:
+        """Retrieves all registered Main Deck cards (Monsters, Spells, Traps)."""
+        return await self.get_cards_by_filter(is_extra_deck=False)
+
+    async def get_field_spells(self) -> List[Dict[str, Any]]:
+        """Retrieves all Field Spell cards in the cardpool."""
+        return await self.get_cards_by_filter(card_type="Spell", card_subtype="Field")
+
+    async def get_ritual_monsters(self) -> List[Dict[str, Any]]:
+        """Retrieves all Ritual Monster cards in the cardpool."""
+        return await self.get_cards_by_filter(card_type="Monster", card_subtype="Ritual")
+
+    async def get_cards_by_archetype(self, archetype: str) -> List[Dict[str, Any]]:
+        """Retrieves all cards belonging to a specific archetype (e.g. Kasutamaiza)."""
+        return await self.get_cards_by_filter(archetype=archetype)
+
     # -------------------------------------------------------------------------
     # 3.2 Real-time Autocomplete Engine
     # -------------------------------------------------------------------------
 
+    @staticmethod
+    def format_autocomplete_label(card: Dict[str, Any]) -> str:
+        """
+        Builds a rich, compact single-line label for Discord autocomplete choice menus.
+        Enforces Discord's strict 100-character ceiling while displaying frame mechanics.
+        """
+        return format_card_autocomplete_choice(card)
+
     async def search_cards(
         self,
         current: str,
-        limit: int = DEFAULT_AUTOCOMPLETE_LIMIT
+        limit: int = DEFAULT_AUTOCOMPLETE_LIMIT,
+        card_type: Optional[str] = None,
+        card_subtype: Optional[str] = None,
+        is_extra_deck: Optional[bool] = None,
+        archetype: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Returns ranked matching card suggestions for real-time Discord autocomplete.
@@ -337,19 +527,48 @@ class CardService:
         3. Prefix Set Number Match (e.g. "TLOK..." -> "TLOK-001...")
         4. Word-Boundary Match (e.g. "Creator" -> "Kasutamaiza, the Creator of Kustomazi")
         5. General Substring Match
+        Supports contextual scoping (card_type, card_subtype, is_extra_deck, archetype).
         When query is empty, yields cards in canonical Set order (TLOK-001, TLOK-002...).
         """
         clean = current.strip()
+        conditions = []
+        params: List[Any] = []
+
+        if clean:
+            conditions.append("(LOWER(name) LIKE LOWER(?) OR LOWER(set_number) LIKE LOWER(?) OR CAST(id AS TEXT) LIKE ?)")
+            params.extend([f"%{clean}%", f"%{clean}%", f"%{clean}%"])
+
+        if card_type:
+            conditions.append("LOWER(card_type) = LOWER(?)")
+            params.append(card_type)
+
+        if card_subtype:
+            conditions.append("LOWER(card_subtype) LIKE LOWER(?)")
+            params.append(f"%{card_subtype}%")
+
+        if is_extra_deck is not None:
+            extra_cond = """(
+                LOWER(card_type) IN ('fusion', 'synchro', 'xyz', 'link') OR
+                LOWER(card_subtype) LIKE '%fusion%' OR
+                LOWER(card_subtype) LIKE '%synchro%' OR
+                LOWER(card_subtype) LIKE '%xyz%' OR
+                LOWER(card_subtype) LIKE '%link%'
+            )"""
+            if is_extra_deck:
+                conditions.append(extra_cond)
+            else:
+                conditions.append(f"NOT {extra_cond}")
+
+        if archetype:
+            conditions.append("LOWER(archetype) = LOWER(?)")
+            params.append(archetype)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             if clean:
-                like_pattern = f"%{clean}%"
-                cur = await db.execute("""
-                    SELECT id, set_number, name, card_type, card_subtype, rarity, attribute
-                    FROM custom_cards
-                    WHERE LOWER(name) LIKE LOWER(?) 
-                       OR LOWER(set_number) LIKE LOWER(?) 
-                       OR CAST(id AS TEXT) LIKE ?
+                order_clause = """
                     ORDER BY
                         CASE
                             WHEN LOWER(name) = LOWER(?) THEN 1
@@ -361,25 +580,34 @@ class CardService:
                             ELSE 7
                         END,
                         id ASC
-                    LIMIT ?
-                """, (
-                    like_pattern, like_pattern, like_pattern,
-                    clean, clean, clean, clean, clean, clean,
-                    limit
-                ))
+                """
+                order_params = [clean, clean, clean, clean, clean, clean]
             else:
-                cur = await db.execute("""
-                    SELECT id, set_number, name, card_type, card_subtype, rarity, attribute
-                    FROM custom_cards
+                order_clause = """
                     ORDER BY 
                         CASE WHEN set_number IS NOT NULL THEN 0 ELSE 1 END,
                         set_number ASC,
                         id ASC
-                    LIMIT ?
-                """, (limit,))
+                """
+                order_params = []
 
+            sql = f"""
+                SELECT id, set_number, name, card_type, card_subtype, rarity, attribute,
+                       monster_type, level_or_rank_or_link, scale
+                FROM custom_cards
+                {where_clause}
+                {order_clause}
+                LIMIT ?
+            """
+            cur = await db.execute(sql, (*params, *order_params, limit))
             rows = await cur.fetchall()
-            return [dict(r) for r in rows]
+
+            results = []
+            for r in rows:
+                d = dict(r)
+                d["autocomplete_label"] = format_card_autocomplete_choice(d)
+                results.append(d)
+            return results
 
     async def get_all_cards(self) -> List[Dict[str, Any]]:
         """Returns all registered custom cards in Set 1."""
@@ -393,23 +621,68 @@ class CardService:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
-    async def get_random_card(self, card_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Selects a random card from the active pool, optionally filtered by card_type."""
+    async def get_all_cards_partitioned(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Returns the complete Set 1 cardpool partitioned into Main Deck and Extra Deck categories.
+        """
+        all_cards = await self.get_all_cards()
+        main_deck = []
+        extra_deck = []
+        for c in all_cards:
+            ctype = (c.get("card_type") or "").lower()
+            csub = (c.get("card_subtype") or "").lower()
+            if ctype in ("fusion", "synchro", "xyz", "link") or any(m in csub for m in ("fusion", "synchro", "xyz", "link")):
+                extra_deck.append(c)
+            else:
+                main_deck.append(c)
+        return {"main_deck": main_deck, "extra_deck": extra_deck}
+
+    async def get_random_card(
+        self,
+        card_type: Optional[str] = None,
+        card_subtype: Optional[str] = None,
+        is_extra_deck: Optional[bool] = None,
+        archetype: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Selects a random card from the active pool, optionally filtered by card_type,
+        card_subtype, extra deck status, or archetype.
+        """
+        conditions = []
+        params: List[Any] = []
+
+        if card_type:
+            conditions.append("LOWER(c.card_type) = LOWER(?)")
+            params.append(card_type)
+        if card_subtype:
+            conditions.append("LOWER(c.card_subtype) LIKE LOWER(?)")
+            params.append(f"%{card_subtype}%")
+        if is_extra_deck is not None:
+            extra_cond = """(
+                LOWER(c.card_type) IN ('fusion', 'synchro', 'xyz', 'link') OR
+                LOWER(c.card_subtype) LIKE '%fusion%' OR
+                LOWER(c.card_subtype) LIKE '%synchro%' OR
+                LOWER(c.card_subtype) LIKE '%xyz%' OR
+                LOWER(c.card_subtype) LIKE '%link%'
+            )"""
+            if is_extra_deck:
+                conditions.append(extra_cond)
+            else:
+                conditions.append(f"NOT {extra_cond}")
+        if archetype:
+            conditions.append("LOWER(c.archetype) = LOWER(?)")
+            params.append(archetype)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            if card_type:
-                cur = await db.execute(f"""
-                    SELECT {CARD_RECORD_PROJECTION}
-                    {CARD_RECORD_JOINS}
-                    WHERE LOWER(c.card_type) = LOWER(?)
-                    ORDER BY RANDOM() LIMIT 1
-                """, (card_type,))
-            else:
-                cur = await db.execute(f"""
-                    SELECT {CARD_RECORD_PROJECTION}
-                    {CARD_RECORD_JOINS}
-                    ORDER BY RANDOM() LIMIT 1
-                """)
+            cur = await db.execute(f"""
+                SELECT {CARD_RECORD_PROJECTION}
+                {CARD_RECORD_JOINS}
+                {where_clause}
+                ORDER BY RANDOM() LIMIT 1
+            """, params)
             row = await cur.fetchone()
             return dict(row) if row else None
 
@@ -545,6 +818,7 @@ class CardService:
 
 __all__ = [
     "CardService",
+    "format_card_autocomplete_choice",
     "CardRecordDict",
     "CardSummaryDict",
     "CardUsageStatsDict",
@@ -554,5 +828,10 @@ __all__ = [
     "DEFAULT_META_LIMIT",
     "CARD_RECORD_PROJECTION",
     "CARD_RECORD_JOINS",
+    "CARD_TYPE_MONSTER",
+    "CARD_TYPE_SPELL",
+    "CARD_TYPE_TRAP",
+    "CARD_TYPES",
+    "CARD_ATTRIBUTES",
 ]
 

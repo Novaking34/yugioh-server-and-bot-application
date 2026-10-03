@@ -45,7 +45,7 @@ async def card_name_autocomplete(
         cid = m["id"]
         set_num = m["set_number"]
         name = m["name"]
-        label = f"{set_num} | {name}" if set_num else f"[{cid}] {name}"
+        label = m.get("autocomplete_label") or (f"{set_num} | {name}" if set_num else f"[{cid}] {name}")
         if len(label) > 100:
             label = label[:97] + "..."
         choices.append(app_commands.Choice(name=label, value=name))
