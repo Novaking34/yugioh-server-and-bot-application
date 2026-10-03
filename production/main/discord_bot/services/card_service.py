@@ -18,7 +18,7 @@ Description:
 # Sub-Block 2.1: Inclusions & Imports
 # -----------------------------------------------------------------------------
 import aiosqlite
-from typing import Optional, List, Dict, Any, Tuple, TypedDict, Final, Union
+from typing import Optional, List, Dict, Any, Tuple, TypedDict, Final, Union, Sequence
 from bot_config import BOT_CONFIG
 from production.main.logger import get_logger
 
@@ -150,19 +150,57 @@ class CardUsageStatsDict(TypedDict, total=False):
     card_type: str
     card_subtype: Optional[str]
     rarity: Optional[str]
+    attribute: Optional[str]
+    monster_type: Optional[str]
+    archetype: Optional[str]
+    level: Optional[int]
+    scale: Optional[int]
     times_decked: int
     times_drawn: int
     times_played: int
     wins: int
     losses: int
+    total_matches: int
     last_used_at: Optional[str]
     win_rate: float                          # Derived: wins / (wins + losses) * 100
+    play_to_draw_ratio: float                # Derived: times_played / times_drawn * 100
 
 
-class MetaOverviewDict(TypedDict):
-    """Format meta snapshot. NOTE: most_victorious currently ranks by raw wins."""
+class MetaOverviewDict(TypedDict, total=False):
+    """Format meta snapshot covering popularity, playrate, and victory metrics."""
     most_popular: List[CardUsageStatsDict]
     most_victorious: List[CardUsageStatsDict]
+    most_played: List[CardUsageStatsDict]
+    highest_win_rate: List[CardUsageStatsDict]
+    most_drawn: List[CardUsageStatsDict]
+
+
+class ArchetypeMetaDict(TypedDict, total=False):
+    """Aggregated meta performance metrics for a specific archetype."""
+    archetype: str
+    total_cards: int
+    times_decked: int
+    times_drawn: int
+    times_played: int
+    wins: int
+    losses: int
+    total_matches: int
+    win_rate: float
+    top_card_name: Optional[str]
+    top_card_id: Optional[int]
+
+
+class CardpoolTelemetrySummaryDict(TypedDict, total=False):
+    """High-level cardpool health and participation statistics."""
+    total_registered_cards: int
+    distinct_cards_decked: int
+    distinct_cards_drawn: int
+    distinct_cards_played: int
+    total_deck_inclusions: int
+    total_card_draws: int
+    total_card_plays: int
+    total_card_wins: int
+    total_card_losses: int
 
 
 # -----------------------------------------------------------------------------
@@ -703,11 +741,22 @@ class CardService:
     # -------------------------------------------------------------------------
 
     async def get_card_usage_stats(self, card_id: int) -> Dict[str, Any]:
-        """Fetches telemetry stats (times decked, drawn, played, win rate) for a card."""
+        """
+        Fetches comprehensive telemetry stats for a card:
+        - Times decked, drawn, played, won, lost.
+        - Calculated metrics: total_matches, win_rate (%), play_to_draw_ratio (%).
+        - Joined card metadata: name, set_number, card_type, card_subtype, attribute,
+          monster_type, archetype, level_or_rank_or_link (as level), scale, rarity.
+        If no stats row exists yet, returns initialized zero-counts with card identity.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cur = await db.execute("""
-                SELECT s.*, c.name, c.set_number, c.card_type, c.card_subtype, c.rarity
+                SELECT s.card_id, s.times_decked, s.times_drawn, s.times_played,
+                       s.wins, s.losses, s.last_used_at,
+                       c.name, c.set_number, c.card_type, c.card_subtype, c.rarity,
+                       c.attribute, c.monster_type, c.archetype,
+                       c.level_or_rank_or_link AS level, c.scale
                 FROM card_usage_stats s
                 JOIN custom_cards c ON s.card_id = c.id
                 WHERE s.card_id = ?
@@ -715,89 +764,427 @@ class CardService:
             row = await cur.fetchone()
             if row:
                 data = dict(row)
-                total_games = data["wins"] + data["losses"]
-                data["win_rate"] = round((data["wins"] / total_games * 100), 1) if total_games > 0 else 0.0
+                total_matches = data["wins"] + data["losses"]
+                data["total_matches"] = total_matches
+                data["win_rate"] = round((data["wins"] / total_matches * 100), 1) if total_matches > 0 else 0.0
+                data["play_to_draw_ratio"] = round((data["times_played"] / data["times_drawn"] * 100), 1) if data["times_drawn"] > 0 else 0.0
                 return data
 
             # If no stats record exists yet, fetch basic card info and return zeros
-            cur = await db.execute("SELECT id, name, set_number, card_type, card_subtype, rarity FROM custom_cards WHERE id = ?", (card_id,))
+            cur = await db.execute("""
+                SELECT id AS card_id, name, set_number, card_type, card_subtype, rarity,
+                       attribute, monster_type, archetype,
+                       level_or_rank_or_link AS level, scale
+                FROM custom_cards WHERE id = ?
+            """, (card_id,))
             card_row = await cur.fetchone()
             if card_row:
-                return {
-                    "card_id": card_row["id"],
-                    "name": card_row["name"],
-                    "set_number": card_row["set_number"],
-                    "card_type": card_row["card_type"],
-                    "card_subtype": card_row["card_subtype"],
-                    "rarity": card_row["rarity"],
+                d = dict(card_row)
+                d.update({
                     "times_decked": 0,
                     "times_drawn": 0,
                     "times_played": 0,
                     "wins": 0,
                     "losses": 0,
-                    "win_rate": 0.0
-                }
+                    "total_matches": 0,
+                    "last_used_at": None,
+                    "win_rate": 0.0,
+                    "play_to_draw_ratio": 0.0,
+                })
+                return d
             return {}
 
-    async def get_meta_overview(self, limit: int = DEFAULT_META_LIMIT) -> Dict[str, List[Dict[str, Any]]]:
-        """Returns top cards by deck popularity and most played cards."""
+    async def get_meta_overview(
+        self,
+        limit: int = DEFAULT_META_LIMIT,
+        card_type: Optional[str] = None,
+        is_extra_deck: Optional[bool] = None,
+        archetype: Optional[str] = None,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Returns competitive format meta leaderboards across multiple axes:
+        1. most_popular: Highest deck inclusions (times_decked DESC, times_played DESC)
+        2. most_played: Most frequently summoned/activated in live duels (times_played DESC)
+        3. most_victorious: Raw win count leaders (wins DESC)
+        4. highest_win_rate: Highest win percentage among cards with >= 3 matches (win_rate DESC)
+        5. most_drawn: Most frequently drawn into player hands (times_drawn DESC)
+        Supports scoping by card_type, is_extra_deck, and archetype.
+        """
+        conditions = []
+        params: List[Any] = []
+
+        if card_type:
+            conditions.append("LOWER(c.card_type) = LOWER(?)")
+            params.append(card_type)
+        if is_extra_deck is not None:
+            extra_cond = """(
+                LOWER(c.card_type) IN ('fusion', 'synchro', 'xyz', 'link') OR
+                LOWER(c.card_subtype) LIKE '%fusion%' OR
+                LOWER(c.card_subtype) LIKE '%synchro%' OR
+                LOWER(c.card_subtype) LIKE '%xyz%' OR
+                LOWER(c.card_subtype) LIKE '%link%'
+            )"""
+            if is_extra_deck:
+                conditions.append(extra_cond)
+            else:
+                conditions.append(f"NOT {extra_cond}")
+        if archetype:
+            conditions.append("LOWER(c.archetype) = LOWER(?)")
+            params.append(archetype)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        def _decorate_rows(rows):
+            result = []
+            for r in rows:
+                d = dict(r)
+                total = d.get("wins", 0) + d.get("losses", 0)
+                d["total_matches"] = total
+                d["win_rate"] = round((d.get("wins", 0) / total * 100), 1) if total > 0 else 0.0
+                d["play_to_draw_ratio"] = round((d.get("times_played", 0) / d.get("times_drawn", 1) * 100), 1) if d.get("times_drawn", 0) > 0 else 0.0
+                result.append(d)
+            return result
+
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+
+            base_proj = """
+                s.card_id, s.times_decked, s.times_drawn, s.times_played, s.wins, s.losses, s.last_used_at,
+                c.name, c.set_number, c.card_type, c.card_subtype, c.rarity, c.attribute, c.monster_type, c.archetype
+            """
+
+            # 1. Most Popular (by deck inclusions)
+            cur = await db.execute(f"""
+                SELECT {base_proj}
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {where_clause}
+                ORDER BY s.times_decked DESC, s.times_played DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            most_decked = _decorate_rows(await cur.fetchall())
+
+            # 2. Most Played (by on-field summon/activation)
+            cur = await db.execute(f"""
+                SELECT {base_proj}
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {where_clause}
+                ORDER BY s.times_played DESC, s.times_decked DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            most_played = _decorate_rows(await cur.fetchall())
+
+            # 3. Most Victorious (raw win count)
+            win_where = f"{where_clause} AND (s.wins + s.losses) > 0" if where_clause else "WHERE (s.wins + s.losses) > 0"
+            cur = await db.execute(f"""
+                SELECT {base_proj}
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {win_where}
+                ORDER BY s.wins DESC, s.times_played DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            most_wins = _decorate_rows(await cur.fetchall())
+
+            # 4. Highest Win Rate (minimum 3 matches to avoid 1-game noise)
+            min_matches = 3
+            wr_where = f"{where_clause} AND (s.wins + s.losses) >= {min_matches}" if where_clause else f"WHERE (s.wins + s.losses) >= {min_matches}"
+            cur = await db.execute(f"""
+                SELECT {base_proj}
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {wr_where}
+                ORDER BY (CAST(s.wins AS REAL) / (s.wins + s.losses)) DESC, s.wins DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            top_wr = _decorate_rows(await cur.fetchall())
+
+            # 5. Most Drawn
+            cur = await db.execute(f"""
+                SELECT {base_proj}
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {where_clause}
+                ORDER BY s.times_drawn DESC, s.times_played DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            most_drawn = _decorate_rows(await cur.fetchall())
+
+            return {
+                "most_popular": most_decked,
+                "most_victorious": most_wins,
+                "most_played": most_played,
+                "highest_win_rate": top_wr,
+                "most_drawn": most_drawn,
+            }
+
+    async def get_card_win_rates(
+        self,
+        limit: int = 10,
+        min_matches: int = 1,
+        card_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Returns cards ranked by duel win rate percentage with minimum match threshold.
+        """
+        conditions = ["(s.wins + s.losses) >= ?"]
+        params: List[Any] = [min_matches]
+
+        if card_type:
+            conditions.append("LOWER(c.card_type) = LOWER(?)")
+            params.append(card_type)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}"
+
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute(f"""
+                SELECT s.card_id, s.times_decked, s.times_drawn, s.times_played, s.wins, s.losses,
+                       c.name, c.set_number, c.card_type, c.card_subtype, c.rarity, c.attribute
+                FROM card_usage_stats s
+                JOIN custom_cards c ON s.card_id = c.id
+                {where_clause}
+                ORDER BY (CAST(s.wins AS REAL) / (s.wins + s.losses)) DESC, s.wins DESC, c.id ASC
+                LIMIT ?
+            """, (*params, limit))
+            rows = await cur.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                total = d["wins"] + d["losses"]
+                d["total_matches"] = total
+                d["win_rate"] = round((d["wins"] / total * 100), 1) if total > 0 else 0.0
+                results.append(d)
+            return results
+
+    async def get_archetype_meta_stats(self, archetype: str) -> Dict[str, Any]:
+        """
+        Aggregates meta telemetry across all registered cards in a specific archetype.
+        """
+        clean = archetype.strip()
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cur = await db.execute("""
-                SELECT s.*, c.name, c.set_number
-                FROM card_usage_stats s
-                JOIN custom_cards c ON s.card_id = c.id
-                ORDER BY s.times_decked DESC, s.times_played DESC LIMIT ?
-            """, (limit,))
-            most_decked = [dict(r) for r in await cur.fetchall()]
+                SELECT COUNT(c.id) AS total_cards,
+                       COALESCE(SUM(s.times_decked), 0) AS times_decked,
+                       COALESCE(SUM(s.times_drawn), 0) AS times_drawn,
+                       COALESCE(SUM(s.times_played), 0) AS times_played,
+                       COALESCE(SUM(s.wins), 0) AS wins,
+                       COALESCE(SUM(s.losses), 0) AS losses
+                FROM custom_cards c
+                LEFT JOIN card_usage_stats s ON c.id = s.card_id
+                WHERE LOWER(c.archetype) = LOWER(?)
+            """, (clean,))
+            row = await cur.fetchone()
+            if not row or row["total_cards"] == 0:
+                return {
+                    "archetype": clean,
+                    "total_cards": 0,
+                    "times_decked": 0,
+                    "times_drawn": 0,
+                    "times_played": 0,
+                    "wins": 0,
+                    "losses": 0,
+                    "total_matches": 0,
+                    "win_rate": 0.0,
+                    "top_card_name": None,
+                    "top_card_id": None
+                }
 
+            data = dict(row)
+            total_matches = data["wins"] + data["losses"]
+            data["archetype"] = clean
+            data["total_matches"] = total_matches
+            data["win_rate"] = round((data["wins"] / total_matches * 100), 1) if total_matches > 0 else 0.0
+
+            cur_top = await db.execute("""
+                SELECT c.id, c.name, s.wins, s.times_decked
+                FROM custom_cards c
+                LEFT JOIN card_usage_stats s ON c.id = s.card_id
+                WHERE LOWER(c.archetype) = LOWER(?)
+                ORDER BY COALESCE(s.wins, 0) DESC, COALESCE(s.times_decked, 0) DESC, c.id ASC
+                LIMIT 1
+            """, (clean,))
+            top_row = await cur_top.fetchone()
+            data["top_card_name"] = top_row["name"] if top_row else None
+            data["top_card_id"] = top_row["id"] if top_row else None
+            return data
+
+    async def get_cardpool_telemetry_summary(self) -> Dict[str, Any]:
+        """
+        Returns macro server-wide health and activity metrics for the cardpool.
+        """
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
             cur = await db.execute("""
-                SELECT s.*, c.name, c.set_number
-                FROM card_usage_stats s
-                JOIN custom_cards c ON s.card_id = c.id
-                WHERE (s.wins + s.losses) > 0
-                ORDER BY s.wins DESC LIMIT ?
-            """, (limit,))
-            most_wins = [dict(r) for r in await cur.fetchall()]
+                SELECT 
+                    (SELECT COUNT(*) FROM custom_cards) AS total_registered_cards,
+                    (SELECT COUNT(*) FROM card_usage_stats WHERE times_decked > 0) AS distinct_cards_decked,
+                    (SELECT COUNT(*) FROM card_usage_stats WHERE times_drawn > 0) AS distinct_cards_drawn,
+                    (SELECT COUNT(*) FROM card_usage_stats WHERE times_played > 0) AS distinct_cards_played,
+                    COALESCE(SUM(times_decked), 0) AS total_deck_inclusions,
+                    COALESCE(SUM(times_drawn), 0) AS total_card_draws,
+                    COALESCE(SUM(times_played), 0) AS total_card_plays,
+                    COALESCE(SUM(wins), 0) AS total_card_wins,
+                    COALESCE(SUM(losses), 0) AS total_card_losses
+                FROM card_usage_stats
+            """)
+            row = await cur.fetchone()
+            return dict(row) if row else {}
 
-            return {"most_popular": most_decked, "most_victorious": most_wins}
+    async def get_underused_cards(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Identifies cards with lowest deck inclusion and play activity.
+        Useful for community deck ideas and cardpool balance reviews.
+        """
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute("""
+                SELECT c.id, c.set_number, c.name, c.card_type, c.card_subtype, c.rarity,
+                       COALESCE(s.times_decked, 0) AS times_decked,
+                       COALESCE(s.times_played, 0) AS times_played
+                FROM custom_cards c
+                LEFT JOIN card_usage_stats s ON c.id = s.card_id
+                ORDER BY COALESCE(s.times_decked, 0) ASC, COALESCE(s.times_played, 0) ASC, c.id ASC
+                LIMIT ?
+            """, (limit,))
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
 
     # -------------------------------------------------------------------------
     # 3.4 Live Duel Event Tracking Mutators
     # -------------------------------------------------------------------------
 
-    async def track_card_draw(self, card_id: int):
+    async def track_card_draw(self, card_id: int, count: int = 1):
         """Increments draw count for a card during live duels."""
+        if count <= 0:
+            return
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
                     INSERT INTO card_usage_stats (card_id, times_drawn, last_used_at)
-                    VALUES (?, 1, CURRENT_TIMESTAMP)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(card_id) DO UPDATE SET
-                        times_drawn = times_drawn + 1,
+                        times_drawn = times_drawn + ?,
                         last_used_at = CURRENT_TIMESTAMP
-                """, (card_id,))
+                """, (card_id, count, count))
                 await db.commit()
         except Exception as e:
             logger.warning(f"Failed to record card draw for ID {card_id}: {e}")
 
-    async def track_card_play(self, card_id: int):
+    async def track_cards_drawn(self, card_ids: Sequence[int]):
+        """
+        Atomically records multi-card draws (e.g. 5-card opening hand) in a single transaction.
+        """
+        if not card_ids:
+            return
+        counts: Dict[int, int] = {}
+        for cid in card_ids:
+            counts[cid] = counts.get(cid, 0) + 1
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                for cid, count in counts.items():
+                    await db.execute("""
+                        INSERT INTO card_usage_stats (card_id, times_drawn, last_used_at)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(card_id) DO UPDATE SET
+                            times_drawn = times_drawn + ?,
+                            last_used_at = CURRENT_TIMESTAMP
+                    """, (cid, count, count))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to batch record card draws: {e}")
+
+    async def track_card_play(self, card_id: int, count: int = 1):
         """Increments play count for a card when summoned or activated."""
+        if count <= 0:
+            return
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
                     INSERT INTO card_usage_stats (card_id, times_played, last_used_at)
-                    VALUES (?, 1, CURRENT_TIMESTAMP)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT(card_id) DO UPDATE SET
-                        times_played = times_played + 1,
+                        times_played = times_played + ?,
                         last_used_at = CURRENT_TIMESTAMP
-                """, (card_id,))
+                """, (card_id, count, count))
                 await db.commit()
         except Exception as e:
             logger.warning(f"Failed to record card play for ID {card_id}: {e}")
 
+    async def track_cards_played(self, card_ids: Sequence[int]):
+        """
+        Atomically records multi-card plays in a single transaction.
+        """
+        if not card_ids:
+            return
+        counts: Dict[int, int] = {}
+        for cid in card_ids:
+            counts[cid] = counts.get(cid, 0) + 1
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                for cid, count in counts.items():
+                    await db.execute("""
+                        INSERT INTO card_usage_stats (card_id, times_played, last_used_at)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(card_id) DO UPDATE SET
+                            times_played = times_played + ?,
+                            last_used_at = CURRENT_TIMESTAMP
+                    """, (cid, count, count))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to batch record card plays: {e}")
+
+    async def track_card_match_result(self, card_id: int, is_win: bool):
+        """
+        Records a match win or loss for a single card in an active deck.
+        """
+        w = 1 if is_win else 0
+        l = 0 if is_win else 1
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute("""
+                    INSERT INTO card_usage_stats (card_id, wins, losses, last_used_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(card_id) DO UPDATE SET
+                        wins = wins + ?,
+                        losses = losses + ?,
+                        last_used_at = CURRENT_TIMESTAMP
+                """, (card_id, w, l, w, l))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to record match result for card ID {card_id}: {e}")
+
+    async def track_cards_match_result(self, card_ids: Sequence[int], is_win: bool):
+        """
+        Atomically records match outcome for all distinct cards in a player's deck.
+        Deduplicates card IDs so each distinct card receives 1 win or 1 loss per match.
+        """
+        if not card_ids:
+            return
+        unique_ids = set(card_ids)
+        w = 1 if is_win else 0
+        l = 0 if is_win else 1
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                for cid in unique_ids:
+                    await db.execute("""
+                        INSERT INTO card_usage_stats (card_id, wins, losses, last_used_at)
+                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(card_id) DO UPDATE SET
+                            wins = wins + ?,
+                            losses = losses + ?,
+                            last_used_at = CURRENT_TIMESTAMP
+                    """, (cid, w, l, w, l))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to batch record match results for cards: {e}")
+
     async def track_deck_inclusion(self, card_id: int, delta: int):
         """Updates the count of player decks including this card."""
+        if delta == 0:
+            return
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
@@ -811,6 +1198,50 @@ class CardService:
         except Exception as e:
             logger.warning(f"Failed to track deck inclusion for ID {card_id}: {e}")
 
+    async def batch_track_deck_inclusions(self, card_deltas: Dict[int, int]):
+        """
+        Atomically updates deck inclusion counts for multiple cards in a single transaction.
+        """
+        if not card_deltas:
+            return
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                for cid, delta in card_deltas.items():
+                    if delta != 0:
+                        await db.execute("""
+                            INSERT INTO card_usage_stats (card_id, times_decked, last_used_at)
+                            VALUES (?, MAX(0, ?), CURRENT_TIMESTAMP)
+                            ON CONFLICT(card_id) DO UPDATE SET
+                                times_decked = MAX(0, times_decked + ?),
+                                last_used_at = CURRENT_TIMESTAMP
+                        """, (cid, delta, delta))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to batch track deck inclusions: {e}")
+
+    async def reset_card_telemetry(self, card_id: Optional[int] = None):
+        """
+        Resets telemetry counters to zero for a specific card or all cards (maintenance/testing).
+        """
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                if card_id is not None:
+                    await db.execute("""
+                        UPDATE card_usage_stats
+                        SET times_decked = 0, times_drawn = 0, times_played = 0,
+                            wins = 0, losses = 0, last_used_at = CURRENT_TIMESTAMP
+                        WHERE card_id = ?
+                    """, (card_id,))
+                else:
+                    await db.execute("""
+                        UPDATE card_usage_stats
+                        SET times_decked = 0, times_drawn = 0, times_played = 0,
+                            wins = 0, losses = 0, last_used_at = CURRENT_TIMESTAMP
+                    """)
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to reset card telemetry: {e}")
+
 
 # =============================================================================
 # BLOCK 4: CLOSING BLOCK (Public Exports & Translation Unit Manifest)
@@ -823,6 +1254,8 @@ __all__ = [
     "CardSummaryDict",
     "CardUsageStatsDict",
     "MetaOverviewDict",
+    "ArchetypeMetaDict",
+    "CardpoolTelemetrySummaryDict",
     "DEFAULT_AUTOCOMPLETE_LIMIT",
     "DEFAULT_RECENT_LIMIT",
     "DEFAULT_META_LIMIT",

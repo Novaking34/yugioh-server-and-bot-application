@@ -1687,4 +1687,138 @@ async def test_card_service_all_card_types_and_autocomplete_formatting():
     assert found["id"] == 50000101
 
 
+@pytest.mark.anyio
+async def test_card_service_telemetry_analytics_and_mutators():
+    """
+    Rigorously tests Sub-Blocks 3.3 and 3.4 in CardService:
+    1. Single and batch draw mutators (track_card_draw, track_cards_drawn).
+    2. Single and batch play mutators (track_card_play, track_cards_played).
+    3. Match result mutators (track_card_match_result, track_cards_match_result).
+    4. Deck inclusion mutators (track_deck_inclusion, batch_track_deck_inclusions).
+    5. Telemetry inspection via get_card_usage_stats (metadata, derived ratios).
+    6. Multi-axis format overview via get_meta_overview (popularity, playrate, winrate).
+    7. Win rate rankings via get_card_win_rates.
+    8. Archetype analytics via get_archetype_meta_stats.
+    9. Macro cardpool summary via get_cardpool_telemetry_summary.
+    10. Underused card discovery via get_underused_cards.
+    11. Maintenance reset via reset_card_telemetry.
+    """
+    service = CardService(STORY_DB_PATH)
+    cid = 50000101  # Kasutamaiza, the Creator of Kustomazi
+    cid2 = 50000102 # The Void of Creation
+
+    # 1. Reset target cards to clean baseline
+    await service.reset_card_telemetry(cid)
+    await service.reset_card_telemetry(cid2)
+
+    stats_initial = await service.get_card_usage_stats(cid)
+    assert stats_initial["times_drawn"] == 0
+    assert stats_initial["times_played"] == 0
+    assert stats_initial["wins"] == 0
+    assert stats_initial["losses"] == 0
+    assert stats_initial["total_matches"] == 0
+    assert stats_initial["win_rate"] == 0.0
+    assert stats_initial["name"] == "Kasutamaiza, the Creator of Kustomazi"
+    assert stats_initial["attribute"] == "DIVINE"
+    assert stats_initial["level"] == 12
+
+    # 2. Draw mutators (single with count, and batch opening hand)
+    await service.track_card_draw(cid, count=2)
+    await service.track_cards_drawn([cid, cid2, cid2])
+
+    stats_draw = await service.get_card_usage_stats(cid)
+    assert stats_draw["times_drawn"] == 3
+    stats_draw2 = await service.get_card_usage_stats(cid2)
+    assert stats_draw2["times_drawn"] == 2
+
+    # 3. Play mutators (single with count, and batch)
+    await service.track_card_play(cid, count=1)
+    await service.track_cards_played([cid, cid2])
+
+    stats_play = await service.get_card_usage_stats(cid)
+    assert stats_play["times_played"] == 2
+    assert stats_play["play_to_draw_ratio"] == round(2 / 3 * 100, 1)
+
+    # 4. Match result mutators
+    await service.track_card_match_result(cid, is_win=True)
+    await service.track_cards_match_result([cid, cid2], is_win=True)
+    await service.track_cards_match_result([cid, cid2], is_win=False)
+
+    stats_match = await service.get_card_usage_stats(cid)
+    assert stats_match["wins"] == 2
+    assert stats_match["losses"] == 1
+    assert stats_match["total_matches"] == 3
+    assert stats_match["win_rate"] == round(2 / 3 * 100, 1)
+
+    # 5. Deck inclusion mutators (single and batch)
+    await service.track_deck_inclusion(cid, delta=3)
+    await service.batch_track_deck_inclusions({cid: -1, cid2: 2})
+
+    stats_deck = await service.get_card_usage_stats(cid)
+    assert stats_deck["times_decked"] == 2
+    stats_deck2 = await service.get_card_usage_stats(cid2)
+    assert stats_deck2["times_decked"] == 2
+
+    # 6. Meta overview across all 5 axes
+    meta = await service.get_meta_overview(limit=5)
+    assert "most_popular" in meta
+    assert "most_victorious" in meta
+    assert "most_played" in meta
+    assert "highest_win_rate" in meta
+    assert "most_drawn" in meta
+
+    assert len(meta["most_popular"]) > 0
+    assert len(meta["most_victorious"]) > 0
+    assert len(meta["most_played"]) > 0
+    assert len(meta["most_drawn"]) > 0
+
+    # With full cardpool limit, verify cid is indexed across telemetry
+    meta_all = await service.get_meta_overview(limit=64)
+    assert any(c["card_id"] == cid for c in meta_all["most_popular"])
+    assert any(c["card_id"] == cid for c in meta_all["most_drawn"])
+
+    # Scoped meta overview by card_type
+    spell_meta = await service.get_meta_overview(limit=5, card_type="Spell")
+    for sm in spell_meta["most_popular"]:
+        assert sm["card_type"] == "Spell"
+
+    # 7. Win rate leaderboard
+    wr_rankings = await service.get_card_win_rates(limit=5, min_matches=1)
+    assert len(wr_rankings) > 0
+    assert any(c["card_id"] == cid for c in wr_rankings)
+
+    # 8. Archetype meta stats
+    arch_stats = await service.get_archetype_meta_stats("Kasutamaiza")
+    assert arch_stats["archetype"] == "Kasutamaiza"
+    assert arch_stats["total_cards"] > 0
+    assert arch_stats["times_decked"] >= 2
+    assert arch_stats["total_matches"] >= 3
+    assert arch_stats["top_card_name"] is not None
+
+    # Non-existent archetype returns zeroed contract safely
+    empty_arch = await service.get_archetype_meta_stats("NonExistentArchetypeXYZ")
+    assert empty_arch["total_cards"] == 0
+    assert empty_arch["win_rate"] == 0.0
+
+    # 9. Cardpool telemetry macro summary
+    summary = await service.get_cardpool_telemetry_summary()
+    assert summary["total_registered_cards"] == 64
+    assert summary["distinct_cards_decked"] >= 1
+    assert summary["total_deck_inclusions"] >= 1
+    assert summary["total_card_draws"] >= 1
+    assert summary["total_card_plays"] >= 1
+
+    # 10. Underused card discovery
+    underused = await service.get_underused_cards(limit=5)
+    assert len(underused) == 5
+    for u in underused:
+        assert "times_decked" in u
+        assert "times_played" in u
+
+    # 11. Cleanup test mutations
+    await service.reset_card_telemetry(cid)
+    await service.reset_card_telemetry(cid2)
+
+
+
 
