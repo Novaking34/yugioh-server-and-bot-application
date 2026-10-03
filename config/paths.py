@@ -79,6 +79,7 @@ SIMULATOR_REPLAYS_DIR: str = os.path.join(SIMULATOR_DIR, "replays")
 WEB_DIR: str = os.path.join(PROD_MAIN_DIR, "web")
 STORY_DB_PATH: str = os.path.join(WEB_DIR, "ygo_story.db")
 TEMPLATES_DIR: str = os.path.join(WEB_DIR, "templates")
+STATIC_DIR: str = os.path.join(WEB_DIR, "static")
 
 # The Great Kasutamaiza Discord Bot
 BOT_DIR: str = os.path.join(PROD_MAIN_DIR, "discord_bot")
@@ -142,6 +143,7 @@ def get_all_runtime_directories() -> List[str]:
         THUMBNAILS_DIR,
         DECKS_DIR,
         TEMPLATES_DIR,
+        STATIC_DIR,
         ASSETS_DIR,
         TOOLS_DIR,
         TESTS_DIR,

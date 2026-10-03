@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Deck Vault & Strategy Blueprints | The Land of Kustomazi{% endblock %}
+{% block meta_desc %}Download pre-constructed story decks and tournament-tested decklists (.ydk) for The Land of Kustomazi expansion.{% endblock %}
+
+{% block content %}
+<section style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 6px;">Deck Vault & Strategy Blueprints</h1>
+    <p style="color: var(--text-secondary); font-size: 15px; max-width: 800px;">
+        Tested decks ready for competition and casual dueling. Download raw <code class="mono">.ydk</code> files directly into your EDOPro <code class="mono">deck/</code> directory.
+    </p>
+</section>
+
+<!-- Character Decks -->
+<section style="margin-bottom: 40px;">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Story Archetype Decks</h2>
+    <div class="grid-3" id="decks-list-container">
+        <!-- Rendered dynamically by decks.js -->
+    </div>
+</section>
+
+<!-- Downloadable Raw .YDK Files -->
+<section style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 32px;">
+    <h2 style="font-size: 20px; margin-bottom: 12px;">Direct .YDK Deck File Downloads</h2>
+    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">
+        Place these files inside your <code class="mono">deck/</code> folder in EDOPro or Project Ignis to immediately pilot them online.
+    </p>
+    <div id="shared-ydk-downloads">
+        <!-- Rendered dynamically by decks.js -->
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/decks.js"></script>
+{% endblock %}

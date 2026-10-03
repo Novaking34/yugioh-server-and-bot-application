@@ -18,7 +18,7 @@ function s.initial_effect(c)
 	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
 
-	-- Effect 2: Cannot be Tributed, except for the Tribute Summon of a ...
+	-- Effect 2: Cannot be used as material for the Summoning of a monst...
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,1))
 	e2:SetCategory(0)
@@ -28,17 +28,17 @@ function s.initial_effect(c)
 	e2:SetOperation(s.operation2)
 	c:RegisterEffect(e2)
 
-	-- Effect 3: Cannot be used as material for a Special Summon from th...
+	-- Effect 3: Cannot be Tributed, except for the Tribute Summon of a ...
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e3:SetCategory(0)
 	e3:SetType(EFFECT_TYPE_IGNITION)
 	e3:SetRange(LOCATION_MZONE)
 	e3:SetTarget(s.target3)
 	e3:SetOperation(s.operation3)
 	c:RegisterEffect(e3)
 
-	-- Effect 4: You can banish this card and 2 other "Servants of the G...
+	-- Effect 4: If this card is in your GY: You can banish this card an...
 	local e4=Effect.CreateEffect(c)
 	e4:SetDescription(aux.Stringid(id,3))
 	e4:SetCategory(CATEGORY_REMOVE)

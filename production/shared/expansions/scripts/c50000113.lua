@@ -11,48 +11,16 @@ function s.initial_effect(c)
 	-- Effect 1: Fusion Summon 1 Fusion Monster from your Extra Deck, us...
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetCategory(0)
+	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetTarget(s.target1)
 	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
-
-	-- Effect 2: ● Level 6 or lower: It gains 1000 ATK/DEF, also it can ...
-	local e2=Effect.CreateEffect(c)
-	e2:SetDescription(aux.Stringid(id,1))
-	e2:SetCategory(0)
-	e2:SetType(EFFECT_TYPE_IGNITION)
-	e2:SetTarget(s.target2)
-	e2:SetOperation(s.operation2)
-	c:RegisterEffect(e2)
-
-	-- Effect 3: ● Level 7 or higher: Your opponent cannot activate card...
-	local e3=Effect.CreateEffect(c)
-	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(CATEGORY_SPECIAL_SUMMON)
-	e3:SetType(EFFECT_TYPE_IGNITION)
-	e3:SetTarget(s.target3)
-	e3:SetOperation(s.operation3)
-	c:RegisterEffect(e3)
 end
 
 function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chk==0 then return true end
 end
 function s.operation1(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target2(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation2(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target3(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation3(e,tp,eg,ep,ev,re,r,rp)
 	-- Effect implementation
 end

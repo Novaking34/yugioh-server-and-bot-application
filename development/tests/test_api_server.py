@@ -36,7 +36,28 @@ def test_dashboard_endpoint():
     response = client.get("/")
     assert response.status_code == 200, f"Expected 200 OK, got {response.status_code}"
     assert "text/html" in response.headers.get("content-type", "")
-    assert "Yu-Gi-Oh!" in response.text
+    assert "The Land of Kustomazi" in response.text
+
+
+def test_modular_pages_and_static_assets():
+    """Verify all separated, modular web pages and static stylesheets/scripts render 200 OK."""
+    pages = [
+        ("/catalog", "Card Catalog & Database Explorer"),
+        ("/lore", "Chronicles of Kustomazi"),
+        ("/decks", "Deck Vault & Strategy Blueprints"),
+        ("/play", "Live Duel Simulator Hub"),
+        ("/rules", "Format Rules & Banlist Status"),
+    ]
+    for url, expected_text in pages:
+        res = client.get(url)
+        assert res.status_code == 200, f"Page {url} failed with {res.status_code}"
+        assert "text/html" in res.headers.get("content-type", "")
+        assert expected_text in res.text, f"Page {url} missing expected text: {expected_text}"
+
+    # Verify static assets
+    for asset_url in ["/static/css/main.css", "/static/css/components.css", "/static/js/core.js", "/static/js/catalog.js"]:
+        res = client.get(asset_url)
+        assert res.status_code == 200, f"Static asset {asset_url} failed with {res.status_code}"
 
 
 def test_status_and_health_endpoints():

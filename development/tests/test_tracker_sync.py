@@ -34,20 +34,23 @@ from development.tools.tracker_sync import (
 
 
 def test_tracker_files_exist_and_match():
-    """Verify that both CSV and TSV tracker files exist and contain 14 records."""
+    """Verify that both CSV and TSV tracker files exist and contain 64 records."""
     assert os.path.exists(DEFAULT_TRACKER_CSV), "Master Tracker CSV missing!"
     assert os.path.exists(DEFAULT_TRACKER_TSV), "Master Tracker TSV missing!"
     assert os.path.exists(DEFAULT_ROOT_CSV), "Root Master Tracker CSV mirror missing!"
 
     records = parse_raw_tracker(DEFAULT_TRACKER_CSV)
-    assert len(records) == 14, f"Expected 14 cards, got {len(records)}"
+    assert len(records) == 64, f"Expected 64 cards, got {len(records)}"
 
-    # Check for core creator cards
+    # Check for core creator and LeSpookie cards
     names = [r["name"] for r in records]
     assert "Kasutamaiza, the Creator of Kustomazi" in names
     assert "The Void of Creation" in names
     assert "The Seed of Creation" in names
     assert "The Great Kasutamaiza" in names
+    assert "A Wicked Shadow" in names
+    assert "Magnolia, the Ghost of LeSpookie Street" in names
+    assert "Magnolia, Lantern Ascended" in names
 
 
 def test_google_sheets_image_formula_present():
@@ -91,13 +94,13 @@ def test_duelingbook_id_extraction():
 
 
 def test_database_has_synchronized_cards():
-    """Verify that custom_cards table in story DB contains all 14 TLOK cards with passcodes."""
+    """Verify that custom_cards table in story DB contains all 64 TLOK cards with passcodes."""
     conn = sqlite3.connect(STORY_DB_PATH)
     cur = conn.cursor()
 
     cur.execute("SELECT COUNT(*) FROM custom_cards WHERE set_code = 'TLOK'")
     tlok_count = cur.fetchone()[0]
-    assert tlok_count == 14, f"Expected 14 TLOK cards in database, found {tlok_count}"
+    assert tlok_count == 64, f"Expected 64 TLOK cards in database, found {tlok_count}"
 
     # Check that 'The Creators of Kustomazi' faction is linked
     cur.execute("""
@@ -111,12 +114,24 @@ def test_database_has_synchronized_cards():
     assert row[0] == 50000101
     assert row[2] == "The Creators of Kustomazi"
 
+    # Check that 'The LeSpookiest Night' faction is linked
+    cur.execute("""
+        SELECT c.id, c.name, f.name
+        FROM custom_cards c
+        JOIN factions f ON c.faction_id = f.id
+        WHERE c.name = 'Magnolia, the Ghost of LeSpookie Street'
+    """)
+    row2 = cur.fetchone()
+    assert row2 is not None
+    assert row2[0] == 50000130
+    assert row2[2] == "The LeSpookiest Night"
+
     conn.close()
 
 
 def test_local_images_exist():
-    """Verify that local card images are present for all 14 cards in expansions/pics/."""
-    for passcode in range(50000101, 50000115):
+    """Verify that local card images are present for all 64 cards in expansions/pics/."""
+    for passcode in range(50000101, 50000165):
         img_path = os.path.join(PICS_DIR, f"{passcode}.jpg")
         assert os.path.exists(img_path), f"Card artwork missing for passcode {passcode}: {img_path}"
         assert os.path.getsize(img_path) > 1000, f"Card artwork appears corrupted (size <= 1000 bytes): {img_path}"

@@ -14,8 +14,10 @@ Or via master CLI:
 =============================================================================
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
+from starlette.staticfiles import StaticFiles
+from starlette.templating import Jinja2Templates
 from typing import Optional, List, Dict, Any
 import os
 import sys
@@ -25,18 +27,20 @@ import zipfile
 # Resolve base directories
 try:
     from config.paths import (
-        BASE_DIR, STORY_DB_PATH, TEMPLATES_DIR, TOOLS_DIR,
-        CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR, SCRIPTS_DIR
+        BASE_DIR, STORY_DB_PATH, TEMPLATES_DIR, STATIC_DIR, TOOLS_DIR,
+        CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR, SCRIPTS_DIR, PICS_DIR
     )
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
     TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
     TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
     CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
     DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
     EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
     SCRIPTS_DIR = os.path.join(EXPANSIONS_DIR, "scripts")
+    PICS_DIR = os.path.join(EXPANSIONS_DIR, "pics")
 
 DB_PATH = STORY_DB_PATH
 
@@ -68,22 +72,58 @@ except ImportError:
 app = FastAPI(
     title="Yu-Gi-Oh! Story & Custom Card Engine API",
     description="Synchronizes Duelingbook custom cards with SQLite lore database and ocgcore simulator.",
-    version="1.2.0"
+    version="1.3.0"
 )
 
+# Initialize Jinja2 Templates
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# Mount static web assets and card artwork directories
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+if os.path.exists(PICS_DIR):
+    app.mount("/pics", StaticFiles(directory=PICS_DIR), name="pics")
+
 
 # =============================================================================
-# 1. WEB DASHBOARD ROUTE
+# 1. MODULAR WEB PAGES (Separated & Connected)
 # =============================================================================
 
-@app.get("/", response_class=HTMLResponse, summary="Web Catalog Dashboard")
-def serve_dashboard():
-    """Serves the interactive web dashboard for browsing custom cards and lore."""
-    template_path = os.path.join(TEMPLATES_DIR, "index.html")
-    if os.path.exists(template_path):
-        with open(template_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse("<h2>Error: Dashboard template not found.</h2>", status_code=500)
+@app.get("/", response_class=HTMLResponse, summary="Home Portal Hub")
+def serve_home_page(request: Request):
+    """Serves the portal overview and quick start guide."""
+    return templates.TemplateResponse(request=request, name="index.html", context={"active_page": "home"})
+
+
+@app.get("/catalog", response_class=HTMLResponse, summary="Card Catalog Explorer")
+def serve_catalog_page(request: Request):
+    """Serves the interactive card database and filter explorer."""
+    return templates.TemplateResponse(request=request, name="catalog.html", context={"active_page": "catalog"})
+
+
+@app.get("/lore", response_class=HTMLResponse, summary="World Lore & Sagas")
+def serve_lore_page(request: Request):
+    """Serves narrative sagas, faction dossiers, and character profiles."""
+    return templates.TemplateResponse(request=request, name="lore.html", context={"active_page": "lore"})
+
+
+@app.get("/decks", response_class=HTMLResponse, summary="Deck Vault")
+def serve_decks_page(request: Request):
+    """Serves character decks and direct .ydk downloads."""
+    return templates.TemplateResponse(request=request, name="decks.html", context={"active_page": "decks"})
+
+
+@app.get("/play", response_class=HTMLResponse, summary="Live Duel Simulator Hub")
+def serve_play_page(request: Request):
+    """Serves connection credentials, EDOPro instructions, and asset packages."""
+    return templates.TemplateResponse(request=request, name="play.html", context={"active_page": "play"})
+
+
+@app.get("/rules", response_class=HTMLResponse, summary="Format Rules & Banlist")
+def serve_rules_page(request: Request):
+    """Serves tournament rules, Divine summoning rulings, and banlist status."""
+    return templates.TemplateResponse(request=request, name="rules.html", context={"active_page": "rules"})
 
 
 @app.get("/api/status", summary="Server Health & Subsystem Telemetry")

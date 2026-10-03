@@ -164,3 +164,96 @@ CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
     content='custom_cards',
     content_rowid='id'
 );
+
+-- ----------------------------------------------------------------------------
+-- 10. Competitive ELO & Player Rankings
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS player_ratings (
+    user_id TEXT PRIMARY KEY,               -- Discord Snowflake ID
+    username TEXT,                          -- Cached Discord display name
+    elo INTEGER DEFAULT 1200,               -- Current ELO score (default 1200)
+    wins INTEGER DEFAULT 0,                 -- Total competitive wins
+    losses INTEGER DEFAULT 0,               -- Total competitive losses
+    draws INTEGER DEFAULT 0,                -- Total competitive draws
+    win_streak INTEGER DEFAULT 0,           -- Current consecutive wins
+    highest_streak INTEGER DEFAULT 0,       -- Peak consecutive wins
+    highest_elo INTEGER DEFAULT 1200,       -- Peak ELO reached
+    tier TEXT DEFAULT 'Bronze Duelist',      -- Tier title
+    season_id TEXT DEFAULT 'Season 1',      -- Ranking season
+    last_match_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_player_ratings_elo ON player_ratings(elo DESC);
+
+-- ----------------------------------------------------------------------------
+-- 11. Match History & Duel Tracking
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS duel_matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_type TEXT DEFAULT 'CASUAL',       -- 'RANKED', 'CASUAL', 'STORY'
+    p1_user_id TEXT NOT NULL,
+    p2_user_id TEXT,                        -- NULL or 'NPC' if story duel
+    winner_user_id TEXT,                    -- Winner user ID, 'DRAW', or 'CANCELLED'
+    p1_elo_before INTEGER,
+    p1_elo_after INTEGER,
+    p2_elo_before INTEGER,
+    p2_elo_after INTEGER,
+    turns INTEGER DEFAULT 1,
+    summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 12. Card & Deck Usage Telemetry
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS card_usage_stats (
+    card_id INTEGER PRIMARY KEY REFERENCES custom_cards(id) ON DELETE CASCADE,
+    times_decked INTEGER DEFAULT 0,         -- Included in player decks
+    times_drawn INTEGER DEFAULT 0,          -- Drawn in duels
+    times_played INTEGER DEFAULT 0,         -- Played/summoned in duels
+    wins INTEGER DEFAULT 0,                 -- Matches won when in active deck
+    losses INTEGER DEFAULT 0,               -- Matches lost when in active deck
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 13. Story Mode Chapters & Progressive Stages
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS story_chapters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chapter_number INTEGER NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    arc_id INTEGER REFERENCES lore_arcs(id) ON DELETE SET NULL,
+    synopsis TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS story_stages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chapter_id INTEGER REFERENCES story_chapters(id) ON DELETE CASCADE,
+    stage_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    intro_dialogue TEXT NOT NULL,
+    outro_dialogue TEXT NOT NULL,
+    opponent_name TEXT NOT NULL,
+    opponent_title TEXT,
+    opponent_character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
+    opponent_deck_id INTEGER REFERENCES decks(id) ON DELETE SET NULL,
+    encounter_type TEXT DEFAULT 'AI',       -- 'AI' (dynamic RNG deck play) or 'SCRIPTED' (pre-determined events)
+    boss_hp INTEGER DEFAULT 8000,           -- Starting LP for NPC boss
+    script_data TEXT DEFAULT NULL,          -- JSON encoded scripted timeline & dialogue cues
+    reward_title TEXT,
+    reward_card_id INTEGER REFERENCES custom_cards(id) ON DELETE SET NULL,
+    UNIQUE(chapter_id, stage_number)
+);
+
+
+CREATE TABLE IF NOT EXISTS player_story_progress (
+    user_id TEXT PRIMARY KEY,               -- Discord Snowflake ID
+    current_chapter_id INTEGER DEFAULT 1,
+    current_stage_number INTEGER DEFAULT 1,
+    highest_stage_completed INTEGER DEFAULT 0,
+    unlocked_titles TEXT DEFAULT '',        -- Comma-separated titles
+    total_story_wins INTEGER DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+

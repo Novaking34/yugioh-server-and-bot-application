@@ -1,0 +1,105 @@
+{
+  "chapter_id": 2,
+  "chapter_number": 2,
+  "title": "The LeSpookiest Night",
+  "arc_id": 1,
+  "synopsis": "On a quiet Halloween night when Magnolia dances and shadows are a fright, costumed mortals awaken their inner spirits. Duel through the haunted streets and face the mysterious shadows.",
+  "stages": [
+    {
+      "stage_id": 4,
+      "stage_number": 1,
+      "title": "Halloween on LeSpookie Street",
+      "intro_dialogue": "The autumn breeze carries the scent of caramel and fallen leaves. Children in handmade masks laugh beneath the glowing amber streetlights. But there is a peculiar resonance in the air—these aren't mere costumes. Tonight, the boundary between mortal whimsy and the spirit realm is gossamer-thin.",
+      "outro_dialogue": "The costumed trick-or-treater giggles and hands you a handful of sugary sweets. 'You duel like you really believe in magic! Keep this safe—the shadows grow longer tonight!'",
+      "opponent_name": "Costumed Trick-or-Treater",
+      "opponent_title": "Wandering Reveler",
+      "opponent_character_id": 2,
+      "opponent_deck_id": 2,
+      "encounter_type": "AI",
+      "boss_hp": 8000,
+      "reward_title": "Street Reveler",
+      "reward_card_id": 50000128,
+      "script_data": null
+    },
+    {
+      "stage_id": 5,
+      "stage_number": 2,
+      "title": "When the Shadows Are a Fright",
+      "intro_dialogue": "A flicker along the brick alleyway catches your eye. The streetlight flickers and dims to a pale violet hue. From the base of the lamppost, a silhouette detaches itself, grinning with needle-thin fangs. This is no ordinary ghost—it is the lingering malice of Mohousha, banished into the rift by Divine Justice and wandering between worlds before Contact from Beyond breaks his seal. 'Trick or treat... or perhaps a duel in the dark?'",
+      "outro_dialogue": "The wicked shadow dissolves into tendrils of harmless dusk. 'Hehehe... delightful! Even while cast out from the creator's realm, my shadow dances! Go forth—Magnolia awaits where the lanterns burn brightest!'",
+      "opponent_name": "A Wicked Shadow",
+      "opponent_title": "Formless Phantasm",
+      "opponent_character_id": 2,
+      "opponent_deck_id": 2,
+      "encounter_type": "SCRIPTED",
+      "boss_hp": 8000,
+      "reward_title": "Shadow Weaver",
+      "reward_card_id": 50000115,
+      "script_data": {
+        "turns": {
+          "1": {
+            "play": "A chilly wind sweeps the lane. A Wicked Shadow manifests beneath the streetlamp, placing Trick-or-Treat Counters on all monsters and Normal Summoning **LeSpookie Jack, Ember of the Hollow Smile** (`TLOK-021`)!",
+            "damage": 800,
+            "quote": "\"When Magnolia dances and shadows are a fright... let's see if you can survive the night!\""
+          },
+          "2": {
+            "play": "A Wicked Shadow removes 3 Trick-or-Treat Counters to conduct an instant Quick Synchro! The flames erupt into **Jack-O-Lantern, Spirit Spark of LeSpookie** (`TLOK-054`)!",
+            "damage": 1200,
+            "quote": "\"The embers burn bright! Feel the bite of Halloween!\""
+          },
+          "3": {
+            "play": "The phantasm activates **LeSpookiest Trick!** (`TLOK-046`), shuffling cards and unleashing a wave of spectral fright!",
+            "damage": 1500,
+            "quote": "\"Trick or treat, smell my feet, give me something good to beat!\""
+          }
+        },
+        "repeat": {
+          "play": "A Wicked Shadow lashes out from the corners of the dark alley!",
+          "damage": 900,
+          "quote": "\"The shadows will never truly vanish!\""
+        },
+        "threshold_4000": "🎃 *A Wicked Shadow flickers wildly as its spectral form is destabilized! \"What an extraordinary duelist... your light burns too bright!\"*"
+      }
+    },
+    {
+      "stage_id": 6,
+      "stage_number": 3,
+      "title": "The Dance of Magnolia",
+      "intro_dialogue": "At the town square fountain, floating jack-o'-lanterns cast warm, undulating amber ripples. A spectral maiden with braided hair twirls softly, clutching an ancient, luminous lantern. She turns to you with gentle, ancient eyes. 'Welcome to our quiet town, traveler. When the world was created, our inner spirits were granted this sacred night. Shall we dance beneath the streetlights?'",
+      "outro_dialogue": "Magnolia lowers her lantern and bows gracefully. 'Magnificent! You have embraced the spirit of the Gemini—ordinary mortals capable of wondrous, supernatural awakening. Wherever the streetlights shine, LeSpookie Commons welcomes you home.'",
+      "opponent_name": "Magnolia, the Ghost of LeSpookie Street",
+      "opponent_title": "The Lantern Maiden",
+      "opponent_character_id": 2,
+      "opponent_deck_id": 2,
+      "encounter_type": "SCRIPTED",
+      "boss_hp": 8000,
+      "reward_title": "Lantern Maiden's Bond",
+      "reward_card_id": 50000130,
+      "script_data": {
+        "turns": {
+          "1": {
+            "play": "Magnolia glides across the cobbles as lanterns ignite. Normal Summons **Magnolia, the Ghost of LeSpookie Street** (`TLOK-030`) with 2500 ATK!",
+            "damage": 1000,
+            "quote": "\"Every child in costume carries an inner light waiting to be awakened...\""
+          },
+          "2": {
+            "play": "Magnolia raises her lantern! Activates **LeSpookiest Night** (`TLOK-040`), awakening her Gemini companions and Synchro Summoning **Magnolia, Lantern Eternal of LeSpookie** (`TLOK-058`) (3300 ATK)!",
+            "damage": 1600,
+            "quote": "\"Dance with me under the streetlights! Let the spirits celebrate!\""
+          },
+          "3": {
+            "play": "Magnolia conducts a Link Summon into **Magnolia, Lantern Ascended** (`TLOK-064`), linking the field with radiant protective light!",
+            "damage": 1800,
+            "quote": "\"Our inner lives shine eternal, even when the night draws to a close!\""
+          }
+        },
+        "repeat": {
+          "play": "Magnolia's lantern radiates warm spectral energy, illuminating the entire avenue!",
+          "damage": 1200,
+          "quote": "\"Let the music of the quiet town continue!\""
+        },
+        "threshold_4000": "🏮 *Magnolia's eyes sparkle with joyful wonder! \"Breathtaking! Your bond with your cards illuminates the entire LeSpookie Commons!\"*"
+      }
+    }
+  ]
+}

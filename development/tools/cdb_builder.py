@@ -60,7 +60,7 @@ if CURRENT_DIR not in sys.path:
 from constants import (
     TYPE_MONSTER, TYPE_SPELL, TYPE_TRAP, TYPE_NORMAL, TYPE_EFFECT,
     TYPE_FUSION, TYPE_RITUAL, TYPE_SYNCHRO, TYPE_XYZ, TYPE_PENDULUM, TYPE_LINK,
-    TYPE_TUNER, TYPE_QUICKPLAY, TYPE_CONTINUOUS, TYPE_EQUIP, TYPE_FIELD, TYPE_COUNTER,
+    TYPE_TUNER, TYPE_DUAL, TYPE_QUICKPLAY, TYPE_CONTINUOUS, TYPE_EQUIP, TYPE_FIELD, TYPE_COUNTER,
     ATTRIBUTE_MAP, RACE_MAP, LINK_ARROW_MAP
 )
 
@@ -99,6 +99,8 @@ def parse_card_type(card_type: Optional[str], card_subtype: Optional[str]) -> in
             val |= TYPE_PENDULUM
         if 'tuner' in csub_lower:
             val |= TYPE_TUNER
+        if 'gemini' in csub_lower or 'dual' in csub_lower:
+            val |= TYPE_DUAL | TYPE_EFFECT
 
     elif ctype_lower == 'spell':
         val |= TYPE_SPELL
@@ -268,6 +270,10 @@ def build_cdb(
             str13 text, str14 text, str15 text, str16 text
         )
     """)
+
+    # Clean stale records before compiling
+    cdb_cur.execute("DELETE FROM datas")
+    cdb_cur.execute("DELETE FROM texts")
 
     # 3. Fetch all custom cards from Story DB
     story_cur.execute("""

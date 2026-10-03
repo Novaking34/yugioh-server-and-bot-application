@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Play Online & Live Duel Engine Hub | The Land of Kustomazi{% endblock %}
+{% block meta_desc %}Connect your EDOPro / Project Ignis client to our 24/7 dedicated duel server. Get server IP, port, and custom card expansion packages.{% endblock %}
+
+{% block content %}
+<section style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 6px;">Live Duel Simulator Hub</h1>
+    <p style="color: var(--text-secondary); font-size: 15px; max-width: 800px;">
+        Join our dedicated 24/7 Yu-Gi-Oh! duel simulator engine powered by ocgcore. Real-time automatic rule enforcement, full timing mechanics, and custom card script execution.
+    </p>
+</section>
+
+<!-- Connection Status & Credentials Panel -->
+<section style="background: var(--bg-card); border: 1px solid var(--border-glow-cyan); border-radius: var(--radius-xl); padding: 32px; margin-bottom: 40px; box-shadow: var(--shadow-glow-cyan);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+        <div>
+            <span class="hero-tag">⚡ 24/7 Dedicated Server</span>
+            <h2 style="font-size: 24px;">Connection Endpoints</h2>
+        </div>
+        <button class="btn btn-accent" onclick="copyFullEDOProConfig()">
+            📋 Copy EDOPro Config
+        </button>
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Host Address / IP</div>
+            <div class="mono" style="font-size: 18px; color: var(--accent-cyan); font-weight: 700; margin-bottom: 8px;">147.224.147.30</div>
+            <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="copyHostConfig()">Copy Host</button>
+        </div>
+
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Duel Socket Port (EDOPro)</div>
+            <div class="mono" style="font-size: 18px; color: var(--accent-emerald); font-weight: 700; margin-bottom: 8px;">7911</div>
+            <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="copyPortConfig()">Copy Port</button>
+        </div>
+
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Domain Alias</div>
+            <div class="mono" style="font-size: 16px; color: var(--accent-gold); font-weight: 700; margin-bottom: 8px;">thelandofkustomazi.com</div>
+            <span style="font-size: 11px; color: var(--text-secondary);">play.thelandofkustomazi.com</span>
+        </div>
+    </div>
+</section>
+
+<!-- Client Setup Instructions -->
+<section class="grid-2" style="margin-bottom: 40px;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 28px;">
+        <h3 style="font-size: 19px; margin-bottom: 14px;">Option A: Manual EDOPro Setup</h3>
+        <ol style="color: var(--text-secondary); font-size: 14px; line-height: 1.8; padding-left: 20px;">
+            <li>Download the <a href="/api/shared/cdb" style="color: var(--accent-cyan); text-decoration: underline;">custom_cards.cdb</a> database.</li>
+            <li>Place <code class="mono">custom_cards.cdb</code> into your EDOPro <code class="mono">expansions/</code> folder.</li>
+            <li>Launch EDOPro and click <strong>Multiplayer</strong>.</li>
+            <li>Enter Host: <code class="mono" style="color: var(--text-primary);">147.224.147.30</code> and Port: <code class="mono" style="color: var(--text-primary);">7911</code>.</li>
+            <li>Join or host a custom duel room!</li>
+        </ol>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 28px;">
+        <h3 style="font-size: 19px; margin-bottom: 14px;">Option B: Automated Client Package</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+            Download our all-in-one expansion archive containing card databases, card artwork, Lua scripts, and pre-configured decklists.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="/api/expansions/download" class="btn btn-primary" style="justify-content: center;">
+                📦 Download All Expansion Assets (.ZIP)
+            </a>
+            <a href="/api/shared/cdb" class="btn btn-secondary" style="justify-content: center;">
+                📥 Download SQLite .CDB Only
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/play.js"></script>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The Land of Kustomazi | Yu-Gi-Oh! Custom Card Platform{% endblock %}</title>
+    <meta name="description" content="{% block meta_desc %}Official portal for The Land of Kustomazi Yu-Gi-Oh! custom card expansion, live 24/7 duel simulator engine, and story lore chronicle.{% endblock %}">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Core & Modular CSS Stylesheets -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Bar -->
+        <header class="topbar" id="app-topbar">
+            <a href="/" class="brand-cluster" id="brand-home-link">
+                <div class="brand-icon">⚡</div>
+                <div class="brand-text">
+                    <h1>The Land of Kustomazi</h1>
+                    <span>Custom Duel Engine & Lore Hub</span>
+                </div>
+            </a>
+
+            <!-- Central Nav Links -->
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}" id="nav-home">Home</a></li>
+                    <li><a href="/catalog" class="nav-link {% if active_page == 'catalog' %}active{% endif %}" id="nav-catalog">Card Catalog</a></li>
+                    <li><a href="/lore" class="nav-link {% if active_page == 'lore' %}active{% endif %}" id="nav-lore">World Lore</a></li>
+                    <li><a href="/decks" class="nav-link {% if active_page == 'decks' %}active{% endif %}" id="nav-decks">Deck Vault</a></li>
+                    <li><a href="/play" class="nav-link {% if active_page == 'play' %}active{% endif %}" id="nav-play">Play Online</a></li>
+                    <li><a href="/rules" class="nav-link {% if active_page == 'rules' %}active{% endif %}" id="nav-rules">Banlist</a></li>
+                </ul>
+            </nav>
+
+            <!-- Live Telemetry Status Bar -->
+            <div class="telemetry-bar">
+                <span class="status-pill online" id="status-web-pill">
+                    <span class="pulse-dot"></span> Web: Port 8000
+                </span>
+                <span class="status-pill online" id="status-sim-pill">
+                    <span class="pulse-dot"></span> Duel Server: 7911
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Body Content -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Global Card Inspection Modal Drawer -->
+        <div class="modal-overlay" id="card-modal-overlay">
+            <div class="modal-container" id="card-modal-container">
+                <button class="modal-close" id="card-modal-close" onclick="closeCardModal()">&times;</button>
+                <div class="modal-body" id="card-modal-body">
+                    <!-- Dynamically populated by catalog.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Footer -->
+        <footer class="footer">
+            <div>
+                <strong>The Land of Kustomazi Platform</strong> &bull; Custom Card Expansion & ocgcore Engine
+            </div>
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <a href="/catalog">Database</a>
+                <a href="/play">EDOPro Connect</a>
+                <a href="/api/shared/cdb">Download .CDB</a>
+                <a href="/api/docs" target="_blank" rel="noopener noreferrer">REST API Docs</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Core JavaScript -->
+    <script src="/static/js/core.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

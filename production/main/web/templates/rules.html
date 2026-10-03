@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Format Rules & Banlist Status | The Land of Kustomazi{% endblock %}
+{% block meta_desc %}Official tournament format rules, custom card mechanic rulings, and current banlist (LFList) for The Land of Kustomazi.{% endblock %}
+
+{% block content %}
+<section style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 6px;">Format Rules & Banlist Status</h1>
+    <p style="color: var(--text-secondary); font-size: 15px; max-width: 800px;">
+        The Land of Kustomazi follows Master Rule 2020 guidelines with custom expansion card interactions.
+    </p>
+</section>
+
+<!-- Format Overview Cards -->
+<section class="grid-3" style="margin-bottom: 40px;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 24px;">
+        <div style="font-size: 12px; color: var(--accent-cyan); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Duel Format</div>
+        <h3 style="font-size: 18px; margin-bottom: 8px;">Master Rule 2020</h3>
+        <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+            8000 Life Points, 5 card opening hand, standard Extra Deck placement (Fusion, Synchro, Xyz into Main or Extra Monster Zones).
+        </p>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 24px;">
+        <div style="font-size: 12px; color: var(--accent-gold); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Special Summon Rules</div>
+        <h3 style="font-size: 18px; margin-bottom: 8px;">DIVINE Deities</h3>
+        <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+            Kasutamaiza deities possess strict Summoning conditions. Special Summoning is locked unless explicitly enabled by cards like <code class="mono">The Seed of Creation</code>.
+        </p>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 24px;">
+        <div style="font-size: 12px; color: var(--accent-emerald); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Engine Compatibility</div>
+        <h3 style="font-size: 18px; margin-bottom: 8px;">ocgcore v1.2</h3>
+        <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+            Strict priority windows, continuous chain link evaluation, and authentic PSCT (Problem-Solving Card Text) execution.
+        </p>
+    </div>
+</section>
+
+<!-- Banlist Status -->
+<section style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 32px;">
+    <h2 style="font-size: 22px; margin-bottom: 8px;">Expansion Set 1 Banlist (LFList)</h2>
+    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">
+        All 14 cards of Set 1 (Passcodes 50000101 &ndash; 50000114) and 6 archetype extensions are currently <strong>Unlimited (3 copies per deck)</strong> during initial live server testing.
+    </p>
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <span class="chip active">Unlimited (3) - 20 Cards</span>
+        <span class="chip">Semi-Limited (2) - 0 Cards</span>
+        <span class="chip">Limited (1) - 0 Cards</span>
+        <span class="chip">Forbidden (0) - 0 Cards</span>
+    </div>
+</section>
+{% endblock %}

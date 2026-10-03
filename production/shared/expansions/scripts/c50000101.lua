@@ -8,27 +8,27 @@
 local s, id = GetID()
 
 function s.initial_effect(c)
-	-- Effect 1: Requires 3 Tributes to Normal Summon (cannot be Normal ...
+	-- Effect 1: Cannot be Special Summoned. Requires 3 Tributes to Norm...
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetCategory(0)
+	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetTarget(s.target1)
 	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
 
-	-- Effect 2: Cannot be Special Summoned....
+	-- Effect 2: Cannot attack the turn it is Summoned....
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,1))
-	e2:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e2:SetCategory(0)
 	e2:SetType(EFFECT_TYPE_IGNITION)
 	e2:SetRange(LOCATION_MZONE)
 	e2:SetTarget(s.target2)
 	e2:SetOperation(s.operation2)
 	c:RegisterEffect(e2)
 
-	-- Effect 3: Cannot attack the turn it is Normal Summoned....
+	-- Effect 3: If this card is Tribute Summoned by Tributing 2 or more...
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,2))
 	e3:SetCategory(0)
@@ -38,46 +38,36 @@ function s.initial_effect(c)
 	e3:SetOperation(s.operation3)
 	c:RegisterEffect(e3)
 
-	-- Effect 4: If this card was Tribute Summoned by Tributing 2 or mor...
+	-- Effect 4: If this card is Normal Summoned: You can add 1 card fro...
 	local e4=Effect.CreateEffect(c)
 	e4:SetDescription(aux.Stringid(id,3))
-	e4:SetCategory(0)
+	e4:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH+CATEGORY_REMOVE)
 	e4:SetType(EFFECT_TYPE_IGNITION)
 	e4:SetRange(LOCATION_MZONE)
 	e4:SetTarget(s.target4)
 	e4:SetOperation(s.operation4)
 	c:RegisterEffect(e4)
 
-	-- Effect 5: If this card is Normal Summoned: You can add 1 card fro...
+	-- Effect 5: Once per turn, during your Main Phase 1: You can make t...
 	local e5=Effect.CreateEffect(c)
 	e5:SetDescription(aux.Stringid(id,4))
-	e5:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH+CATEGORY_REMOVE)
+	e5:SetCategory(0)
 	e5:SetType(EFFECT_TYPE_IGNITION)
 	e5:SetRange(LOCATION_MZONE)
+	e5:SetCountLimit(1)
 	e5:SetTarget(s.target5)
 	e5:SetOperation(s.operation5)
 	c:RegisterEffect(e5)
 
-	-- Effect 6: Once per turn, during your Main Phase 1: You can change...
+	-- Effect 6: You can only control 1 "Kasutamaiza, the Creator of Kus...
 	local e6=Effect.CreateEffect(c)
 	e6:SetDescription(aux.Stringid(id,5))
 	e6:SetCategory(0)
 	e6:SetType(EFFECT_TYPE_IGNITION)
 	e6:SetRange(LOCATION_MZONE)
-	e6:SetCountLimit(1)
 	e6:SetTarget(s.target6)
 	e6:SetOperation(s.operation6)
 	c:RegisterEffect(e6)
-
-	-- Effect 7: You can only control 1 "Kasutamaiza, the Creator of Kus...
-	local e7=Effect.CreateEffect(c)
-	e7:SetDescription(aux.Stringid(id,6))
-	e7:SetCategory(0)
-	e7:SetType(EFFECT_TYPE_IGNITION)
-	e7:SetRange(LOCATION_MZONE)
-	e7:SetTarget(s.target7)
-	e7:SetOperation(s.operation7)
-	c:RegisterEffect(e7)
 end
 
 function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
@@ -119,12 +109,5 @@ function s.target6(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chk==0 then return true end
 end
 function s.operation6(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target7(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation7(e,tp,eg,ep,ev,re,r,rp)
 	-- Effect implementation
 end

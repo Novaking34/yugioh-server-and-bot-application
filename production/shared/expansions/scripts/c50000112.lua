@@ -11,47 +11,20 @@ function s.initial_effect(c)
 	-- Effect 1: Banish up to 3 "The Void of Creation" from your GY; app...
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetCategory(CATEGORY_REMOVE)
+	e1:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH+CATEGORY_SPECIAL_SUMMON+CATEGORY_REMOVE+CATEGORY_DRAW)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetTarget(s.target1)
 	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
 
-	-- Effect 2: ● 1+: Add 1 monster from your GY to your hand, also you...
+	-- Effect 2: You can only activate 1 "The Spark of Creation" per tur...
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,1))
-	e2:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH+CATEGORY_SPECIAL_SUMMON)
+	e2:SetCategory(0)
 	e2:SetType(EFFECT_TYPE_IGNITION)
 	e2:SetTarget(s.target2)
 	e2:SetOperation(s.operation2)
 	c:RegisterEffect(e2)
-
-	-- Effect 3: ● 2+: Set 1 Spell/Trap directly from your Deck, but it ...
-	local e3=Effect.CreateEffect(c)
-	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(0)
-	e3:SetType(EFFECT_TYPE_IGNITION)
-	e3:SetTarget(s.target3)
-	e3:SetOperation(s.operation3)
-	c:RegisterEffect(e3)
-
-	-- Effect 4: ● 3: Draw 1 card, then, if you have 3 or fewer cards in...
-	local e4=Effect.CreateEffect(c)
-	e4:SetDescription(aux.Stringid(id,3))
-	e4:SetCategory(CATEGORY_DRAW)
-	e4:SetType(EFFECT_TYPE_IGNITION)
-	e4:SetTarget(s.target4)
-	e4:SetOperation(s.operation4)
-	c:RegisterEffect(e4)
-
-	-- Effect 5: You can only activate 1 "The Spark of Creation" per tur...
-	local e5=Effect.CreateEffect(c)
-	e5:SetDescription(aux.Stringid(id,4))
-	e5:SetCategory(0)
-	e5:SetType(EFFECT_TYPE_IGNITION)
-	e5:SetTarget(s.target5)
-	e5:SetOperation(s.operation5)
-	c:RegisterEffect(e5)
 end
 
 function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
@@ -65,26 +38,5 @@ function s.target2(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chk==0 then return true end
 end
 function s.operation2(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target3(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation3(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target4(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation4(e,tp,eg,ep,ev,re,r,rp)
-	-- Effect implementation
-end
-
-function s.target5(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chk==0 then return true end
-end
-function s.operation5(e,tp,eg,ep,ev,re,r,rp)
 	-- Effect implementation
 end

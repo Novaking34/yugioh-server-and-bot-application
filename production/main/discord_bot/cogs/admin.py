@@ -197,6 +197,90 @@ class AdminCog(commands.GroupCog, group_name="admin"):
         await interaction.channel.send(embed=embed)
         await interaction.response.send_message("[+] Announcement broadcasted.", ephemeral=True)
 
+    @app_commands.command(name="reset_duel", description="Safely terminate and reset a stuck duel session for a user")
+    @app_commands.describe(user="The duelist whose duel session should be cleared")
+    async def reset_duel(self, interaction: discord.Interaction, user: discord.User):
+        """Emergency reset tool to recover duelists from interrupted or frozen duels."""
+        from services.duel_service import duel_manager
+        success = duel_manager.force_reset_user(user.id)
+        if success:
+            await interaction.response.send_message(
+                f"✅ Successfully cleared active duel session for **{user.display_name}**.",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"ℹ️ **{user.display_name}** has no active duel session in memory.",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="clear_all_duels", description="Emergency purge for all active live duel sessions across the server")
+    async def clear_all_duels(self, interaction: discord.Interaction):
+        """Purges all running in-memory duel sessions."""
+        from services.duel_service import duel_manager
+        count = duel_manager.clear_all()
+        await interaction.response.send_message(
+            f"🧹 Cleared all **{count}** active duel sessions.",
+            ephemeral=True
+        )
+
+    @app_commands.command(name="reset_story", description="Reset or adjust a player's Story Mode stage progress")
+    @app_commands.describe(user="Player to modify", stage="Target stage number (1 = beginning)")
+    async def reset_story(self, interaction: discord.Interaction, user: discord.User, stage: Optional[int] = 1):
+        """Sets a player's story stage progress."""
+        from services.story_service import StoryService
+        service = StoryService()
+        target_stage = max(1, stage or 1)
+        await service.reset_progress(str(user.id), target_stage)
+        await interaction.response.send_message(
+            f"✅ Story progress for **{user.display_name}** adjusted to Stage **{target_stage}**.",
+            ephemeral=True
+        )
+
+    @app_commands.command(name="sync_story", description="Synchronize story chapters and stages from JSON scenario files into the database")
+    async def sync_story(self, interaction: discord.Interaction):
+        """Scans data/story/*.json scenario files and refreshes all story stages with zero downtime."""
+        from services.story_service import StoryService
+        service = StoryService()
+        await interaction.response.defer(ephemeral=True)
+        res = await service.sync_all_story_files()
+
+        embed = discord.Embed(
+            title="📜 Story Scenarios Synchronized",
+            description="Successfully loaded and refreshed story campaign encounters directly into database.",
+            color=0x8B5CF6
+        )
+        embed.add_field(name="Chapters Synced", value=f"**{res['chapters_synced']}** chapters", inline=True)
+        embed.add_field(name="Stages Configured", value=f"**{res['stages_synced']}** stages", inline=True)
+        files_str = "\n".join([f"• `{f}`" for f in res['files']]) if res['files'] else "*None found.*"
+        embed.add_field(name="Scenario Files", value=files_str, inline=False)
+        embed.set_footer(text="Zero bot restart required • Hot-updated story encounters")
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="status", description="Inspect live bot diagnostics, active duels, and gateway health")
+    async def status(self, interaction: discord.Interaction):
+        """Displays live platform and bot observability metrics."""
+        from services.duel_service import duel_manager
+        gateway_ping = round(self.bot.latency * 1000, 1)
+        guilds_count = len(self.bot.guilds)
+        active_duels = duel_manager.active_duel_count
+
+        embed = discord.Embed(
+            title="🤖 Discord Bot Operational Diagnostics",
+            color=0x10B981
+        )
+        embed.add_field(name="Gateway Latency", value=f"`{gateway_ping} ms`", inline=True)
+        embed.add_field(name="Connected Guilds", value=f"**{guilds_count}**", inline=True)
+        embed.add_field(name="Active Live Duels", value=f"**{active_duels}**", inline=True)
+        embed.add_field(name="Loaded Extensions", value=f"`{len(self.bot.extensions)}` cogs", inline=True)
+        embed.add_field(name="Database Path", value=f"`{os.path.basename(self.db_path)}`", inline=True)
+
+        embed.set_footer(text="State auto-reloads cleanly • Hot-reloadable via /admin reload")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AdminCog(bot))
+

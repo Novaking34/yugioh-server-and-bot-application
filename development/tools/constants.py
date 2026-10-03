@@ -216,3 +216,82 @@ DB_ATTRIBUTES = {
     6: 'DARK',
     7: 'DIVINE'
 }
+
+# =============================================================================
+# 7. OFFICIAL YU-GI-OH! CARD RARITIES
+# =============================================================================
+# Standard core booster and tournament rarities used in Yu-Gi-Oh! TCG/OCG.
+RARITY_COMMON                   = 'Common'
+RARITY_RARE                     = 'Rare'
+RARITY_SUPER_RARE               = 'Super Rare'
+RARITY_ULTRA_RARE               = 'Ultra Rare'
+RARITY_SECRET_RARE              = 'Secret Rare'
+RARITY_ULTIMATE_RARE            = 'Ultimate Rare'
+RARITY_GHOST_RARE               = 'Ghost Rare'
+RARITY_STARLIGHT_RARE           = 'Starlight Rare'
+RARITY_COLLECTOR_RARE           = 'Collector\'s Rare'
+RARITY_QUARTER_CENTURY_SECRET_RARE = 'Quarter Century Secret Rare'
+
+OFFICIAL_RARITIES = [
+    RARITY_COMMON,
+    RARITY_RARE,
+    RARITY_SUPER_RARE,
+    RARITY_ULTRA_RARE,
+    RARITY_SECRET_RARE,
+    RARITY_ULTIMATE_RARE,
+    RARITY_GHOST_RARE,
+    RARITY_STARLIGHT_RARE,
+    RARITY_COLLECTOR_RARE,
+    RARITY_QUARTER_CENTURY_SECRET_RARE,
+]
+
+RARITY_SHORT_CODES = {
+    'C': RARITY_COMMON,
+    'R': RARITY_RARE,
+    'SR': RARITY_SUPER_RARE,
+    'UR': RARITY_ULTRA_RARE,
+    'SCR': RARITY_SECRET_RARE,
+    'UTR': RARITY_ULTIMATE_RARE,
+    'GR': RARITY_GHOST_RARE,
+    'STR': RARITY_STARLIGHT_RARE,
+    'CR': RARITY_COLLECTOR_RARE,
+    'QCSR': RARITY_QUARTER_CENTURY_SECRET_RARE,
+}
+
+RARITY_COLOR_CODES = {
+    RARITY_COMMON: 0xBDC3C7,                    # Silver / Grey
+    RARITY_RARE: 0x95A5A6,                      # Silver foil title
+    RARITY_SUPER_RARE: 0x3498DB,                # Foil holofoil art (Blue)
+    RARITY_ULTRA_RARE: 0xF1C40F,                # Gold foil title + holo art (Gold)
+    RARITY_SECRET_RARE: 0x9B59B6,               # Silver rainbow foil + cross-hatch (Prismatic/Purple)
+    RARITY_ULTIMATE_RARE: 0xE67E22,             # Embossed relief (Orange)
+    RARITY_GHOST_RARE: 0xECF0F1,                # Holographic 3D pale (Silver-White)
+    RARITY_STARLIGHT_RARE: 0x1ABC9C,            # Starlight prismatic foil (Cyan)
+    RARITY_COLLECTOR_RARE: 0xE74C3C,            # Textured border/art (Crimson)
+    RARITY_QUARTER_CENTURY_SECRET_RARE: 0xF39C12 # 25th Anniversary gold/prismatic
+}
+
+def is_official_rarity(rarity_str: str) -> bool:
+    """Checks whether a given rarity matches an official Yu-Gi-Oh! rarity."""
+    if not rarity_str:
+        return False
+    norm = rarity_str.strip().title()
+    return norm in OFFICIAL_RARITIES or rarity_str.strip().upper() in RARITY_SHORT_CODES
+
+def has_field_awareness(card_subtype: str, effect_text: str) -> bool:
+    """
+    Determines if a card has Field Awareness (either is a Field Spell or explicitly
+    mentions, requires, tutors, or interacts with a Field Spell).
+    """
+    sub = (card_subtype or "").lower()
+    text = (effect_text or "").lower()
+    if "field" in sub:
+        return True
+    field_keywords = [
+        "field spell", "field card", "while you control a field spell",
+        "control a face-up “lespookie” field spell", "control a “lespookie” field spell",
+        "control a field spell", "planet kustomazi", "temple of the great kasutamaiza",
+        "lespookie haunted mansion", "lespookie street, cursed lane"
+    ]
+    return any(k in text for k in field_keywords)
+

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Card Catalog & Database Explorer | The Land of Kustomazi{% endblock %}
+{% block meta_desc %}Browse, search, and inspect the complete custom card catalog for The Land of Kustomazi expansion. Check ATK/DEF, card effects, passcodes, and rulings.{% endblock %}
+
+{% block content %}
+<section style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; gap: 14px;">
+        <div>
+            <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 4px;">Card Catalog & Database Explorer</h1>
+            <p style="color: var(--text-secondary); font-size: 14px;">
+                Complete registry of Set 1: The Land of Kustomazi. Click any card to inspect full text, rulings, and DuelingBook links.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="/api/shared/cdb" class="btn btn-secondary" style="font-size: 13px;">
+                📥 Export .CDB
+            </a>
+            <a href="/api/cards" target="_blank" class="btn btn-secondary" style="font-size: 13px;">
+                ⚡ JSON API
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <span style="font-size: 16px;">🔍</span>
+            <input type="text" class="search-input" id="catalog-search-input" placeholder="Search by name, effect text, race, or 8-digit passcode..." autocomplete="off">
+        </div>
+
+        <div class="filter-chips">
+            <button class="chip active" id="filter-all" onclick="setCategoryFilter('all', this)">All Cards</button>
+            <button class="chip" id="filter-monsters" onclick="setCategoryFilter('monster', this)">Monsters</button>
+            <button class="chip" id="filter-spells" onclick="setCategoryFilter('spell', this)">Spells</button>
+            <button class="chip" id="filter-traps" onclick="setCategoryFilter('trap', this)">Traps</button>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;" id="catalog-card-count">
+            Loading...
+        </div>
+    </div>
+</section>
+
+<!-- Card Grid Container -->
+<section>
+    <div class="grid-4" id="catalog-cards-grid">
+        <!-- Rendered dynamically by catalog.js -->
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/catalog.js"></script>
+{% endblock %}

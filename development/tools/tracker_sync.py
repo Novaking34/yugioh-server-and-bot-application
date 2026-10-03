@@ -89,6 +89,7 @@ MASTER_HEADERS = [
     "Synergy/Combos",
     "Designer Notes",
     "Duelingbook Card ID",
+    "Duelingbook Card URL",
     "Script File",
     "Script Status",
     "CDB Bitmask Type",
@@ -177,6 +178,95 @@ def calculate_cdb_type(category: str, subtype: str) -> int:
     return val
 
 
+# Canonical Lore, Combos & Designer Notes for Expansion Set 1
+CANONICAL_CARD_METADATA = {
+    50000101: {
+        "significance": "Creator Deity",
+        "lore": "The primordial architect of Kustomazi who forged the universe from the cosmic void.",
+        "combos": "Tribute Summon using 2+ Divine-Beasts for complete card effect immunity; combo with Planet Kustomazi for additional Normal Summons.",
+        "notes": "Boss deity monster; can reduce ATK to 0 to burn opponent; self-limiting Special Summon restriction.",
+    },
+    50000102: {
+        "significance": "Primordial Origin",
+        "lore": "It is quiet and restless, containing all potential of the universe before creation.",
+        "combos": "Special Summoned via The Seed of Creation; essential material for Formless and Mohousha.",
+        "notes": "Level 1 0/0 Divine-Beast; core combo catalyst and engine bridge for Kasutamaiza strategies.",
+    },
+    50000103: {
+        "significance": "Core Catalyst",
+        "lore": "The first concentrated spark of cosmic matter that awakened the silent void.",
+        "combos": "Searches Kasutamaiza; revives Void from GY; enables Level 1 GY Tribute Summoning during Standby Phase.",
+        "notes": "Key Normal Spell searcher and GY recursion engine for the Divine-Beast archetype.",
+    },
+    50000104: {
+        "significance": "Worshippers of Creation",
+        "lore": "Devoted cosmic disciples who tend to the sacred monuments and altars of the Creator.",
+        "combos": "Normal Summon swarms up to 2 copies from Deck; GY banish doubles all battle and effect damage.",
+        "notes": "3-Tribute engine enabler with built-in OTK damage amplification.",
+    },
+    50000105: {
+        "significance": "Primordial Chaos",
+        "lore": "The boundless unformed essence capable of consuming whole galaxies back into nothingness.",
+        "combos": "Contact Special Summons by banishing Void, Servants, and Seed; board wipe when hand is empty.",
+        "notes": "Dynamic ATK gain (battling monster's ATK + 100); high-risk last-resort board clearing tool.",
+    },
+    50000106: {
+        "significance": "Corrupted Entity",
+        "lore": "A rogue reflection that attempted to usurp the Creator's absolute authority.",
+        "combos": "Contact Fusion using Field/GY materials; targets and equips opponent monsters to copy ATK, Level, Type, and effects.",
+        "notes": "Extra Deck boss with non-destruction monster removal, effect theft, and destruction protection.",
+    },
+    50000107: {
+        "significance": "Transcendent Deity",
+        "lore": "The supreme unified godhead commanding all cosmic elements and universal attributes.",
+        "combos": "Fusion with Kasutamaiza; gains omni-protection and Quick Effect GY equips based on material Attributes.",
+        "notes": "Pinnacle Fusion boss with destruction replacement and graveyard draw manipulation.",
+    },
+    50000108: {
+        "significance": "Divine Decree",
+        "lore": "The creator's voice echoing across the cosmos, calling the chosen to battle.",
+        "combos": "Searches any Kasutamaiza card; recycles up to 3 archetypal cards from GY back into the Deck.",
+        "notes": "Consistency spell providing both immediate card advantage and long-term GY recursion.",
+    },
+    50000109: {
+        "significance": "Cosmic Retribution",
+        "lore": "The unyielding law enforcing balance in the cosmic order against chaos.",
+        "combos": "Counter Trap negates summon/activation; locks Extra Deck or forces opponent discards based on banished card.",
+        "notes": "High-cost omni-negate (2000 LP + banish) with lingering format disruption.",
+    },
+    50000110: {
+        "significance": "Sacred Homeland",
+        "lore": "The celestial jewel world forged at the center of the universe.",
+        "combos": "Grants additional Normal Summon in MP1; recycles banished cards and fixes hand in MP2.",
+        "notes": "Continuous utility spell providing field presence and banished resource recovery.",
+    },
+    50000111: {
+        "significance": "Sanctuary of the Gods",
+        "lore": "The grand cosmic shrine where prayers to the Creator are answered.",
+        "combos": "Recovers GY/banished cards on activation; grants targeting immunity to Divine-Beasts; multi-card spot removal.",
+        "notes": "Continuous spell protecting Divine-Beasts and enabling continuous field removal.",
+    },
+    50000112: {
+        "significance": "Genesis Flash",
+        "lore": "The initial flash of light that split the darkness and ignited reality.",
+        "combos": "Banishes up to 3 Void from GY; stages effects from monster retrieval to setting S/T to drawing 2 cards.",
+        "notes": "High-value payoff spell rewarding dedicated graveyard setup.",
+    },
+    50000113: {
+        "significance": "Transmutation Secret",
+        "lore": "The esoteric rites connecting mortal alchemists with divine energy.",
+        "combos": "Fusion summons from hand/field; grants second attack or summon activation protection based on level.",
+        "notes": "Primary archetypal Fusion Spell with level-dependent combat and protection buffs.",
+    },
+    50000114: {
+        "significance": "Dimensional Rift",
+        "lore": "A channel carved through space and time to summon ancient entities from oblivion.",
+        "combos": "Shuffles materials from GY/banishment into Deck; ignores summoning conditions for Extra Deck monsters.",
+        "notes": "Miracle-style Fusion spell utilizing banished and graveyard resources.",
+    },
+}
+
+
 def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
     """Reads legacy tracker CSV and parses into standardized record list."""
     if not os.path.exists(csv_path):
@@ -192,16 +282,21 @@ def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
                 continue
 
             raw_cat = (row.get("Card Category") or "").strip()
+            raw_sub = (row.get("Card Subtype") or "").strip()
+            raw_race = (row.get("Monster Race") or "").strip()
             raw_type = (row.get("Monster Type") or "").strip()
             raw_attr = (row.get("Attribute") or "").strip()
             raw_set = (row.get("Set Number") or f"TLOK-{idx:03d}").strip()
             img_link = (row.get("Image Link") or "").strip()
+            raw_arrows = (row.get("Link Arrows") or "N/A").strip()
 
             # Normalization logic
             if raw_cat.lower() == "monster":
                 category = "Monster"
-                # Parse Monster Type (e.g. "Divine-Beast/Effect" -> Race="Divine-Beast", Subtype="Effect")
-                if "/" in raw_type:
+                if raw_sub:
+                    subtype = raw_sub
+                    race = raw_race if raw_race and raw_race != "N/A" else (raw_type if raw_type and raw_type != "N/A" else "Divine-Beast")
+                elif "/" in raw_type:
                     parts = [p.strip() for p in raw_type.split("/")]
                     race = parts[0]
                     subtype = "/".join(parts[1:])
@@ -211,23 +306,23 @@ def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
                 attribute = raw_attr if raw_attr and raw_attr != "N/A" else "DIVINE"
             elif raw_cat.lower() == "spell":
                 category = "Spell"
-                subtype = raw_attr if raw_attr and raw_attr != "N/A" else "Normal"
+                subtype = raw_sub if raw_sub else (raw_attr if raw_attr and raw_attr != "N/A" else "Normal")
                 race = "N/A"
                 attribute = "N/A"
             elif raw_cat.lower() == "trap":
                 category = "Trap"
-                subtype = raw_attr if raw_attr and raw_attr != "N/A" else "Normal"
+                subtype = raw_sub if raw_sub else (raw_attr if raw_attr and raw_attr != "N/A" else "Normal")
                 race = "N/A"
                 attribute = "N/A"
             else:
                 category = "Monster"
-                subtype = "Effect"
-                race = "Divine-Beast"
+                subtype = raw_sub if raw_sub else "Effect"
+                race = raw_race if raw_race and raw_race != "N/A" else "Divine-Beast"
                 attribute = "DIVINE"
 
-            # Passcode determination
-            # Existing TLOK set uses 50000101 + (idx - 1)
-            passcode = 50000100 + idx
+            raw_passcode = (row.get("Passcode (ID)") or "").strip()
+            passcode = int(raw_passcode) if raw_passcode.isdigit() else (50000100 + idx)
+            meta = CANONICAL_CARD_METADATA.get(passcode, {})
 
             duelingbook_id = extract_duelingbook_id(img_link)
             local_img = f"pics/{passcode}.jpg"
@@ -239,6 +334,24 @@ def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
             script_status = "Implemented" if os.path.exists(script_full_path) else "Draft"
 
             cdb_bitmask = hex(calculate_cdb_type(category, subtype))
+
+            # Normalize effect text: remove internal newlines so each record is exactly one line in CSV/TSV
+            raw_effect = (row.get("Effect Text") or "").strip()
+            clean_effect = re.sub(r'[\r\n]+', ' ', raw_effect)
+            clean_effect = re.sub(r'\s*●\s*', ' ● ', clean_effect).strip()
+
+            lore_val = (row.get("Story/Lore Context") or "").strip().replace("--", "") or meta.get("lore", "")
+            combos_val = (row.get("Synergy/Combos") or "").strip().replace("--", "") or meta.get("combos", "")
+            notes_val = (row.get("Designer Notes") or "").strip().replace("--", "") or meta.get("notes", "")
+            significance_val = (row.get("Story Significance") or "").strip().replace("--", "") or meta.get("significance", "Core Engine")
+
+            faction_val = (row.get("Faction Alignment") or row.get("Faction/Character Alignment") or "").strip()
+            if not faction_val or faction_val.lower() in ("netural", "neutral", "--"):
+                faction_val = "The Creators of Kustomazi"
+
+            duelist_val = (row.get("Signature Duelist") or "").strip() or "ProfessorSeanEX"
+            creator_val = (row.get("Creator") or "").strip() or "ProfessorSeanEX"
+            archetype_val = (row.get("Archetype/Series") or "").strip() or "Kasutamaiza"
 
             records.append({
                 "passcode": passcode,
@@ -255,18 +368,18 @@ def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
                 "atk": (row.get("ATK") or "N/A").strip(),
                 "def": (row.get("DEF") or "N/A").strip(),
                 "scale": (row.get("Pendulum Scale") or "N/A").strip(),
-                "link_arrows": "N/A",
-                "effect_text": (row.get("Effect Text") or "").strip(),
-                "pendulum_effect": "N/A",
-                "archetype": (row.get("Archetype/Series") or "Kasutamaiza").strip(),
+                "link_arrows": raw_arrows,
+                "effect_text": clean_effect,
+                "pendulum_effect": (row.get("Pendulum Effect") or "N/A").strip(),
+                "archetype": archetype_val,
                 "rarity": (row.get("Rarity") or "Common").strip().replace("--", "Common"),
-                "creator": (row.get("Creator") or "ProfessorSeanEX").strip(),
-                "faction": "The Creators of Kustomazi" if (row.get("Faction/Character Alignment") or "").lower() in ("netural", "neutral", "--") else (row.get("Faction/Character Alignment") or "The Creators of Kustomazi").strip(),
-                "duelist": "ProfessorSeanEX",
-                "significance": "Creator Deity" if "Creator" in name else ("Primordial Origin" if "Void" in name else "Core Engine"),
-                "lore": (row.get("Story/Lore Context") or "").strip().replace("--", ""),
-                "combos": (row.get("Synergy/Combos") or "").strip().replace("--", ""),
-                "notes": (row.get("Designer Notes") or "").strip().replace("--", ""),
+                "creator": creator_val,
+                "faction": faction_val,
+                "duelist": duelist_val,
+                "significance": significance_val,
+                "lore": lore_val,
+                "combos": combos_val,
+                "notes": notes_val,
                 "duelingbook_id": duelingbook_id or "",
                 "script_file": script_file,
                 "script_status": script_status,
@@ -320,6 +433,7 @@ def write_master_trackers(records: List[Dict[str, Any]], csv_path: str = DEFAULT
             r["combos"],
             r["notes"],
             r["duelingbook_id"],
+            f"https://www.duelingbook.com/card?id={r['duelingbook_id']}" if r.get("duelingbook_id") else "",
             r["script_file"],
             r["script_status"],
             r["cdb_bitmask"],
@@ -430,6 +544,32 @@ def sync_tracker_to_database(records: List[Dict[str, Any]], db_path: str = STORY
         # Link arrows
         link_arrows = r["link_arrows"] if r["link_arrows"] != "N/A" else None
 
+        # Resolve faction
+        card_faction = r.get("faction") or "The Creators of Kustomazi"
+        cur.execute("SELECT id FROM factions WHERE name = ?", (card_faction,))
+        f_row = cur.fetchone()
+        if f_row:
+            f_id = f_row[0]
+        else:
+            cur.execute("""
+                INSERT INTO factions (name, lore_description, playstyle_overview)
+                VALUES (?, ?, ?)
+            """, (card_faction, f"Faction representing {card_faction}", ""))
+            f_id = cur.lastrowid
+
+        # Resolve signature character
+        card_duelist = r.get("duelist") or "ProfessorSeanEX"
+        cur.execute("SELECT id FROM characters WHERE name = ?", (card_duelist,))
+        c_row = cur.fetchone()
+        if c_row:
+            ch_id = c_row[0]
+        else:
+            cur.execute("""
+                INSERT INTO characters (name, alias, bio, faction_id)
+                VALUES (?, ?, ?, ?)
+            """, (card_duelist, card_duelist, f"Duelist representing {card_duelist}", f_id))
+            ch_id = cur.lastrowid
+
         cur.execute("""
             INSERT INTO custom_cards (
                 id, name, card_type, card_subtype, attribute, monster_type,
@@ -480,12 +620,13 @@ def sync_tracker_to_database(records: List[Dict[str, Any]], db_path: str = STORY
             level, scale, atk, defense, link_arrows,
             r["effect_text"], None if r["pendulum_effect"] == "N/A" else r["pendulum_effect"],
             r["duelingbook_id"], f"https://www.duelingbook.com/card?id={r['duelingbook_id']}" if r["duelingbook_id"] else None,
-            r["image_link"], r["creator"], r["lore"], creator_faction_id, creator_char_id,
+            r["image_link"], r["creator"], r["lore"], f_id, ch_id,
             r["significance"], r["set_number"], "TLOK", r["rarity"], r["archetype"],
             r["banlist_status"], r["playtesting_status"], r["local_image"], r["script_file"], r["script_status"]
         ))
         synced_count += 1
 
+    cur.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
     conn.commit()
     conn.close()
     logger.info(f"Successfully synchronized {synced_count} cards from tracker into database {db_path}.")

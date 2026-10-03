@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}World Lore & Saga Chronicles | The Land of Kustomazi{% endblock %}
+{% block meta_desc %}Immerse yourself in the story of The Land of Kustomazi. Explore narrative sagas, cosmic factions, and signature duelist dossiers.{% endblock %}
+
+{% block content %}
+<section style="margin-bottom: 32px;">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 6px;">Chronicles of Kustomazi</h1>
+    <p style="color: var(--text-secondary); font-size: 15px; max-width: 800px;">
+        Before cards were placed upon the duel grid, the primordial void existed in absolute stillness.
+        Explore the mythology, cosmic factions, and duel masters shaping this universe.
+    </p>
+</section>
+
+<!-- Narrative Sagas -->
+<section style="margin-bottom: 40px;">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Canonical Sagas & Arcs</h2>
+    <div id="lore-arcs-container">
+        <!-- Rendered dynamically by lore.js -->
+    </div>
+</section>
+
+<!-- Factions -->
+<section style="margin-bottom: 40px;">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Cosmic Factions & Archetypes</h2>
+    <div class="grid-2" id="lore-factions-container">
+        <!-- Rendered dynamically by lore.js -->
+    </div>
+</section>
+
+<!-- Characters -->
+<section>
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Signature Duelists & Creators</h2>
+    <div class="grid-3" id="lore-characters-container">
+        <!-- Rendered dynamically by lore.js -->
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/lore.js"></script>
+{% endblock %}

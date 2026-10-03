@@ -18,7 +18,7 @@ function s.initial_effect(c)
 	e1:SetOperation(s.operation1)
 	c:RegisterEffect(e1)
 
-	-- Effect 2: If this card battles an opponent's monster, during dama...
+	-- Effect 2: If this card battles a monster, during damage calculati...
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,1))
 	e2:SetCategory(0)
@@ -28,16 +28,26 @@ function s.initial_effect(c)
 	e2:SetOperation(s.operation2)
 	c:RegisterEffect(e2)
 
-	-- Effect 3: Once per turn, if you control no other cards and have n...
+	-- Effect 3: During the End Phase, if this card battled a Divine-Bea...
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(CATEGORY_REMOVE)
+	e3:SetCategory(0)
 	e3:SetType(EFFECT_TYPE_IGNITION)
 	e3:SetRange(LOCATION_MZONE)
-	e3:SetCountLimit(1)
 	e3:SetTarget(s.target3)
 	e3:SetOperation(s.operation3)
 	c:RegisterEffect(e3)
+
+	-- Effect 4: Once per turn, if you control no other cards and have n...
+	local e4=Effect.CreateEffect(c)
+	e4:SetDescription(aux.Stringid(id,3))
+	e4:SetCategory(CATEGORY_REMOVE)
+	e4:SetType(EFFECT_TYPE_IGNITION)
+	e4:SetRange(LOCATION_MZONE)
+	e4:SetCountLimit(1)
+	e4:SetTarget(s.target4)
+	e4:SetOperation(s.operation4)
+	c:RegisterEffect(e4)
 end
 
 function s.target1(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
@@ -58,5 +68,12 @@ function s.target3(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chk==0 then return true end
 end
 function s.operation3(e,tp,eg,ep,ev,re,r,rp)
+	-- Effect implementation
+end
+
+function s.target4(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+	if chk==0 then return true end
+end
+function s.operation4(e,tp,eg,ep,ev,re,r,rp)
 	-- Effect implementation
 end

@@ -1,0 +1,155 @@
+/* =============================================================================
+   The Land of Kustomazi - Core Design System & Global Stylesheet
+   ============================================================================= */
+
+:root {
+    /* Color Palette - Curated Obsidian & Neon Palette */
+    --bg-deep: #05070d;
+    --bg-surface: #0b0f19;
+    --bg-card: rgba(16, 23, 38, 0.72);
+    --bg-card-hover: rgba(24, 34, 56, 0.85);
+    --bg-glass: rgba(15, 23, 42, 0.65);
+    
+    /* Borders & Glows */
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-medium: rgba(255, 255, 255, 0.16);
+    --border-glow-cyan: rgba(56, 189, 248, 0.35);
+    --border-glow-indigo: rgba(99, 102, 241, 0.35);
+    --border-glow-gold: rgba(245, 158, 11, 0.35);
+
+    /* Text Hierarchy */
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-inverse: #020617;
+
+    /* Theme Accents */
+    --accent-cyan: #38bdf8;
+    --accent-cyan-glow: rgba(56, 189, 248, 0.25);
+    --accent-indigo: #6366f1;
+    --accent-indigo-hover: #4f46e5;
+    --accent-purple: #a855f7;
+    --accent-gold: #f59e0b;
+    --accent-emerald: #10b981;
+    --accent-rose: #f43f5e;
+
+    /* Yu-Gi-Oh! Specific Archetype / Card Type Colors */
+    --color-monster: #f97316;
+    --color-spell: #10b981;
+    --color-trap: #ec4899;
+    --color-fusion: #a855f7;
+    --color-ritual: #3b82f6;
+    --color-divine: #f59e0b;
+
+    /* Layout & Geometry */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+
+    /* Shadows & Glassmorphism */
+    --glass-blur: blur(16px);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+    --shadow-glow-cyan: 0 0 30px -5px rgba(56, 189, 248, 0.22);
+    --shadow-glow-indigo: 0 0 35px -5px rgba(99, 102, 241, 0.25);
+}
+
+/* CSS Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image: 
+        radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 88% 20%, rgba(56, 189, 248, 0.10) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+    background-attachment: fixed;
+    overflow-x: hidden;
+}
+
+/* Typography Helpers */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Layout Containers */
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px 60px 24px;
+}
+
+@media (max-width: 768px) {
+    .app-container {
+        padding: 14px 16px 40px 16px;
+    }
+}
+
+/* Grid Utilities */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1100px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 680px) {
+    .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+}

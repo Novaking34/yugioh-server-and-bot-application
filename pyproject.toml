@@ -94,3 +94,8 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore:.*Using `httpx` with `starlette.testclient` is deprecated.*:DeprecationWarning",
+    "ignore:.*Using `httpx` with `starlette.testclient` is deprecated.*:UserWarning",
+]
+
