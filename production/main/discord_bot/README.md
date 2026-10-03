@@ -46,8 +46,10 @@ production/main/discord_bot/
 ├── utils.py                # Card frame palettes, status embeds, rating badges & dialog builders
 ├── services/               # Decoupled Domain & Database Services
 │   ├── __init__.py
-│   ├── card_service.py     # Custom card lookups, search suggestions & usage telemetry
-│   ├── deck_service.py     # Player decks, character decks & Set 1 34-card validation
+│   ├── card/               # Modular Card subsystem (foundation, domain discovery, autocomplete, analytics, mutators)
+│   ├── card.py             # Root Card service entry point & translation bridge
+│   ├── deck/               # Modular Deck subsystem (foundation, domain storage, slots, story, YDK, visual)
+│   ├── deck.py             # Root Deck service entry point & translation bridge
 │   ├── rating_service.py   # ELO calculation, rank brackets & leaderboard generation
 │   ├── story_service.py    # Story chapters, stage encounters, dialogue & rewards
 │   └── duel_service.py     # In-memory live session registry & recovery tools

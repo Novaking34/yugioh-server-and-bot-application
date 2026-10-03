@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 from bot_config import BOT_CONFIG
 from services.duel_service import duel_manager
 from services.rating_service import RatingService
-from services.card_service import CardService
+from services.card import CardService
 from services.deck import DeckService
 from production.main.logger import get_logger
 from utils import (

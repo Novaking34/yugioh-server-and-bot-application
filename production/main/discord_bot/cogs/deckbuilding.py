@@ -17,7 +17,7 @@ from discord.ext import commands
 from typing import Optional, List
 
 from services.deck import DeckService, MAX_USER_DECK_SLOTS
-from services.card_service import CardService
+from services.card import CardService
 from cogs.cardpool import card_name_autocomplete
 from production.main.logger import get_logger
 

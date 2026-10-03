@@ -2,12 +2,11 @@
 # BLOCK 1: METADATA BLOCK
 # =============================================================================
 """
-Module: discord_bot.services.card_service
+Module: discord_bot.services.card
 Description:
     Root Card Service Entry Point & Translation Bridge.
     Re-exports the central CardService engine, foundation primitives,
     and domain operations from the modular subsystem at `services.card`.
-    Provides 100% backwards compatibility for all Discord cogs and runners.
 """
 
 # =============================================================================

@@ -18,7 +18,7 @@ from typing import Optional, List, Dict, Any, Tuple
 
 from services.story_service import StoryService
 from services.deck import DeckService
-from services.card_service import CardService
+from services.card import CardService
 from services.duel_service import duel_manager
 from utils import build_story_stage_embed
 from production.main.logger import get_logger

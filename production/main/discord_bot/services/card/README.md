@@ -68,6 +68,6 @@ services/card/
 
 - Defines `CardService(db_path: Optional[str] = None)` which delegates all calls directly to the pure functional domain compilation units while preserving instance state.
 
-### 4. Backwards-Compatibility Bridge (`services/card_service.py`)
+### 4. Root Service Entry Point & Bridge (`services/card.py`)
 
-- Re-exports `CardService` and all public constants/types at `production/main/discord_bot/services/card_service.py` to ensure 100% zero breaking changes for existing cogs, slash commands, and test runners.
+- Re-exports `CardService` and all public constants/types at `production/main/discord_bot/services/card.py` matching the `services/deck.py` structure, ensuring clean module resolution and direct imports via `from services.card import CardService`.

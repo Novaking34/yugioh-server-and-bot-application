@@ -21,7 +21,7 @@ from discord import app_commands
 from discord.ext import commands
 from typing import Optional, List
 
-from services.card_service import CardService
+from services.card import CardService
 from utils import build_card_embed, build_card_stats_embed, build_card_types_guide_embed
 from production.main.logger import get_logger
 

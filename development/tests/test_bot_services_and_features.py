@@ -27,7 +27,7 @@ if BOT_DIR not in sys.path:
     sys.path.insert(0, BOT_DIR)
 
 from config.paths import STORY_DB_PATH
-from services.card_service import CardService
+from services.card import CardService
 from services.deck import DeckService
 from services.rating_service import RatingService
 from services.story_service import StoryService
@@ -1567,7 +1567,7 @@ async def test_card_service_all_card_types_and_autocomplete_formatting():
     3. Scoped autocomplete filtering (by card_type and is_extra_deck).
     4. Query sanitization with trailing autocomplete metadata tags.
     """
-    from production.main.discord_bot.services.card_service import format_card_autocomplete_choice
+    from production.main.discord_bot.services.card import format_card_autocomplete_choice
 
     # 1. Test format_card_autocomplete_choice across card frames
     # Standard Monster
@@ -1851,9 +1851,9 @@ async def test_card_service_modular_architecture():
         get_meta_overview,
         track_card_draw,
         reset_card_telemetry,
-        CardService as ModularCardService,
+        CardService as RootCardService,
     )
-    from services.card_service import CardService as BridgeCardService
+    from services.card.core import CardService as CoreCardService
 
     # 2. Direct pure functional domain execution (passing db_path as 1st parameter)
     card_direct = await get_card_by_id(STORY_DB_PATH, 50000101)
@@ -1871,16 +1871,16 @@ async def test_card_service_modular_architecture():
     assert "DIVINE" in tag
     assert "★12" in tag
 
-    # 3. Modular Facade verification
-    modular_svc = ModularCardService(STORY_DB_PATH)
-    card_facade = await modular_svc.get_card_by_id(50000101)
-    assert card_facade["name"] == card_direct["name"]
+    # 3. Core Engine Facade verification
+    core_svc = CoreCardService(STORY_DB_PATH)
+    card_core = await core_svc.get_card_by_id(50000101)
+    assert card_core["name"] == card_direct["name"]
 
-    # 4. Backward-compatibility bridge verification
-    bridge_svc = BridgeCardService(STORY_DB_PATH)
-    card_bridge = await bridge_svc.get_card_by_id(50000101)
-    assert card_bridge["name"] == card_direct["name"]
-    assert type(modular_svc) is type(bridge_svc)
+    # 4. Root Card package verification
+    root_svc = RootCardService(STORY_DB_PATH)
+    card_root = await root_svc.get_card_by_id(50000101)
+    assert card_root["name"] == card_direct["name"]
+    assert type(core_svc) is type(root_svc)
 
 
 
