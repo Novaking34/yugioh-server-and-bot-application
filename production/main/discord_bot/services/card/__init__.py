@@ -2,27 +2,23 @@
 # BLOCK 1: METADATA BLOCK
 # =============================================================================
 """
-Module: discord_bot.services.card_service
+Package: discord_bot.services.card
 Description:
-    Root Card Service Entry Point & Translation Bridge.
-    Re-exports the central CardService engine, foundation primitives,
-    and domain operations from the modular subsystem at `services.card`.
-    Provides 100% backwards compatibility for all Discord cogs and runners.
+    Modular Custom Card Management Subsystem for Yu-Gi-Oh! Discord Bot & Story Server.
+    Organized with Top-Down / Bottom-Up C-style compilation unit architecture:
+    - foundation/: Bottom-Up Foundation (Constants, Struct Types, Label Formatters)
+    - domain/    : Domain Engines (Discovery, Autocomplete, Analytics, Mutators)
+    - core.py    : Top-Down Orchestrator Facade Engine (CardService)
 """
 
 # =============================================================================
-# BLOCK 2: OPENING BLOCK (Inclusions & Layered Package Imports)
+# BLOCK 2: OPENING BLOCK (Inclusions & Imports)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Sub-Block 2.1: Core Orchestrator Unit
+# Sub-Block 2.1: Foundation Primitives (foundation/)
 # -----------------------------------------------------------------------------
-from .card.core import CardService
-
-# -----------------------------------------------------------------------------
-# Sub-Block 2.2: Foundation Constants & Master Rule Invariants
-# -----------------------------------------------------------------------------
-from .card.foundation.constants import (
+from .foundation.constants import (
     DEFAULT_AUTOCOMPLETE_LIMIT,
     DEFAULT_RECENT_LIMIT,
     DEFAULT_META_LIMIT,
@@ -39,10 +35,7 @@ from .card.foundation.constants import (
     TELEMETRY_COUNTERS,
 )
 
-# -----------------------------------------------------------------------------
-# Sub-Block 2.3: Foundation Type Contracts & Structs
-# -----------------------------------------------------------------------------
-from .card.foundation.types import (
+from .foundation.types import (
     CardRecordDict,
     CardSummaryDict,
     CardUsageStatsDict,
@@ -51,18 +44,15 @@ from .card.foundation.types import (
     CardpoolTelemetrySummaryDict,
 )
 
-# -----------------------------------------------------------------------------
-# Sub-Block 2.4: Foundation Label Formatters
-# -----------------------------------------------------------------------------
-from .card.foundation.formatters import (
+from .foundation.formatters import (
     build_card_descriptor_tag,
     format_card_autocomplete_choice,
 )
 
 # -----------------------------------------------------------------------------
-# Sub-Block 2.5: Domain Operations (Discovery, Autocomplete, Analytics, Mutators)
+# Sub-Block 2.2: Domain Operations (domain/)
 # -----------------------------------------------------------------------------
-from .card.domain.discovery import (
+from .domain.discovery import (
     get_card_by_id,
     get_card_by_set_number,
     get_card_by_query,
@@ -78,12 +68,12 @@ from .card.domain.discovery import (
     get_recent_cards,
 )
 
-from .card.domain.autocomplete import (
+from .domain.autocomplete import (
     format_autocomplete_label,
     search_cards,
 )
 
-from .card.domain.analytics import (
+from .domain.analytics import (
     get_card_usage_stats,
     get_meta_overview,
     get_card_win_rates,
@@ -92,7 +82,7 @@ from .card.domain.analytics import (
     get_underused_cards,
 )
 
-from .card.domain.mutators import (
+from .domain.mutators import (
     track_card_draw,
     track_cards_drawn,
     track_card_play,
@@ -104,8 +94,13 @@ from .card.domain.mutators import (
     reset_card_telemetry,
 )
 
+# -----------------------------------------------------------------------------
+# Sub-Block 2.3: Core Facade Orchestrator (core.py)
+# -----------------------------------------------------------------------------
+from .core import CardService
+
 # =============================================================================
-# BLOCK 4: CLOSING BLOCK (Public Exports & Translation Unit Manifest)
+# BLOCK 4: CLOSING BLOCK (Public Exports)
 # =============================================================================
 
 __all__ = [

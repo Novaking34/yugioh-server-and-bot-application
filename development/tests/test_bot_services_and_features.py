@@ -1820,5 +1820,69 @@ async def test_card_service_telemetry_analytics_and_mutators():
     await service.reset_card_telemetry(cid2)
 
 
+@pytest.mark.anyio
+async def test_card_service_modular_architecture():
+    """
+    Validates the modular C/C++ style architecture for CardService:
+    - foundation: constants, types (TypedDicts), formatters
+    - domain/discovery: Sub-Block 3.1 indexed lookup & multi-criteria filtering
+    - domain/autocomplete: Sub-Block 3.2 fast-path and SQL-driven autocomplete ranking
+    - domain/analytics: Sub-Block 3.3 telemetry analytics & 5-axis meta overview
+    - domain/mutators: Sub-Block 3.4 single & batch counter increments
+    - core / facade: CardService orchestration and zero-regression bridge
+    """
+    # 1. Foundation & Domain import from services.card package root
+    from services.card import (
+        CardRecordDict,
+        CardSummaryDict,
+        CardUsageStatsDict,
+        MetaOverviewDict,
+        ArchetypeMetaDict,
+        CardpoolTelemetrySummaryDict,
+        DEFAULT_AUTOCOMPLETE_LIMIT,
+        format_card_autocomplete_choice,
+        build_card_descriptor_tag,
+        get_card_by_id,
+        get_card_by_query,
+        get_cards_by_filter,
+        get_all_cards_partitioned,
+        search_cards,
+        get_card_usage_stats,
+        get_meta_overview,
+        track_card_draw,
+        reset_card_telemetry,
+        CardService as ModularCardService,
+    )
+    from services.card_service import CardService as BridgeCardService
+
+    # 2. Direct pure functional domain execution (passing db_path as 1st parameter)
+    card_direct = await get_card_by_id(STORY_DB_PATH, 50000101)
+    assert card_direct is not None
+    assert card_direct["id"] == 50000101
+    assert card_direct["name"] == "Kasutamaiza, the Creator of Kustomazi"
+
+    # Autocomplete functional unit
+    ac_results = await search_cards(STORY_DB_PATH, "Kas", limit=DEFAULT_AUTOCOMPLETE_LIMIT)
+    assert len(ac_results) >= 1
+    assert ac_results[0]["id"] == 50000101
+
+    # Formatter pure functional unit
+    tag = build_card_descriptor_tag(card_direct)
+    assert "DIVINE" in tag
+    assert "★12" in tag
+
+    # 3. Modular Facade verification
+    modular_svc = ModularCardService(STORY_DB_PATH)
+    card_facade = await modular_svc.get_card_by_id(50000101)
+    assert card_facade["name"] == card_direct["name"]
+
+    # 4. Backward-compatibility bridge verification
+    bridge_svc = BridgeCardService(STORY_DB_PATH)
+    card_bridge = await bridge_svc.get_card_by_id(50000101)
+    assert card_bridge["name"] == card_direct["name"]
+    assert type(modular_svc) is type(bridge_svc)
+
+
+
 
 
