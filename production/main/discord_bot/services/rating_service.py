@@ -112,11 +112,13 @@ class RatingService:
         p2_deck: Optional[List[int]] = None,
         p1_name: Optional[str] = None,
         p2_name: Optional[str] = None,
+        p1_deck_name: Optional[str] = None,
+        p2_deck_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Processes a concluded match:
         - Updates Elo and stats for both players if RANKED.
-        - Updates win/loss telemetry in card_usage_stats.
+        - Updates win/loss telemetry in card_usage_stats (micro) and player_saved_decks (macro).
         - Records match in duel_matches.
         """
         p1 = await self.get_or_create_player(p1_id, p1_name)
@@ -207,22 +209,30 @@ class RatingService:
                 str(p2_id)
             ))
 
+            # Migration check for duel_matches deck columns
+            cur_dm = await db.execute("PRAGMA table_info(duel_matches)")
+            dm_cols = {r[1] for r in await cur_dm.fetchall()}
+            if "p1_deck_name" not in dm_cols:
+                await db.execute("ALTER TABLE duel_matches ADD COLUMN p1_deck_name TEXT DEFAULT NULL")
+            if "p2_deck_name" not in dm_cols:
+                await db.execute("ALTER TABLE duel_matches ADD COLUMN p2_deck_name TEXT DEFAULT NULL")
+
             # 3. Record Match History
             cur = await db.execute("""
                 INSERT INTO duel_matches (
                     match_type, p1_user_id, p2_user_id, winner_user_id,
                     p1_elo_before, p1_elo_after, p2_elo_before, p2_elo_after,
-                    turns, summary
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    turns, summary, p1_deck_name, p2_deck_name
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 match_type.upper(), str(p1_id), str(p2_id),
                 winner_id or "DRAW",
                 p1_elo_before, p1_elo_after, p2_elo_before, p2_elo_after,
-                turns, summary
+                turns, summary, p1_deck_name, p2_deck_name
             ))
             match_id = cur.lastrowid
 
-            # 4. Telemetry: Update card wins/losses
+            # 4. Telemetry: Update card wins/losses (micro)
             if p1_deck:
                 unique_p1 = set(p1_deck)
                 for cid in unique_p1:
@@ -249,6 +259,27 @@ class RatingService:
                     """, (cid, 1 if is_p2_win else 0, 1 if is_p1_win else 0,
                           1 if is_p2_win else 0, 1 if is_p1_win else 0))
 
+            # 5. Macro Telemetry: Update saved deck slot usage and win/loss
+            if p1_deck_name:
+                await db.execute("""
+                    UPDATE player_saved_decks
+                    SET times_used = times_used + 1,
+                        wins = wins + ?,
+                        losses = losses + ?,
+                        last_used_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND deck_name = ?
+                """, (1 if is_p1_win else 0, 1 if is_p2_win else 0, str(p1_id), p1_deck_name))
+
+            if p2_deck_name:
+                await db.execute("""
+                    UPDATE player_saved_decks
+                    SET times_used = times_used + 1,
+                        wins = wins + ?,
+                        losses = losses + ?,
+                        last_used_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND deck_name = ?
+                """, (1 if is_p2_win else 0, 1 if is_p1_win else 0, str(p2_id), p2_deck_name))
+
             await db.commit()
 
         logger.info(f"Recorded {match_type} duel #{match_id}: P1 {p1_elo_before}->{p1_elo_after}, P2 {p2_elo_before}->{p2_elo_after}")
@@ -257,6 +288,8 @@ class RatingService:
             "match_type": match_type.upper(),
             "p1_id": p1_id,
             "p2_id": p2_id,
+            "p1_deck_name": p1_deck_name,
+            "p2_deck_name": p2_deck_name,
             "p1_elo_before": p1_elo_before,
             "p1_elo_after": p1_elo_after,
             "p1_elo_delta": p1_elo_after - p1_elo_before,

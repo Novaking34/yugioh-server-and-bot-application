@@ -1374,3 +1374,84 @@ async def test_deck_service_modular_architecture():
 
     facade_legality = service.validate_deck_legality(mock_cards)
     assert facade_legality["is_legal"] == legality["is_legal"]
+
+
+@pytest.mark.anyio
+async def test_deck_macro_telemetry_and_drift_prevention():
+    """
+    Validates:
+    1. Deck usage and match win/loss recording on player_saved_decks.
+    2. Active deck identification via find_matching_saved_deck.
+    3. Micro counter drift prevention when overwriting player decks via YDK/story imports.
+    4. End-to-end match recording in RatingService with deck names.
+    """
+    from services.deck import DeckService
+    from services.rating_service import RatingService
+
+    deck_service = DeckService(STORY_DB_PATH)
+    rating_service = RatingService(STORY_DB_PATH)
+    test_uid = "macro_telemetry_user_42"
+
+    await deck_service.clear_deck(test_uid)
+    for d in await deck_service.list_user_decks(test_uid):
+        await deck_service.delete_named_deck(test_uid, d["deck_name"])
+
+    # 1. Build an active deck and save it
+    await deck_service.add_card_to_deck(test_uid, 50000101, quantity=3)
+    await deck_service.add_card_to_deck(test_uid, 50000102, quantity=2)
+    ok, name = await deck_service.save_named_deck(test_uid, "Control Alpha")
+    assert ok is True
+
+    # 2. find_matching_saved_deck matches "Control Alpha"
+    matched_name = await deck_service.find_matching_saved_deck(test_uid)
+    assert matched_name == "Control Alpha"
+
+    # Modify active deck slightly -> should no longer match
+    await deck_service.add_card_to_deck(test_uid, 50000103, quantity=1)
+    matched_name_after = await deck_service.find_matching_saved_deck(test_uid)
+    assert matched_name_after is None
+
+    # Revert active deck by loading saved deck
+    ok_load, _, _ = await deck_service.load_named_deck(test_uid, "Control Alpha")
+    assert ok_load is True
+    assert await deck_service.find_matching_saved_deck(test_uid) == "Control Alpha"
+
+    # 3. Record match result directly
+    ok_rec = await deck_service.record_deck_match_result(test_uid, "Control Alpha", is_win=True)
+    assert ok_rec is True
+
+    slot = await deck_service.get_saved_deck(test_uid, "Control Alpha")
+    assert slot["times_used"] == 1
+    assert slot["wins"] == 1
+    assert slot["losses"] == 0
+    assert slot["win_rate"] == 100.0
+
+    # Record a loss
+    await deck_service.record_deck_match_result(test_uid, "Control Alpha", is_win=False)
+    slot2 = await deck_service.get_saved_deck(test_uid, "Control Alpha")
+    assert slot2["times_used"] == 2
+    assert slot2["wins"] == 1
+    assert slot2["losses"] == 1
+    assert slot2["win_rate"] == 50.0
+
+    # 4. RatingService.record_duel_match macro integration
+    res = await rating_service.record_duel_match(
+        p1_id=test_uid,
+        p2_id="opponent_bot",
+        winner_id=test_uid,
+        match_type="CASUAL",
+        p1_deck=[50000101, 50000102],
+        p1_deck_name="Control Alpha"
+    )
+    assert res["p1_deck_name"] == "Control Alpha"
+
+    slot3 = await deck_service.get_saved_deck(test_uid, "Control Alpha")
+    assert slot3["times_used"] == 3
+    assert slot3["wins"] == 2
+    assert slot3["losses"] == 1
+    assert slot3["win_rate"] == 66.7
+
+    # Clean up
+    await deck_service.clear_deck(test_uid)
+    await deck_service.delete_named_deck(test_uid, "Control Alpha")
+

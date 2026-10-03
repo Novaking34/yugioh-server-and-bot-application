@@ -37,7 +37,7 @@ from ..foundation.types import SavedDeckSlot
 # -----------------------------------------------------------------------------
 
 async def ensure_saved_deck_tables(db_path: str) -> None:
-    """Ensures the player_saved_decks table exists for multi-deck support."""
+    """Ensures the player_saved_decks table exists for multi-deck support with match telemetry."""
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS player_saved_decks (
@@ -46,9 +46,24 @@ async def ensure_saved_deck_tables(db_path: str) -> None:
                 deck_name TEXT NOT NULL,
                 ydk_content TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                times_used INTEGER DEFAULT 0,
+                wins INTEGER DEFAULT 0,
+                losses INTEGER DEFAULT 0,
+                last_used_at TIMESTAMP DEFAULT NULL,
                 UNIQUE(user_id, deck_name)
             )
         """)
+        # Safe migration for existing schemas lacking usage telemetry columns
+        cur = await db.execute("PRAGMA table_info(player_saved_decks)")
+        cols = {r[1] for r in await cur.fetchall()}
+        if "times_used" not in cols:
+            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN times_used INTEGER DEFAULT 0")
+        if "wins" not in cols:
+            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN wins INTEGER DEFAULT 0")
+        if "losses" not in cols:
+            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN losses INTEGER DEFAULT 0")
+        if "last_used_at" not in cols:
+            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN last_used_at TIMESTAMP DEFAULT NULL")
         await db.commit()
 
 
@@ -146,7 +161,7 @@ async def list_user_deck_slots(db_path: str, user_id: str) -> List[Dict[str, Any
     async with aiosqlite.connect(db_path) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute("""
-            SELECT id, deck_name, ydk_content, created_at 
+            SELECT id, deck_name, ydk_content, created_at, times_used, wins, losses, last_used_at
             FROM player_saved_decks 
             WHERE user_id = ? 
             ORDER BY created_at DESC
@@ -181,12 +196,22 @@ async def list_user_deck_slots(db_path: str, user_id: str) -> List[Dict[str, Any
             else:
                 legality_badge = f"⚠️ Format Violation ({total_c} Cards)"
 
+            times_used = int(d.get("times_used") or 0)
+            wins = int(d.get("wins") or 0)
+            losses = int(d.get("losses") or 0)
+            win_rate = round((wins / times_used * 100.0), 1) if times_used > 0 else 0.0
+
             d["main_count"] = main_c
             d["extra_count"] = extra_c
             d["side_count"] = side_c
             d["total_count"] = total_c
             d["is_legal"] = is_legal
             d["legality_badge"] = legality_badge
+            d["times_used"] = times_used
+            d["wins"] = wins
+            d["losses"] = losses
+            d["win_rate"] = win_rate
+            d["last_used_at"] = d.get("last_used_at")
             decks.append(d)
 
         return decks
@@ -260,6 +285,69 @@ async def delete_saved_deck_slot(
         return cur.rowcount > 0
 
 
+# -----------------------------------------------------------------------------
+# Sub-Block 3.6: Match Telemetry & Active Slot Identification
+# -----------------------------------------------------------------------------
+
+async def record_deck_slot_match(
+    db_path: str,
+    user_id: str,
+    deck_name: str,
+    is_win: bool
+) -> bool:
+    """
+    Records a match result (win/loss and usage counter) for a saved deck slot.
+    Updates times_used, wins or losses, and last_used_at timestamp.
+    """
+    await ensure_saved_deck_tables(db_path)
+    user_id_str = str(user_id)
+    clean_name = deck_name.strip()
+    win_col = "wins" if is_win else "losses"
+    async with aiosqlite.connect(db_path) as db:
+        cur = await db.execute(f"""
+            UPDATE player_saved_decks
+            SET times_used = times_used + 1,
+                {win_col} = {win_col} + 1,
+                last_used_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND deck_name = ?
+        """, (user_id_str, clean_name))
+        await db.commit()
+        return cur.rowcount > 0
+
+
+async def find_matching_saved_deck(db_path: str, user_id: str) -> Optional[str]:
+    """
+    Identifies if the player's active deck matches one of their saved named deck slots.
+    Compares the card counts (card_id -> quantity) of player_decks with the parsed .ydk
+    contents of all saved slots for this user.
+    Returns the matching deck_name, or None if the active deck is custom/unregistered.
+    """
+    await ensure_saved_deck_tables(db_path)
+    user_id_str = str(user_id)
+    async with aiosqlite.connect(db_path) as db:
+        cur = await db.execute(
+            "SELECT card_id, quantity FROM player_decks WHERE user_id = ?",
+            (user_id_str,)
+        )
+        active_rows = await cur.fetchall()
+        if not active_rows:
+            return None
+        active_counts = {cid: qty for cid, qty in active_rows if qty > 0}
+
+        cur = await db.execute(
+            "SELECT deck_name, ydk_content FROM player_saved_decks WHERE user_id = ? ORDER BY last_used_at DESC, created_at DESC",
+            (user_id_str,)
+        )
+        saved_decks = await cur.fetchall()
+
+    for deck_name, ydk_text in saved_decks:
+        parsed = parse_ydk(ydk_text or "")
+        if parsed.get("passcode_counts") == active_counts:
+            return deck_name
+
+    return None
+
+
 # =============================================================================
 # BLOCK 4: CLOSING BLOCK (Public Exports & Translation Unit Manifest)
 # =============================================================================
@@ -272,5 +360,7 @@ __all__ = [
     "get_saved_deck_slot",
     "rename_saved_deck_slot",
     "delete_saved_deck_slot",
+    "record_deck_slot_match",
+    "find_matching_saved_deck",
 ]
 

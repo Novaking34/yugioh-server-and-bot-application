@@ -51,6 +51,8 @@ from .domain.slots import (
     get_saved_deck_slot,
     rename_saved_deck_slot,
     delete_saved_deck_slot,
+    record_deck_slot_match,
+    find_matching_saved_deck,
 )
 
 from .domain.story import (
@@ -199,6 +201,14 @@ class DeckService:
     async def delete_named_deck(self, user_id: str, deck_name: str) -> bool:
         """Deletes a saved named deck profile."""
         return await delete_saved_deck_slot(self.db_path, user_id, deck_name)
+
+    async def record_deck_match_result(self, user_id: str, deck_name: str, is_win: bool) -> bool:
+        """Records a match result (win/loss telemetry) for a user's saved deck slot."""
+        return await record_deck_slot_match(self.db_path, user_id, deck_name, is_win)
+
+    async def find_matching_saved_deck(self, user_id: str) -> Optional[str]:
+        """Identifies if the player's active deck matches one of their saved named deck slots."""
+        return await find_matching_saved_deck(self.db_path, user_id)
 
     # -------------------------------------------------------------------------
     # Sub-Block 3.4: Pre-Constructed Character Decks & Story Integration

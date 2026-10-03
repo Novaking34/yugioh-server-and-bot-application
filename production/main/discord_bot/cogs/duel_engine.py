@@ -54,11 +54,14 @@ class DuelSession:
         p2: discord.User,
         p1_deck: List[int],
         p2_deck: List[int],
-        match_type: str = "RANKED"
+        match_type: str = "RANKED",
+        p1_deck_name: Optional[str] = None,
+        p2_deck_name: Optional[str] = None,
     ):
         self.p1 = p1
         self.p2 = p2
         self.match_type = match_type.upper()
+        self.deck_names = {p1.id: p1_deck_name, p2.id: p2_deck_name}
         self.lp = {p1.id: 8000, p2.id: 8000}
 
         # Keep original decks for post-match card telemetry
@@ -167,7 +170,9 @@ class LPModal(ui.Modal, title="Adjust Life Points"):
                 p1_deck=self.session.original_decks[self.session.p1.id],
                 p2_deck=self.session.original_decks[self.session.p2.id],
                 p1_name=self.session.p1.display_name,
-                p2_name=self.session.p2.display_name
+                p2_name=self.session.p2.display_name,
+                p1_deck_name=self.session.deck_names.get(self.session.p1.id),
+                p2_deck_name=self.session.deck_names.get(self.session.p2.id),
             )
             self.session.match_result = res
             if self.session.match_type == "RANKED":
@@ -427,7 +432,9 @@ class DuelView(ui.View):
                 p1_deck=self.session.original_decks[self.session.p1.id],
                 p2_deck=self.session.original_decks[self.session.p2.id],
                 p1_name=self.session.p1.display_name,
-                p2_name=self.session.p2.display_name
+                p2_name=self.session.p2.display_name,
+                p1_deck_name=self.session.deck_names.get(self.session.p1.id),
+                p2_deck_name=self.session.deck_names.get(self.session.p2.id),
             )
             self.session.match_result = res
             if self.session.match_type == "RANKED":
@@ -588,7 +595,9 @@ class DuelView(ui.View):
                     p1_deck=self.session.original_decks[self.session.p1.id],
                     p2_deck=self.session.original_decks[self.session.p2.id],
                     p1_name=self.session.p1.display_name,
-                    p2_name=self.session.p2.display_name
+                    p2_name=self.session.p2.display_name,
+                    p1_deck_name=self.session.deck_names.get(self.session.p1.id),
+                    p2_deck_name=self.session.deck_names.get(self.session.p2.id),
                 )
                 self.session.match_result = res
                 if self.session.match_type == "RANKED":
@@ -652,7 +661,9 @@ class DuelView(ui.View):
                     p1_deck=self.session.original_decks[self.session.p1.id],
                     p2_deck=self.session.original_decks[self.session.p2.id],
                     p1_name=self.session.p1.display_name,
-                    p2_name=self.session.p2.display_name
+                    p2_name=self.session.p2.display_name,
+                    p1_deck_name=self.session.deck_names.get(self.session.p1.id),
+                    p2_deck_name=self.session.deck_names.get(self.session.p2.id),
                 )
                 self.session.match_result = res
                 if self.session.match_type == "RANKED":
@@ -688,7 +699,9 @@ class DuelView(ui.View):
             p1_deck=self.session.original_decks[self.session.p1.id],
             p2_deck=self.session.original_decks[self.session.p2.id],
             p1_name=self.session.p1.display_name,
-            p2_name=self.session.p2.display_name
+            p2_name=self.session.p2.display_name,
+            p1_deck_name=self.session.deck_names.get(self.session.p1.id),
+            p2_deck_name=self.session.deck_names.get(self.session.p2.id),
         )
         self.session.match_result = res
         if self.session.match_type == "RANKED":
@@ -728,7 +741,18 @@ class ChallengeView(ui.View):
             if len(p2_deck) < 5:
                 p2_deck = fallback.copy()
 
-        session = DuelSession(self.challenger, self.challenged, p1_deck, p2_deck, match_type=match_type)
+        p1_deck_name = await _deck_service.find_matching_saved_deck(str(self.challenger.id))
+        p2_deck_name = await _deck_service.find_matching_saved_deck(str(self.challenged.id))
+
+        session = DuelSession(
+            self.challenger,
+            self.challenged,
+            p1_deck,
+            p2_deck,
+            match_type=match_type,
+            p1_deck_name=p1_deck_name,
+            p2_deck_name=p2_deck_name
+        )
         duel_manager.register_session(self.challenger.id, self.challenged.id, session)
 
         duel_view = DuelView(session)

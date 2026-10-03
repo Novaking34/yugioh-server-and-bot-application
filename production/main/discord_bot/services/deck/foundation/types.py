@@ -85,7 +85,7 @@ class ParsedYDK(TypedDict):
 # -----------------------------------------------------------------------------
 # Sub-Block 3.4: Saved Named Deck Slot Profile
 # -----------------------------------------------------------------------------
-class SavedDeckSlot(TypedDict):
+class SavedDeckSlot(TypedDict, total=False):
     """Profile telemetry for a user's saved multi-deck slot."""
     id: int
     deck_name: str
@@ -97,6 +97,11 @@ class SavedDeckSlot(TypedDict):
     total_count: int
     is_legal: bool
     legality_badge: str
+    times_used: int
+    wins: int
+    losses: int
+    win_rate: float
+    last_used_at: Optional[str]
 
 
 # -----------------------------------------------------------------------------
@@ -119,6 +124,11 @@ class StoryDeckRecord(TypedDict, total=False):
     legality_badge: str
     ai_elo: int
     story_chapter: str
+    times_used: int
+    wins: int
+    losses: int
+    win_rate: float
+    last_used_at: Optional[str]
 
 
 # -----------------------------------------------------------------------------

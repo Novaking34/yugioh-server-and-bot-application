@@ -189,11 +189,9 @@ class CardService:
         query_clean = query.strip()
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cur = await db.execute("""
-                SELECT c.*, f.name AS faction_name, ch.name AS character_name
-                FROM custom_cards c
-                LEFT JOIN factions f ON c.faction_id = f.id
-                LEFT JOIN characters ch ON c.signature_character_id = ch.id
+            cur = await db.execute(f"""
+                SELECT {CARD_RECORD_PROJECTION}
+                {CARD_RECORD_JOINS}
                 WHERE c.name = ? 
                    OR c.set_number = ?
                    OR CAST(c.id AS TEXT) = ?
@@ -230,11 +228,9 @@ class CardService:
         """Returns all registered custom cards in Set 1."""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cur = await db.execute("""
-                SELECT c.*, f.name AS faction_name, ch.name AS character_name
-                FROM custom_cards c
-                LEFT JOIN factions f ON c.faction_id = f.id
-                LEFT JOIN characters ch ON c.signature_character_id = ch.id
+            cur = await db.execute(f"""
+                SELECT {CARD_RECORD_PROJECTION}
+                {CARD_RECORD_JOINS}
                 ORDER BY c.id ASC
             """)
             rows = await cur.fetchall()
@@ -244,11 +240,9 @@ class CardService:
         """Selects a random card from the active pool."""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cur = await db.execute("""
-                SELECT c.*, f.name AS faction_name, ch.name AS character_name
-                FROM custom_cards c
-                LEFT JOIN factions f ON c.faction_id = f.id
-                LEFT JOIN characters ch ON c.signature_character_id = ch.id
+            cur = await db.execute(f"""
+                SELECT {CARD_RECORD_PROJECTION}
+                {CARD_RECORD_JOINS}
                 ORDER BY RANDOM() LIMIT 1
             """)
             row = await cur.fetchone()
@@ -392,5 +386,7 @@ __all__ = [
     "DEFAULT_AUTOCOMPLETE_LIMIT",
     "DEFAULT_RECENT_LIMIT",
     "DEFAULT_META_LIMIT",
+    "CARD_RECORD_PROJECTION",
+    "CARD_RECORD_JOINS",
 ]
 

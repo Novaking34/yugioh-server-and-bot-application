@@ -111,6 +111,8 @@ from .deck.domain.slots import (
     get_saved_deck_slot,
     rename_saved_deck_slot,
     delete_saved_deck_slot,
+    record_deck_slot_match,
+    find_matching_saved_deck,
 )
 from .deck.domain.story import (
     fetch_character_decks,
@@ -253,6 +255,8 @@ __all__ = [
     "get_saved_deck_slot",
     "rename_saved_deck_slot",
     "delete_saved_deck_slot",
+    "record_deck_slot_match",
+    "find_matching_saved_deck",
     "fetch_character_decks",
     "fetch_character_deck_by_id",
     "copy_character_deck_to_player_deck",

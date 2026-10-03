@@ -210,6 +210,16 @@ async def copy_character_deck_to_player_deck(
         return False, "Story Deck not found", 0
 
     async with aiosqlite.connect(db_path) as db:
+        # Decrement card_usage_stats for cards being replaced to prevent telemetry drift
+        cur = await db.execute("SELECT card_id, quantity FROM player_decks WHERE user_id = ?", (user_id_str,))
+        old_cards = await cur.fetchall()
+        for old_cid, old_qty in old_cards:
+            await db.execute("""
+                UPDATE card_usage_stats
+                SET times_decked = MAX(0, times_decked - ?)
+                WHERE card_id = ?
+            """, (old_qty, old_cid))
+
         await db.execute("DELETE FROM player_decks WHERE user_id = ?", (user_id_str,))
         total_added = 0
         for card in deck.get("cards", []):
