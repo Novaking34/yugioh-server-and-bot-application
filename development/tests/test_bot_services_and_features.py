@@ -1455,3 +1455,89 @@ async def test_deck_macro_telemetry_and_drift_prevention():
     await deck_service.clear_deck(test_uid)
     await deck_service.delete_named_deck(test_uid, "Control Alpha")
 
+
+@pytest.mark.anyio
+async def test_card_service_discovery_and_autocomplete_engine():
+    """
+    Validates:
+    1. Direct indexed lookup via get_card_by_id.
+    2. Composite autocomplete query sanitization ("TLOK-001 | Name" and "[50000101] Name").
+    3. Multi-criteria card filtering via get_cards_by_filter.
+    4. Real-time autocomplete ranking and empty query set ordering in search_cards.
+    5. Type-filtered random card retrieval in get_random_card.
+    """
+    service = CardService(STORY_DB_PATH)
+
+    # 1. Direct O(1) indexed lookup
+    card_by_id = await service.get_card_by_id(50000101)
+    assert card_by_id is not None
+    assert card_by_id["name"] == "Kasutamaiza, the Creator of Kustomazi"
+    assert card_by_id["level"] == 12  # Canonical level alias
+    assert card_by_id["faction_name"] is not None
+
+    # Non-existent ID returns None
+    assert await service.get_card_by_id(99999999) is None
+
+    # 2. Composite label parsing in get_card_by_query
+    comp1 = await service.get_card_by_query("TLOK-001 | Kasutamaiza, the Creator of Kustomazi")
+    assert comp1 is not None
+    assert comp1["id"] == 50000101
+
+    comp2 = await service.get_card_by_query("[50000102] The Void of Creation")
+    assert comp2 is not None
+    assert comp2["set_number"] == "TLOK-002"
+
+    # Numeric string fast-path
+    comp3 = await service.get_card_by_query("50000103")
+    assert comp3 is not None
+    assert comp3["name"] == "The Seed of Creation"
+
+    # Case-insensitive exact name
+    comp4 = await service.get_card_by_query("kasutamaiza, the creator of kustomazi")
+    assert comp4 is not None
+    assert comp4["id"] == 50000101
+
+    # 3. Multi-criteria filtering
+    monsters_divine = await service.get_cards_by_filter(card_type="Monster", attribute="DIVINE")
+    assert len(monsters_divine) >= 1
+    assert any(m["id"] == 50000101 for m in monsters_divine)
+
+    field_spells = await service.get_cards_by_filter(card_type="Spell", card_subtype="Field")
+    assert len(field_spells) >= 1
+    for fs in field_spells:
+        assert fs["card_type"] == "Spell"
+        assert "Field" in (fs.get("card_subtype") or "")
+
+    archetype_cards = await service.get_cards_by_filter(archetype="Kasutamaiza")
+    assert len(archetype_cards) >= 1
+
+    # 4. search_cards ranking
+    # Autocomplete with "Kas" should rank cards starting with "Kas" at the top
+    suggestions = await service.search_cards("Kas", limit=10)
+    assert len(suggestions) >= 1
+    assert suggestions[0]["name"].startswith("Kas")
+    # Verify rich metadata keys
+    s0 = suggestions[0]
+    assert "id" in s0
+    assert "set_number" in s0
+    assert "name" in s0
+    assert "card_type" in s0
+    assert "card_subtype" in s0
+    assert "rarity" in s0
+
+    # Empty query yields canonical Set order (TLOK-001, TLOK-002...)
+    empty_suggestions = await service.search_cards("", limit=5)
+    assert len(empty_suggestions) == 5
+    assert empty_suggestions[0]["set_number"] == "TLOK-001"
+    assert empty_suggestions[1]["set_number"] == "TLOK-002"
+
+    # 5. Type-filtered get_random_card
+    random_spell = await service.get_random_card(card_type="Spell")
+    assert random_spell is not None
+    assert random_spell["card_type"] == "Spell"
+
+    random_monster = await service.get_random_card(card_type="Monster")
+    assert random_monster is not None
+    assert random_monster["card_type"] == "Monster"
+
+
