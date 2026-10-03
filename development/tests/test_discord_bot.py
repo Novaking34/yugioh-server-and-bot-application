@@ -31,7 +31,7 @@ from production.main.discord_bot.utils import (
 )
 from production.main.discord_bot.cogs.cardpool import card_name_autocomplete
 from production.main.discord_bot.cogs.lore import lore_autocomplete, deck_name_autocomplete
-from production.main.discord_bot.cogs.deckbuilding import character_deck_autocomplete
+from production.main.discord_bot.cogs.deckbuilding import character_deck_autocomplete, user_deck_slot_autocomplete
 
 
 def test_frame_colors_and_card_color():
@@ -195,6 +195,10 @@ async def test_deck_autocompletes():
     choices_char = await character_deck_autocomplete(interaction_mock, "Professor")
     assert len(choices_char) > 0
     assert "Kasutamaiza - Creation Control" in choices_char[0].value
+
+    interaction_mock.user.id = 123456789
+    slot_choices = await user_deck_slot_autocomplete(interaction_mock, "")
+    assert isinstance(slot_choices, list)
 
 
 def test_all_canonical_cards_generate_valid_embeds():
