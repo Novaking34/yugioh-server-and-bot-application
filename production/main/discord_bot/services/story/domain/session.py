@@ -71,9 +71,13 @@ class StoryDuelSession:
         self.encounter_type = (stage.get("encounter_type") or ENCOUNTER_TYPE_AI).upper()
         self.script_data = stage.get("script") or {}
 
-        # Starting Life Points
+        # Starting Life Points: Tiered scaling (4000 LP skirmish vs 6000 LP midboss vs 8000 LP apex)
         boss_starting_lp = stage.get("boss_hp") or DEFAULT_STARTING_BOSS_HP
-        self.lp = {player.id: DEFAULT_STARTING_PLAYER_HP, "npc": boss_starting_lp}
+        script = stage.get("script") or {}
+        player_starting_lp = stage.get("player_hp") or script.get("player_hp") or (boss_starting_lp if boss_starting_lp <= 4000 else DEFAULT_STARTING_PLAYER_HP)
+        self.npc_max_hp = int(boss_starting_lp)
+        self.player_max_hp = int(player_starting_lp)
+        self.lp = {player.id: self.player_max_hp, "npc": self.npc_max_hp}
 
         # MR5 Deck Partitioning: Guarantee Extra Deck monsters are NEVER in Main Deck or dealt to hand
         p_main, p_extra = partition_card_ids(player_deck)

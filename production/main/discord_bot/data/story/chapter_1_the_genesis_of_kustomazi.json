@@ -14,9 +14,9 @@
       "opponent_name": "Echo of the Void",
       "opponent_title": "Primordial Emanation",
       "opponent_character_id": 1,
-      "opponent_deck_id": 1,
+      "opponent_deck_id": 4,
       "encounter_type": "SCRIPTED",
-      "boss_hp": 8000,
+      "boss_hp": 4000,
       "reward_title": "Void Walker",
       "reward_card_id": 50000102,
       "script_data": {
@@ -28,20 +28,21 @@
           },
           "2": {
             "play": "Echo banishes materials to Special Summon **Formless the True Void of Creation** (`TLOK-005`)! A wave of void distortion strikes!",
-            "damage": 1000,
+            "damage": 800,
             "quote": "\"Can your spirit maintain form against infinity?\""
           },
           "3": {
             "play": "Echo casts **The Spark of Creation** (`TLOK-012`), retrieving void essences and unleashing a concentrated beam!",
-            "damage": 1200,
+            "damage": 1000,
             "quote": "\"From nothingness, the spark ignites!\""
           }
         },
         "repeat": {
           "play": "Echo lashes out with residual primordial void energy!",
-          "damage": 800,
+          "damage": 600,
           "quote": "\"The void never sleeps...\""
         },
+        "threshold_2000": "🌌 *Echo of the Void falters as its cosmic density collapses! \"You... withstand the void?!\"*",
         "threshold_4000": "🌌 *Echo of the Void falters as its cosmic density collapses! \"You... withstand the void?!\"*"
       }
     },
@@ -54,9 +55,9 @@
       "opponent_name": "Acolytes of Kustomazi",
       "opponent_title": "Temple Guardians",
       "opponent_character_id": 1,
-      "opponent_deck_id": 1,
+      "opponent_deck_id": 5,
       "encounter_type": "AI",
-      "boss_hp": 8000,
+      "boss_hp": 6000,
       "reward_title": "Temple Guardian",
       "reward_card_id": 50000111,
       "script_data": null

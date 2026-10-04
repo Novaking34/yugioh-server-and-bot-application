@@ -340,10 +340,15 @@ class StoryDuelView(ui.View):
         self.session.lp["npc"] = max(0, self.session.lp["npc"] - player_dmg)
         chronicle = [attack_line]
 
-        # Check threshold dialogue loaded from database script
-        if self.session.lp["npc"] <= 4000 and not self.session.threshold_triggered and self.session.lp["npc"] > 0:
+        # Check threshold dialogue loaded from database script (half LP dialogue)
+        half_hp = getattr(self.session, "npc_max_hp", 8000) // 2
+        if self.session.lp["npc"] <= half_hp and not self.session.threshold_triggered and self.session.lp["npc"] > 0:
             self.session.threshold_triggered = True
-            threshold_text = self.session.script_data.get("threshold_4000")
+            threshold_text = (
+                self.session.script_data.get(f"threshold_{half_hp}")
+                or self.session.script_data.get("threshold_half")
+                or self.session.script_data.get("threshold_4000")
+            )
             if threshold_text:
                 chronicle.append(threshold_text)
 

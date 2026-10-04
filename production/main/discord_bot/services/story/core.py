@@ -101,6 +101,9 @@ class StoryService:
         """
         return await sync_all_scenario_files(self.db_path, story_dir)
 
+    # Alias for legacy and convenience
+    sync_scenarios_from_json = sync_all_story_files
+
 
 # Default Singleton Instance
 story_service = StoryService()

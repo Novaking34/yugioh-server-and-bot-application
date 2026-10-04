@@ -16,7 +16,7 @@
       "opponent_character_id": 2,
       "opponent_deck_id": 2,
       "encounter_type": "AI",
-      "boss_hp": 8000,
+      "boss_hp": 4000,
       "reward_title": "Street Reveler",
       "reward_card_id": 50000128,
       "script_data": null
@@ -30,9 +30,9 @@
       "opponent_name": "A Wicked Shadow",
       "opponent_title": "Formless Phantasm",
       "opponent_character_id": 2,
-      "opponent_deck_id": 2,
+      "opponent_deck_id": 6,
       "encounter_type": "SCRIPTED",
-      "boss_hp": 8000,
+      "boss_hp": 6000,
       "reward_title": "Shadow Weaver",
       "reward_card_id": 50000115,
       "script_data": {
@@ -58,6 +58,7 @@
           "damage": 900,
           "quote": "\"The shadows will never truly vanish!\""
         },
+        "threshold_3000": "🎃 *A Wicked Shadow flickers wildly as its spectral form is destabilized! \"What an extraordinary duelist... your light burns too bright!\"*",
         "threshold_4000": "🎃 *A Wicked Shadow flickers wildly as its spectral form is destabilized! \"What an extraordinary duelist... your light burns too bright!\"*"
       }
     },
@@ -70,7 +71,7 @@
       "opponent_name": "Magnolia, the Ghost of LeSpookie Street",
       "opponent_title": "The Lantern Maiden",
       "opponent_character_id": 2,
-      "opponent_deck_id": 2,
+      "opponent_deck_id": 7,
       "encounter_type": "SCRIPTED",
       "boss_hp": 8000,
       "reward_title": "Lantern Maiden's Bond",
