@@ -63,13 +63,21 @@ class GeneralCog(commands.Cog, name="General"):
     async def info(self, interaction: discord.Interaction):
         """Displays platform info and game connection instructions."""
         card_count = 0
+        min_set = "TLOK-001"
+        max_set = "TLOK-064"
         factions_count = 0
         decks_count = 0
 
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute("SELECT COUNT(*) FROM custom_cards") as cur:
-                    card_count = (await cur.fetchone())[0]
+                async with db.execute("SELECT COUNT(*), MIN(set_number), MAX(set_number) FROM custom_cards") as cur:
+                    row = await cur.fetchone()
+                    if row:
+                        card_count = row[0]
+                        if row[1]:
+                            min_set = row[1]
+                        if row[2]:
+                            max_set = row[2]
                 async with db.execute("SELECT COUNT(*) FROM factions") as cur:
                     factions_count = (await cur.fetchone())[0]
                 async with db.execute("SELECT COUNT(*) FROM decks") as cur:
@@ -89,9 +97,9 @@ class GeneralCog(commands.Cog, name="General"):
             ),
             color=0x8b5cf6
         )
-        embed.add_field(name="🃏 Set 1 Cardpool", value=f"**{card_count}** Cards (`TLOK-001` - `TLOK-014`)", inline=True)
-        embed.add_field(name="🏛️ Lore Factions", value=f"**{factions_count}** Faction (The Creators of Kustomazi)", inline=True)
-        embed.add_field(name="📦 Official Decks", value=f"**{decks_count}** Deck (Kasutamaiza Creation Control)", inline=True)
+        embed.add_field(name="🃏 Live Cardpool", value=f"**{card_count}** Cards (`{min_set}` - `{max_set}`)", inline=True)
+        embed.add_field(name="🏛️ Lore Factions", value=f"**{factions_count}** Factions", inline=True)
+        embed.add_field(name="📦 Official Decks", value=f"**{decks_count}** Decks", inline=True)
 
         embed.add_field(
             name="🎮 Live Duel Simulator Connection",
@@ -182,10 +190,11 @@ class GeneralCog(commands.Cog, name="General"):
         embed.add_field(
             name="🃏 Set 1: The Land of Kustomazi (TLOK)",
             value=(
-                "• **Passcode Range:** `50,000,101 - 50,000,114` (`TLOK-001` - `TLOK-014`).\n"
+                "• **Passcode Range:** `50,000,101 - 50,000,164` (`TLOK-001` - `TLOK-064`).\n"
                 "• **Divine Mechanics:** Supreme Divine-Beast monsters (such as *Kasutamaiza, the Creator of Kustomazi*) require 3 Tributes, and their Normal Summon cannot be negated.\n"
                 "• **Void & Creation Engine:** Spells and monsters synergize around continuous field control and special summoning servants from the Void.\n"
-                "• **Pre-made Deck:** Load the official tournament deck instantly via `/load_character_deck ProfessorSeanEX`."
+                "• **LeSpookie Halloween Chronicle:** Zombie Gemini monsters and Trick-or-Treat counter manipulation led by *Magnolia, Ghost of LeSpookie Street*.\n"
+                "• **Pre-made Decks:** Load official tournament decks via `/load_character_deck`."
             ),
             inline=False
         )

@@ -66,7 +66,7 @@ BANLIST_LIMITS: Dict[str, int] = {
 # -----------------------------------------------------------------------------
 # Sub-Block 3.5: Backward-Compatibility Aliases
 # -----------------------------------------------------------------------------
-SET_1_CARD_COUNT: int = 14             # Legacy alpha testing constante
+SET_1_CARD_COUNT: int = 64             # Total canonical cards in Set 1: The Land of Kustomazi
 SET_1_MAIN_DECK_EXPECTED: int = 34     # Legacy Kasutamaiza Creation Control main count
 SET_1_EXTRA_DECK_EXPECTED: int = 6     # Legacy Kasutamaiza Creation Control extra count
 SET_1_EXTRA_DECK_IDS: Set[int] = {50000106, 50000107}

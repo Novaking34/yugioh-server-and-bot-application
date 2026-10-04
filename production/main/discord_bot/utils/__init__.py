@@ -2,27 +2,27 @@
 # BLOCK 1: METADATA BLOCK
 # =============================================================================
 """
-Module: discord_bot.utils
+Package: discord_bot.utils
 Description:
-    Root Formatting & UI Presentation Entry Point & Translation Bridge.
-    Re-exports the card embed builders, duelist license renderers,
-    story RPG encounter profiles, duel board models, and reference guides
-    from the modular subsystem at `utils`.
+    Modular Discord Bot Formatting & UI Presentation Subsystem.
+    Organized with Top-Down / Bottom-Up C-style compilation unit architecture:
+    - foundation/: Bottom-Up Foundation (Color Palettes, Guide Metadata, Duel Math, Formatters)
+    - domain/    : Presentation Units (Card Embeds, Duel Board, Ranking, Story)
 """
 
 # =============================================================================
-# BLOCK 2: OPENING BLOCK (Inclusions & Layered Package Imports)
+# BLOCK 2: OPENING BLOCK (Inclusions & Imports)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Sub-Block 2.1: Foundation Primitives (utils.foundation)
+# Sub-Block 2.1: Foundation Primitives (foundation/)
 # -----------------------------------------------------------------------------
-from .utils.foundation.colors import (
+from .foundation.colors import (
     FRAME_COLORS,
     get_card_color,
 )
 
-from .utils.foundation.types_guide_data import (
+from .foundation.types_guide_data import (
     SPELL_CARD_TYPES,
     TRAP_CARD_TYPES,
     MONSTER_CARD_FRAMES,
@@ -33,7 +33,7 @@ from .utils.foundation.types_guide_data import (
     SPELL_SPEEDS_DATA,
 )
 
-from .utils.foundation.duel_math import (
+from .foundation.duel_math import (
     get_tribute_requirement,
     is_tribute_summon,
     calculate_battle_damage,
@@ -44,7 +44,7 @@ from .utils.foundation.duel_math import (
     is_valid_scale,
 )
 
-from .utils.foundation.formatters import (
+from .foundation.formatters import (
     STAT_UNKNOWN,
     LINK_ARROW_GLYPHS,
     LINK_BIT_MAP,
@@ -59,9 +59,9 @@ from .utils.foundation.formatters import (
 )
 
 # -----------------------------------------------------------------------------
-# Sub-Block 2.2: Presentation Operations (utils.domain)
+# Sub-Block 2.2: Presentation Operations (domain/)
 # -----------------------------------------------------------------------------
-from .utils.domain.card_embeds import (
+from .domain.card_embeds import (
     build_card_embed,
     build_card_stats_embed,
     build_card_types_guide_embed,
@@ -71,30 +71,30 @@ from .utils.domain.card_embeds import (
     build_recent_cards_embed,
 )
 
-from .utils.domain.autocomplete import (
+from .domain.autocomplete import (
     DISCORD_MAX_AUTOCOMPLETE_CHOICES,
     build_card_autocomplete_choices,
     card_name_autocomplete,
     create_card_autocomplete,
 )
 
-from .utils.domain.duel_board import (
+from .domain.duel_board import (
     DuelBoard,
     render_duel_field_ascii,
     build_board_guide_embed,
 )
 
-from .utils.domain.ranking_embeds import (
+from .domain.ranking_embeds import (
     build_rank_embed,
     build_leaderboard_embed,
 )
 
-from .utils.domain.story_embeds import (
+from .domain.story_embeds import (
     build_story_stage_embed,
 )
 
 # =============================================================================
-# BLOCK 4: CLOSING BLOCK (Public Exports & Translation Unit Manifest)
+# BLOCK 4: CLOSING BLOCK (Public Manifest)
 # =============================================================================
 
 __all__ = [

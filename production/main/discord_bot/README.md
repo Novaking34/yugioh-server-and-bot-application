@@ -43,7 +43,8 @@ The bot follows a strict **Separation of Concerns** using a three-tier architect
 production/main/discord_bot/
 ├── bot.py                  # Orchestrator with structured logging, lifecycle hooks & error handler
 ├── bot_config.py           # Configuration bridge to centralized config subsystem
-├── utils.py                # Card frame palettes, status embeds, rating badges & dialog builders
+├── utils/                  # Modular UI Presentation subsystem (foundation, domain embeds, board renderer)
+├── utils.py                # Root Presentation entry point & translation bridge
 ├── services/               # Decoupled Domain & Database Services
 │   ├── __init__.py
 │   ├── card/               # Modular Card subsystem (foundation, domain discovery, autocomplete, analytics, mutators)

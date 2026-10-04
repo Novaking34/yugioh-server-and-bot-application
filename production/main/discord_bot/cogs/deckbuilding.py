@@ -47,7 +47,7 @@ from discord.ext import commands
 # -----------------------------------------------------------------------------
 # Sub-Block 2.2: Internal Architecture & Service Inclusions
 # -----------------------------------------------------------------------------
-from cogs.cardpool import card_name_autocomplete
+from utils.domain.autocomplete import card_name_autocomplete
 from production.main.logger import get_logger
 from services.card import CardService
 from services.deck import MAX_USER_DECK_SLOTS, DeckService

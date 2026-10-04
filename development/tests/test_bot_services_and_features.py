@@ -562,9 +562,10 @@ def test_duel_board_model_and_field_rendering():
 
 
 def test_card_types_and_races_guide_metadata():
-    """Validates the card types guide, spell speeds, trap classifications, and 26 races."""
+    """Validates the card types guide, spell speeds, trap classifications, subtypes, and 26 races."""
     from utils import (
         SPELL_CARD_TYPES, TRAP_CARD_TYPES, MONSTER_CARD_FRAMES,
+        MONSTER_SUBTYPES, SPELL_SPEEDS_DATA,
         ALL_26_MONSTER_RACES, build_card_types_guide_embed
     )
 
@@ -579,13 +580,22 @@ def test_card_types_and_races_guide_metadata():
     assert "Counter Trap" in TRAP_CARD_TYPES
     assert TRAP_CARD_TYPES["Counter Trap"]["speed"] == "Spell Speed 3"
 
-    # 3. Monster Frames
+    # 3. Monster Frames & Subtypes
     assert "Normal Monster" in MONSTER_CARD_FRAMES
     assert "Effect Monster" in MONSTER_CARD_FRAMES
     assert "Fusion Monster" in MONSTER_CARD_FRAMES
     assert "Link Monster" in MONSTER_CARD_FRAMES
+    assert "Gemini" in MONSTER_SUBTYPES
+    assert "LeSpookie" in MONSTER_SUBTYPES["Gemini"]
 
-    # 4. All 26 Races
+    # 4. Spell Speeds Data
+    assert len(SPELL_SPEEDS_DATA) == 4
+    assert "Spell Speed 1" in SPELL_SPEEDS_DATA
+    assert "Spell Speed 2" in SPELL_SPEEDS_DATA
+    assert "Spell Speed 3" in SPELL_SPEEDS_DATA
+    assert "Chain Resolution" in SPELL_SPEEDS_DATA
+
+    # 5. All 26 Races
     assert len(ALL_26_MONSTER_RACES) == 26
     races_names = [r[0] for r in ALL_26_MONSTER_RACES]
     assert "Dragon" in races_names
@@ -594,11 +604,16 @@ def test_card_types_and_races_guide_metadata():
     assert "Illusion" in races_names
     assert "Cyberse" in races_names
 
-    # 5. Embed Generation for all categories
-    for cat in ["overview", "spells", "traps", "monsters", "races", "attributes", "levels_ranks"]:
+    # 6. Embed Generation for all 9 categories
+    categories = [
+        "overview", "spells", "traps", "monsters",
+        "subtypes", "spell_speeds", "races", "attributes", "levels_ranks"
+    ]
+    for cat in categories:
         emb = build_card_types_guide_embed(cat)
         assert emb.title is not None
         assert len(emb.fields) >= 1
+
 
 
 def test_card_attributes_levels_ranks_and_combat_calculations():
@@ -1881,6 +1896,627 @@ async def test_card_service_modular_architecture():
     card_root = await root_svc.get_card_by_id(50000101)
     assert card_root["name"] == card_direct["name"]
     assert type(core_svc) is type(root_svc)
+
+
+def test_modular_utils_subsystem_and_cardpool_architecture():
+    """
+    Verifies the modular C-style architecture of utils/ (foundation and domain)
+    and the 4-block architecture of cogs.cardpool.
+    """
+    # 1. Foundation package re-exports
+    from utils.foundation import (
+        FRAME_COLORS as FOUNDATION_FRAME_COLORS,
+        get_card_color as foundation_get_card_color,
+        SPELL_CARD_TYPES as FOUNDATION_SPELL_CARD_TYPES,
+        TRAP_CARD_TYPES as FOUNDATION_TRAP_CARD_TYPES,
+        MONSTER_CARD_FRAMES as FOUNDATION_MONSTER_CARD_FRAMES,
+        ALL_26_MONSTER_RACES as FOUNDATION_ALL_26_MONSTER_RACES,
+        CARD_ATTRIBUTES as FOUNDATION_CARD_ATTRIBUTES,
+        LEVELS_AND_RANKS_DATA as FOUNDATION_LEVELS_AND_RANKS_DATA,
+        get_tribute_requirement as foundation_get_tribute_req,
+        is_tribute_summon as foundation_is_tribute_summon,
+        calculate_battle_damage as foundation_calc_battle_damage,
+        calculate_piercing_damage as foundation_calc_pierce,
+        format_passcode as foundation_format_passcode,
+        format_stat_value as foundation_format_stat,
+        format_link_arrows as foundation_format_arrows,
+        format_spell_trap_property as foundation_format_sp_prop,
+    )
+    assert foundation_get_card_color("Spell", "Normal") == FOUNDATION_FRAME_COLORS["spell"]
+    assert foundation_get_card_color("Monster", "Pendulum") == FOUNDATION_FRAME_COLORS["pendulum"]
+    assert foundation_get_tribute_req(8) == 2
+    assert foundation_is_tribute_summon(8) is True
+    assert foundation_is_tribute_summon(4) is False
+    assert foundation_calc_pierce(2500, 2000) == 500
+    assert foundation_format_passcode(50000101) == "50000101"
+    assert foundation_format_stat(-2) == "?"
+    assert len(FOUNDATION_ALL_26_MONSTER_RACES) == 26
+
+    # 2. Domain package re-exports
+    from utils.domain import (
+        build_card_embed as domain_build_card_embed,
+        build_card_stats_embed as domain_build_card_stats_embed,
+        build_card_types_guide_embed as domain_build_card_types_guide_embed,
+        DuelBoard as DomainDuelBoard,
+        render_duel_field_ascii as domain_render_duel_field_ascii,
+        build_board_guide_embed as domain_build_board_guide_embed,
+        build_rank_embed as domain_build_rank_embed,
+        build_leaderboard_embed as domain_build_leaderboard_embed,
+        build_story_stage_embed as domain_build_story_stage_embed,
+    )
+    sample_card = {
+        "id": 50000101,
+        "name": "Kasutamaiza, the Creator of Kustomazi",
+        "set_number": "TLOK-001",
+        "card_type": "Monster",
+        "card_subtype": "Effect",
+        "attribute": "DIVINE",
+        "monster_type": "Divine-Beast",
+        "level_or_rank_or_link": 12,
+        "atk": 4000,
+        "def": 4000,
+    }
+    embed = domain_build_card_embed(sample_card)
+    assert "Kasutamaiza" in embed.title
+    assert embed.color.value == FOUNDATION_FRAME_COLORS["divine"]
+
+    # 3. Root utils package and translation bridge consistency
+    from utils import (
+        FRAME_COLORS,
+        get_card_color,
+        build_card_embed,
+        build_card_stats_embed,
+        build_card_types_guide_embed,
+        DuelBoard,
+    )
+    assert FRAME_COLORS is FOUNDATION_FRAME_COLORS
+    assert get_card_color is foundation_get_card_color
+    assert build_card_embed is domain_build_card_embed
+    assert DuelBoard is DomainDuelBoard
+
+    # 4. Cardpool Cog 4-block architecture and presentation builders
+    from production.main.discord_bot.cogs.cardpool import (
+        CardpoolCog,
+        format_cardpool_catalog_line,
+        build_meta_telemetry_embed,
+        build_cardpool_catalog_embed,
+        build_recent_cards_embed,
+        card_name_autocomplete,
+    )
+    line = format_cardpool_catalog_line(sample_card)
+    assert "TLOK-001" in line
+    assert "Kasutamaiza" in line
+    assert "ATK 4000" in line
+
+    cat_embed = build_cardpool_catalog_embed([sample_card])
+    assert "The Land of Kustomazi" in cat_embed.title
+    assert "**Total Registered Cards:** 1" in cat_embed.description
+
+
+def test_card_embeds_body_block_simulator_mechanics():
+    """
+    Validates the upgraded Body Block in card_embeds.py honoring Yu-Gi-Oh!
+    mechanics and EDOPro / YGOPro SQLite .cdb and Lua invariants:
+    - Passcode zero-padding (8 digits)
+    - Variable stat sentinels (-2 -> ?)
+    - Link directional arrows (Unicode glyphs) and lack of DEF
+    - Xyz Rank vs Level distinction
+    - Pendulum Scale and twin effect box formatting
+    - Spell/Trap property icons and Spell Speeds (1, 2, 3)
+    """
+    from utils.domain.card_embeds import (
+        format_passcode,
+        format_stat_value,
+        format_link_arrows,
+        format_spell_trap_property,
+        build_card_embed,
+        build_recent_cards_embed,
+        format_cardpool_catalog_line,
+    )
+
+    # 1. Simulator Passcode Invariants
+    assert format_passcode(50000101) == "50000101"
+    assert format_passcode(101) == "00000101"
+    assert format_passcode("50000102") == "50000102"
+
+    # 2. Variable Stat Sentinels
+    assert format_stat_value(-2) == "?"
+    assert format_stat_value("?") == "?"
+    assert format_stat_value("VAR") == "?"
+    assert format_stat_value(3000) == "3000"
+    assert format_stat_value(None) == "0"
+
+    # 3. Link Arrow Visual Geometry
+    arrow_str = format_link_arrows("BL,BR,T")
+    assert "↙" in arrow_str and "↘" in arrow_str and "⬆" in arrow_str
+    assert "BL" in arrow_str and "BR" in arrow_str and "T" in arrow_str
+
+    # Octal bitmask compatibility (0o001: B, 0o004: BR, 0o100: T -> 0o105)
+    bitmask_arrows = format_link_arrows(0o105)
+    assert "⬇" in bitmask_arrows and "↘" in bitmask_arrows and "⬆" in bitmask_arrows
+
+    # 4. Spell & Trap Properties and Speeds
+    spell_icon, spell_tag, spell_speed = format_spell_trap_property("Spell", "Quick-Play")
+    assert spell_icon == "⚡"
+    assert spell_speed == 2
+    assert "Quick-Play" in spell_tag
+
+    trap_icon, trap_tag, trap_speed = format_spell_trap_property("Trap", "Counter")
+    assert trap_icon == "⤶"
+    assert trap_speed == 3
+    assert "Counter" in trap_tag
+
+    # 5. Link Monster Embed Invariants (No DEF stat, Link Rating, Markers)
+    link_monster = {
+        "id": 50000105,
+        "name": "Accesscode Decrypter",
+        "set_number": "TLOK-005",
+        "card_type": "Monster",
+        "card_subtype": "Cyberse / Link / Effect",
+        "attribute": "DARK",
+        "monster_type": "Cyberse",
+        "level_or_rank_or_link": 4,
+        "atk": 2300,
+        "def": None,
+        "link_arrows": "BL,BR,T",
+        "effect_text": "Cannot be used as Link Material. Gains ATK based on Link Materials.",
+        "rarity": "Ultra Rare",
+        "banlist_status": "Unlimited",
+    }
+    link_embed = build_card_embed(link_monster)
+    param_field = next(f for f in link_embed.fields if f.name == "⚔️ Monster Parameters")
+    assert "**Link Rating:** Link-4" in param_field.value
+    assert "↙" in param_field.value and "↘" in param_field.value
+    assert "/ **DEF:** LINK" in param_field.value
+
+    # 6. Xyz Monster Embed Invariants (Rank instead of Level)
+    xyz_monster = {
+        "id": 50000106,
+        "name": "Number 39: Utopia",
+        "set_number": "TLOK-006",
+        "card_type": "Monster",
+        "card_subtype": "Warrior / Xyz / Effect",
+        "attribute": "LIGHT",
+        "monster_type": "Warrior",
+        "level_or_rank_or_link": 4,
+        "atk": 2500,
+        "def": 2000,
+        "effect_text": "Detach 1 material to negate an attack.",
+        "rarity": "Ultra Rare",
+    }
+    xyz_embed = build_card_embed(xyz_monster)
+    param_field = next(f for f in xyz_embed.fields if f.name == "⚔️ Monster Parameters")
+    assert "**Rank:** 4" in param_field.value
+    assert "**Level:**" not in param_field.value
+
+    # 7. Pendulum Scale & Twin Effect Invariants
+    pendulum_monster = {
+        "id": 50000107,
+        "name": "Odd-Eyes Pendulum Dragon",
+        "set_number": "TLOK-007",
+        "card_type": "Monster",
+        "card_subtype": "Dragon / Pendulum / Effect",
+        "attribute": "DARK",
+        "monster_type": "Dragon",
+        "level_or_rank_or_link": 7,
+        "scale": 4,
+        "atk": 2500,
+        "def": 2000,
+        "pendulum_effect": "You can reduce the battle damage you take to 0.",
+        "effect_text": "If this card battles an opponent's monster, double damage.",
+    }
+    pend_embed = build_card_embed(pendulum_monster)
+    param_field = next(f for f in pend_embed.fields if f.name == "⚔️ Monster Parameters")
+    assert "**Scale:** 4" in param_field.value
+    assert any("💎 Pendulum Effect [Scale 4]" in f.name for f in pend_embed.fields)
+
+    # 8. Variable ATK/DEF Sentinel Representation in Catalog Lines
+    variable_monster = {
+        "id": 50000108,
+        "name": "Tragoedia",
+        "set_number": "TLOK-008",
+        "card_type": "Monster",
+        "card_subtype": "Fiend / Effect",
+        "attribute": "DARK",
+        "level_or_rank_or_link": 10,
+        "atk": -2,
+        "def": -2,
+    }
+    line = format_cardpool_catalog_line(variable_monster)
+    assert "ATK ? / DEF ?" in line
+
+    # 9. Recent Cards Embed Formatting
+    recent_embed = build_recent_cards_embed([link_monster, xyz_monster])
+    assert len(recent_embed.fields) == 2
+
+
+@pytest.mark.anyio
+async def test_utils_domain_autocomplete_subsystem():
+    """
+    Validates utils.domain.autocomplete:
+    - Discord 25-choice API guard and 100-character ceiling
+    - Universal card_name_autocomplete
+    - Factory generator create_card_autocomplete (scoped by type and Extra Deck)
+    - Exception safety returning empty list on errors
+    """
+    from unittest.mock import MagicMock
+    from utils.domain.autocomplete import (
+        DISCORD_MAX_AUTOCOMPLETE_CHOICES,
+        build_card_autocomplete_choices,
+        card_name_autocomplete,
+        create_card_autocomplete,
+    )
+
+    # 1. API Protocol Constants
+    assert DISCORD_MAX_AUTOCOMPLETE_CHOICES == 25
+
+    # 2. Choice Model Building & Protocol Guards
+    sample_matches = [
+        {"id": 50000000 + i, "set_number": f"TLOK-{i:03d}", "name": f"Test Card {i}", "autocomplete_label": f"TLOK-{i:03d} | Test Card {i}"}
+        for i in range(30)
+    ]
+    choices = build_card_autocomplete_choices(sample_matches, limit=30)
+    assert len(choices) == 25  # Hard capped at 25
+
+    long_match = [{"id": 1, "set_number": "TLOK-999", "name": "A" * 150}]
+    long_choices = build_card_autocomplete_choices(long_match)
+    assert len(long_choices[0].name) <= 100
+
+    # 3. Universal Autocomplete Live Query
+    mock_interaction = MagicMock()
+    live_choices = await card_name_autocomplete(mock_interaction, "Kasutamaiza")
+    assert len(live_choices) > 0
+    assert any("Kasutamaiza" in c.value for c in live_choices)
+
+    # 4. Scoped Autocomplete Factory: Spell Only
+    spell_autocomplete = create_card_autocomplete(card_type="Spell")
+    spell_choices = await spell_autocomplete(mock_interaction, "Seed")
+    assert len(spell_choices) > 0
+    assert any("The Seed of Creation" in c.value for c in spell_choices)
+
+    # 5. Scoped Autocomplete Factory: Extra Deck Only
+    extra_autocomplete = create_card_autocomplete(is_extra_deck=True)
+    extra_choices = await extra_autocomplete(mock_interaction, "")
+    assert len(extra_choices) > 0
+
+    # 6. Re-export in Root Translation Bridges
+    from utils import card_name_autocomplete as root_card_autocomplete
+    assert root_card_autocomplete is card_name_autocomplete
+
+
+@pytest.mark.anyio
+async def test_cardpool_sub_block_3_1_and_database_reactivity():
+    """
+    Validates CardpoolCog Sub-Block 3.1 single-card inspection, interactive views,
+    deduplicated resolvers, and dynamic database synchronization reactivity.
+    """
+    from unittest.mock import MagicMock, AsyncMock
+    from cogs.cardpool import (
+        CardpoolCog,
+        CardActionView,
+        RandomCardView,
+        _card_service as default_service,
+    )
+    from services.card import CardService
+
+    # 1. Dynamic CardService Resolution on Cog
+    mock_bot = MagicMock()
+    cog = CardpoolCog(mock_bot)
+    # Default fallback when bot has no genuine CardService
+    assert cog.card_service is default_service
+
+    # Injected CardService on bot instance (e.g. custom database path)
+    custom_service = CardService()
+    mock_bot.card_service = custom_service
+    assert cog.card_service is custom_service
+    mock_bot.card_service = None  # Reset
+
+    # 2. Authoritative Resolver Deduplication (_resolve_card_or_reply)
+    interaction = AsyncMock()
+    interaction.response.send_message = AsyncMock()
+
+    # Valid query resolution
+    found_card = await cog._resolve_card_or_reply(interaction, "  Kasutamaiza, the Creator of Kustomazi  ")
+    assert found_card is not None
+    assert found_card["name"] == "Kasutamaiza, the Creator of Kustomazi"
+
+    # Non-existent card
+    interaction.response.send_message.reset_mock()
+    missing_card = await cog._resolve_card_or_reply(interaction, "NonExistentCardXYZ", ephemeral=True)
+    assert missing_card is None
+    interaction.response.send_message.assert_called_once()
+    assert "not found" in interaction.response.send_message.call_args[0][0]
+
+    # Empty query
+    interaction.response.send_message.reset_mock()
+    empty_card = await cog._resolve_card_or_reply(interaction, "   ", ephemeral=True)
+    assert empty_card is None
+    assert "Please specify" in interaction.response.send_message.call_args[0][0]
+
+    # 3. /card Command Inspection & Hidden Privacy Mode
+    interaction.response.send_message.reset_mock()
+    await cog.card_command.callback(cog, interaction, name="TLOK-001", hidden=True)
+    interaction.response.send_message.assert_called_once()
+    kwargs = interaction.response.send_message.call_args[1]
+    assert kwargs.get("ephemeral") is True
+    assert "embed" in kwargs
+    assert isinstance(kwargs.get("view"), CardActionView)
+
+    # 4. /card_stats Command Inspection & Privacy Mode
+    interaction.response.send_message.reset_mock()
+    await cog.card_stats_command.callback(cog, interaction, name="TLOK-001", hidden=False)
+    interaction.response.send_message.assert_called_once()
+    kwargs_stats = interaction.response.send_message.call_args[1]
+    assert kwargs_stats.get("ephemeral") is False
+    assert "embed" in kwargs_stats
+
+    # 5. /random_card Command with Scoped Categories
+    interaction.response.send_message.reset_mock()
+    await cog.random_card_command.callback(cog, interaction, category="spells", hidden=True)
+    interaction.response.send_message.assert_called_once()
+    kwargs_rand = interaction.response.send_message.call_args[1]
+    assert kwargs_rand.get("ephemeral") is True
+    assert isinstance(kwargs_rand.get("view"), RandomCardView)
+    assert "Spell" in kwargs_rand.get("embed").description or "SPELL" in kwargs_rand.get("embed").title or "Spell" in kwargs_rand.get("content")
+
+    # 6. Interactive Views: CardActionView & RandomCardView Callbacks
+    # CardActionView stats button callback
+    action_view = CardActionView(card=found_card, card_service=cog.card_service)
+    btn_interaction = AsyncMock()
+    btn_interaction.response.send_message = AsyncMock()
+    await action_view.stats_button.callback(btn_interaction)
+    btn_interaction.response.send_message.assert_called_once()
+    assert "embed" in btn_interaction.response.send_message.call_args[1]
+
+    # RandomCardView reroll button callback
+    rand_view = RandomCardView(card_service=cog.card_service, category="monsters")
+    reroll_interaction = AsyncMock()
+    reroll_interaction.response.edit_message = AsyncMock()
+    await rand_view.reroll_button.callback(reroll_interaction)
+    reroll_interaction.response.edit_message.assert_called_once()
+    assert "embed" in reroll_interaction.response.edit_message.call_args[1]
+
+    # 7. Dynamic Database Updates Reactivity
+    # When live telemetry mutator writes to SQLite, card stats query immediately reflects updated count
+    import aiosqlite
+    card_id = found_card["id"]
+    stats_before = await cog.card_service.get_card_usage_stats(card_id)
+    initial_draws = stats_before.get("times_drawn", 0)
+
+    try:
+        # Increment draws via mutator
+        await cog.card_service.track_card_draw(card_id, count=1)
+        stats_after = await cog.card_service.get_card_usage_stats(card_id)
+        assert stats_after.get("times_drawn", 0) == initial_draws + 1
+    finally:
+        # Restore initial count to preserve pristine database state
+        async with aiosqlite.connect(cog.card_service.db_path) as db:
+            await db.execute("UPDATE card_usage_stats SET times_drawn = ? WHERE card_id = ?", (initial_draws, card_id))
+            await db.commit()
+
+
+@pytest.mark.anyio
+async def test_cardpool_growing_cardpool_and_chunked_pagination():
+    """
+    Validates that the cardpool subsystem scales smoothly with a growing cardpool (64+ cards):
+    - Eliminates legacy 14-card artificial caps
+    - add_chunked_catalog_fields partitions large lists so no field exceeds Discord's 1024 limit
+    - build_cardpool_catalog_embed produces valid payloads across overview, monsters, spells, traps, extra_deck
+    - CardpoolSelect and CardpoolView dynamically reflect active cardpool numbers
+    """
+    import discord
+    from unittest.mock import MagicMock, AsyncMock
+    from config.paths import STORY_DB_PATH
+    from services.card import CardService
+    from utils.domain.card_embeds import (
+        build_cardpool_catalog_embed,
+        add_chunked_catalog_fields,
+        build_recent_cards_embed,
+    )
+    from cogs.cardpool import CardpoolCog, CardpoolView, CardpoolSelect
+
+    service = CardService(STORY_DB_PATH)
+    all_cards = await service.get_all_cards()
+
+    # 1. Authoritative 64-Card Baseline Parity
+    assert len(all_cards) == 64
+    monsters = [c for c in all_cards if c.get("card_type") == "Monster"]
+    spells = [c for c in all_cards if c.get("card_type") == "Spell"]
+    traps = [c for c in all_cards if c.get("card_type") == "Trap"]
+    assert len(monsters) == 37
+    assert len(spells) == 18
+    assert len(traps) == 9
+
+    # 2. Defensive Chunking: Prevents Discord 1024-char HTTP 400 Bad Request
+    test_embed = discord.Embed(title="Chunking Test")
+    huge_lines = [f"`TLOK-{i:03d}` **Custom Card Title Long {i}** [LIGHT | Dragon | ★8] — ATK 3000 / DEF 2500" for i in range(1, 101)]
+    add_chunked_catalog_fields(test_embed, "Massive Monster List", huge_lines)
+    assert len(test_embed.fields) > 1
+    for f in test_embed.fields:
+        assert len(f.value) <= 1024, f"Field '{f.name}' exceeded 1024 chars: {len(f.value)}"
+
+    # 3. Macro Cardpool Overview Embed
+    overview_embed = build_cardpool_catalog_embed(all_cards, category="overview")
+    assert "**Total Registered Cards:** 64" in overview_embed.description
+    for f in overview_embed.fields:
+        assert len(f.value) <= 1024
+
+    # 4. Monster Catalog Embed (37 Monsters chunked safely)
+    monster_embed = build_cardpool_catalog_embed(all_cards, category="monsters")
+    assert len(monster_embed.fields) >= 4  # 3,830 chars chunked across ~4 fields
+    for f in monster_embed.fields:
+        assert len(f.value) <= 1024
+
+    # 5. Spell & Trap Catalog Embeds
+    spell_embed = build_cardpool_catalog_embed(all_cards, category="spells")
+    for f in spell_embed.fields:
+        assert len(f.value) <= 1024
+
+    trap_embed = build_cardpool_catalog_embed(all_cards, category="traps")
+    for f in trap_embed.fields:
+        assert len(f.value) <= 1024
+
+    # 6. Extra Deck Filter
+    extra_embed = build_cardpool_catalog_embed(all_cards, category="extra_deck")
+    for f in extra_embed.fields:
+        assert len(f.value) <= 1024
+
+    # 7. CardpoolView & Select Dropdown Dynamic Options
+    view = CardpoolView(cards=all_cards, set_code="TLOK")
+    select = view.children[0]
+    assert isinstance(select, CardpoolSelect)
+    option_labels = [opt.label for opt in select.options]
+    assert any("Cardpool Overview" in lbl for lbl in option_labels)
+    assert any("Monster Cards (37)" in lbl for lbl in option_labels)
+    assert any("Spell Cards (18)" in lbl for lbl in option_labels)
+    assert any("Trap Cards (9)" in lbl for lbl in option_labels)
+
+    # Test Select Callback
+    mock_select_interaction = AsyncMock()
+    mock_select_interaction.response.edit_message = AsyncMock()
+    select._values = ["monsters"]
+    await select.callback(mock_select_interaction)
+    mock_select_interaction.response.edit_message.assert_called_once()
+    edited_kwargs = mock_select_interaction.response.edit_message.call_args[1]
+    assert "Monster Cards Catalog (37 Cards)" in edited_kwargs["embed"].title
+
+    # 8. /recent_cards Removed Artificial 14-Card Cap
+    cog = CardpoolCog(MagicMock())
+    recent_interaction = AsyncMock()
+    recent_interaction.response.send_message = AsyncMock()
+    await cog.recent_cards_command.callback(cog, recent_interaction, limit=25)
+    recent_interaction.response.send_message.assert_called_once()
+    recent_embed = recent_interaction.response.send_message.call_args[1]["embed"]
+    # Verified: displays 25 cards instead of being artificially clamped to 14
+    assert len(recent_embed.fields) == 25
+    assert "(25 Cards Displayed)" in recent_embed.title
+
+
+@pytest.mark.anyio
+async def test_cardpool_sub_block_3_3_and_3_4_components():
+    """
+    Validates Sub-Block 3.3 (/card_types) and Sub-Block 3.4 (Sub-Sub-Blocks 3.4.1 to 3.4.4):
+    - /card_types choices cover all 9 categories (including subtypes/Gemini and spell_speeds)
+    - Tactical duel privacy (hidden: Optional[bool] = False) correctly sets ephemeral=True
+    - CardTypesView and CardTypesSelect dropdown integration and user isolation
+    - Timeout deactivation for CardActionView, RandomCardView, CardpoolView, and CardTypesView
+    - User authorization guarding against cross-duelist interaction interference
+    """
+    import discord
+    from unittest.mock import MagicMock, AsyncMock
+    from cogs.cardpool import (
+        CardpoolCog,
+        CardActionView,
+        RandomCardView,
+        CardpoolView,
+        CardTypesView,
+        CardTypesSelect,
+    )
+    from services.card import CardService
+    from config.paths import STORY_DB_PATH
+
+    bot = MagicMock()
+    service = CardService(STORY_DB_PATH)
+    cog = CardpoolCog(bot)
+
+    # 1. Validate /card_types Slash Command Choices (all 9 categories)
+    cat_param = next(p for p in cog.card_types_command.parameters if p.name == "category")
+    param_choices = [c.value for c in cat_param.choices]
+    assert len(param_choices) == 9
+    assert "overview" in param_choices
+    assert "spells" in param_choices
+    assert "traps" in param_choices
+    assert "monsters" in param_choices
+    assert "subtypes" in param_choices
+    assert "spell_speeds" in param_choices
+    assert "races" in param_choices
+    assert "attributes" in param_choices
+    assert "levels_ranks" in param_choices
+
+    # 2. Test /card_types Execution with Ephemeral Tactical Privacy (hidden=True)
+    interaction = AsyncMock()
+    interaction.user.id = 112233
+    interaction.response.send_message = AsyncMock()
+    await cog.card_types_command.callback(cog, interaction, category="subtypes", hidden=True)
+    interaction.response.send_message.assert_called_once()
+    call_kwargs = interaction.response.send_message.call_args[1]
+    assert call_kwargs["ephemeral"] is True
+    assert "Monster Sub-Classifications" in call_kwargs["embed"].title
+    assert any("LeSpookie" in f.value for f in call_kwargs["embed"].fields)
+    assert isinstance(call_kwargs["view"], CardTypesView)
+    assert call_kwargs["view"].user_id == 112233
+
+    # 3. Test Spell Speeds Category
+    interaction_ss = AsyncMock()
+    interaction_ss.user.id = 112233
+    interaction_ss.response.send_message = AsyncMock()
+    await cog.card_types_command.callback(cog, interaction_ss, category="spell_speeds", hidden=False)
+    ss_kwargs = interaction_ss.response.send_message.call_args[1]
+    assert ss_kwargs["ephemeral"] is False
+    assert "Spell Speeds & Chain Resolution" in ss_kwargs["embed"].title
+    assert any("Counter Traps" in f.value for f in ss_kwargs["embed"].fields)
+
+    # 4. Test CardTypesSelect & User Isolation Guard
+    view = CardTypesView(user_id=112233)
+    select = view.children[0]
+    assert isinstance(select, CardTypesSelect)
+    assert len(select.options) == 9
+
+    # Unauthorized user clicking dropdown
+    intruder_interaction = AsyncMock()
+    intruder_interaction.user.id = 999999
+    intruder_interaction.response.send_message = AsyncMock()
+    await select.callback(intruder_interaction)
+    intruder_interaction.response.send_message.assert_called_once()
+    assert "belongs to another duelist" in intruder_interaction.response.send_message.call_args[0][0]
+
+    # Authorized user clicking dropdown
+    owner_interaction = AsyncMock()
+    owner_interaction.user.id = 112233
+    owner_interaction.response.edit_message = AsyncMock()
+    select._values = ["spells"]
+    await select.callback(owner_interaction)
+    owner_interaction.response.edit_message.assert_called_once()
+    assert "Spell Cards" in owner_interaction.response.edit_message.call_args[1]["embed"].title
+
+    # 5. Test RandomCardView User Isolation & Timeout
+    rand_view = RandomCardView(service, category="monsters", user_id=112233)
+    rand_intruder = AsyncMock()
+    rand_intruder.user.id = 999999
+    await rand_view.children[0].callback(rand_intruder)
+    rand_intruder.response.send_message.assert_called_once()
+    assert "belongs to another duelist" in rand_intruder.response.send_message.call_args[0][0]
+
+    # Test Timeout Deactivation
+    await rand_view.on_timeout()
+    assert rand_view.children[0].disabled is True
+
+    # 6. Test CardpoolView User Isolation & Timeout
+    cards = await service.get_all_cards()
+    cp_view = CardpoolView(cards=cards, user_id=112233)
+    cp_select = cp_view.children[0]
+    cp_intruder = AsyncMock()
+    cp_intruder.user.id = 999999
+    cp_intruder.response.send_message = AsyncMock()
+    await cp_select.callback(cp_intruder)
+    cp_intruder.response.send_message.assert_called_once()
+    assert "belongs to another duelist" in cp_intruder.response.send_message.call_args[0][0]
+
+    await cp_view.on_timeout()
+    assert cp_select.disabled is True
+
+    # 7. Test CardActionView Timeout
+    card = cards[0]
+    action_view = CardActionView(card=card, card_service=service, user_id=112233)
+    await action_view.on_timeout()
+    for child in action_view.children:
+        if isinstance(child, discord.ui.Button) and child.url is None:
+            assert child.disabled is True
+
+
+
+
+
 
 
 
