@@ -48,7 +48,7 @@ def initialize_database():
     cur.execute("""
         INSERT INTO lore_arcs (id, title, synopsis, era_or_season)
         VALUES (1, 'The Genesis of Kustomazi', 
-                'Before the cosmos took form, the primordial void whispered into the infinite darkness. Kasutamaiza awakened to shape existence, forging celestial temples, divine decrees, and the eternal laws of creation.',
+                'Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this void was unmoved and aimless, carrying the stories to start worlds. Suddenly, there was a spark, and shining through the light was Kasutamaiza, the Customizer. Accompanied by his devout servants—heralds to the sacred work he was about to do—Kasutamaiza shaped the void into a seed, springing forth Planet Kustomazi and establishing the foundational orders of creation: the Spellspires, the Counsel of Time, the Teeming Fields of Springtime, the Snares, and the Hidden Treasures. As the world shaped, the dimensional rift opened space for a counterworld of Toontastic sights—the LeSpookies.',
                 'Genesis Era')
         ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
@@ -56,42 +56,39 @@ def initialize_database():
             era_or_season = excluded.era_or_season
     """)
     
-    # 2. Seed Canonical Faction: The Creators of Kustomazi
-    cur.execute("""
-        INSERT INTO factions (id, name, lore_description, playstyle_overview, arc_id)
-        VALUES (1, 'The Creators of Kustomazi', 
-                'The supreme primordial pantheon and cosmic architects of the Land of Kustomazi.',
-                'Tribute and Fusion summoning centered on high-stat DIVINE Divine-Beast deities and void recursion.', 1)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            lore_description = excluded.lore_description,
-            playstyle_overview = excluded.playstyle_overview
-    """)
-    
-    # 3. Seed Canonical Character: ProfessorSeanEX
-    cur.execute("""
-        INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
-        VALUES (1, 'ProfessorSeanEX', 'The Supreme Architect', 
-                'Master creator and overseer of the Kustomazi universe and custom card chronicle.',
-                1, 1, 'https://images.duelingbook.com/custom-pics/2200000/2282769.jpg')
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            alias = excluded.alias,
-            bio = excluded.bio,
-            avatar_url = excluded.avatar_url
-    """)
-
-    # 3b. Seed Canonical Character: Magnolia, Ghost of LeSpookie Street
-    cur.execute("""
-        INSERT INTO factions (id, name, lore_description, playstyle_overview, arc_id)
-        VALUES (2, 'The LeSpookiest Night',
-                'In a quiet town on Halloween night, where costumed youths trick-or-treat under bright streetlights and the shadows dance, ordinary mortals awaken as supernatural entities.',
-                'Gemini and Trick-or-Treat Counter strategy that transitions Normal Monsters into supernatural Effect, Synchro, and Link evolutions.', 1)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            lore_description = excluded.lore_description,
-            playstyle_overview = excluded.playstyle_overview
-    """)
+    # 2. Seed Canonical Factions: The 7 Orders of Creation
+    factions_data = [
+        (1, 'The Creators of Kustomazi',
+         'Kasutamaiza the Customizer and his devout Servants, heralds of genesis who shaped the quiet void into a seed to birth Planet Kustomazi.',
+         'Tribute and Fusion summoning centered on high-stat DIVINE Divine-Beast deities and void recursion.'),
+        (2, 'The LeSpookies',
+         'Born from the dimensional rift left by the shaping of Planet Kustomazi, the LeSpookies inhabit a counterworld of Toontastic sights where lovers of Halloween awaken their inner supernatural spirits under glowing streetlights.',
+         'Gemini and Trick-or-Treat Counter strategy transitioning costumed Normal mortals into supernatural Effect, Synchro, and Link evolutions.'),
+        (3, 'The Spellspires',
+         'The first order founded upon Planet Kustomazi: a team of brilliant alchemists gifted a piece of the primordial void by Kasutamaiza to study, dissect, and create arcane magic with.',
+         'Alchemical Fusion arts and spellbook transmutations (Alchemical Bonds), weaving void essence into ascended Fusion forms.'),
+        (4, 'The Counsel of Time',
+         'A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.',
+         'Ritual Summoning, temporal phase control, dimensional manipulation, and turn-pacing disruption.'),
+        (5, 'The Teeming Fields of Springtime',
+         'A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation, life, and ecological vitality across Planet Kustomazi.',
+         'Swarm field presence, Plant/Insect token generation, nature-based resource ramp, and ecological swarming.'),
+        (6, 'The Snares',
+         'A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule and order.',
+         'Continuous Trap control, counter-punishment, Reptile/Fiend tactical disruption, and lock-down mechanics.'),
+        (7, 'The Hidden Treasures',
+         'Gem-infused beasts questing deep within the subterranean mines of Planet Kustomazi to uncover the ultimate source of energy for the world: The Hidden Treasure.',
+         'Subterranean excavation from Deck/GY, mineral and gem counter accumulation, energy charging, and explosive resource recovery.')
+    ]
+    for fid, fname, fdesc, fplay in factions_data:
+        cur.execute("""
+            INSERT INTO factions (id, name, lore_description, playstyle_overview, arc_id)
+            VALUES (?, ?, ?, ?, 1)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                lore_description = excluded.lore_description,
+                playstyle_overview = excluded.playstyle_overview
+        """, (fid, fname, fdesc, fplay))
     cur.execute("""
         INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
         VALUES (2, 'Magnolia, Ghost of LeSpookie Street', 'The Lantern Maiden',
