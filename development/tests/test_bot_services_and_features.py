@@ -234,22 +234,22 @@ async def test_story_service_progression_and_rewards():
     # 2. Stage Inspection
     stage1 = await service.get_stage(1, 1)
     assert stage1 is not None
-    assert stage1["title"] == "Whispers of the Primordial Void"
-    assert stage1["reward_title"] == "Void Walker"
+    assert stage1["title"] == "The Quiet Void"
+    assert stage1["reward_title"] == "Void Wanderer"
     assert stage1["reward_card_id"] == 50000102
 
     # 3. Complete Stage 1
     result = await service.complete_stage(test_uid, 1)
     assert result["success"] is True
     assert result["next_stage_number"] == 2
-    assert result["reward_title"] == "Void Walker"
+    assert result["reward_title"] == "Void Wanderer"
     assert result["reward_card_name"] == "The Void of Creation"
 
     # Verify updated player record
     progress_after = await service.get_or_create_player_progress(test_uid)
     assert progress_after["current_stage_number"] == 2
     assert progress_after["highest_stage_completed"] == 1
-    assert "Void Walker" in progress_after["titles_list"]
+    assert "Void Wanderer" in progress_after["titles_list"]
     assert progress_after["total_story_wins"] >= 1
 
     # 4. Admin Reset
@@ -335,54 +335,61 @@ async def test_story_duel_session_scripted_and_ai_encounters():
     player_deck = [c["id"] for c in cards] * 2
     npc_deck = [c["id"] for c in cards] * 2
 
-    # --- 1. Test Stage 1: SCRIPTED Encounter ---
-    stage1 = await story_service.get_stage(1, 1)
-    assert stage1["encounter_type"] == "SCRIPTED"
-    assert stage1["script"] is not None
+    # --- 1. Test Chapter 1 Stage 4: SCRIPTED Encounter (Kasutamaiza, the Customizer) ---
+    stage4 = await story_service.get_stage(1, 4)
+    assert stage4["encounter_type"] == "SCRIPTED"
+    assert stage4["script"] is not None
 
-    session1 = StoryDuelSession(mock_user, stage1, player_deck, npc_deck)
-    assert session1.encounter_type == "SCRIPTED"
-    assert len(session1.player_hand) == 5
-    assert len(session1.npc_hand) == 5
+    session4 = StoryDuelSession(mock_user, stage4, player_deck, npc_deck)
+    assert session4.encounter_type == "SCRIPTED"
+    assert len(session4.player_hand) == 5
+    assert len(session4.npc_hand) == 5
 
     # STRICT YU-GI-OH! DECK LEGALITY: Extra Deck monsters must NEVER be in hand or main deck!
     MOHOUSHA_ID = 50000106
     GREAT_KASUTAMAIZA_ID = 50000107
-    assert MOHOUSHA_ID not in session1.player_hand, "Mohousha must never be dealt into hand!"
-    assert MOHOUSHA_ID not in session1.player_deck, "Mohousha must not be in the Main Deck!"
-    assert MOHOUSHA_ID in session1.player_extra_deck, "Mohousha must be in the Extra Deck!"
-    assert GREAT_KASUTAMAIZA_ID not in session1.player_hand
-    assert GREAT_KASUTAMAIZA_ID not in session1.player_deck
-    assert GREAT_KASUTAMAIZA_ID in session1.player_extra_deck
+    assert MOHOUSHA_ID not in session4.player_hand, "Mohousha must never be dealt into hand!"
+    assert MOHOUSHA_ID not in session4.player_deck, "Mohousha must not be in the Main Deck!"
+    assert MOHOUSHA_ID in session4.player_extra_deck, "Mohousha must be in the Extra Deck!"
+    assert GREAT_KASUTAMAIZA_ID not in session4.player_hand
+    assert GREAT_KASUTAMAIZA_ID not in session4.player_deck
+    assert GREAT_KASUTAMAIZA_ID in session4.player_extra_deck
 
     # Test Special Summoning Mohousha from the Extra Deck
     mohousha_data = await card_service.get_card_by_query(str(MOHOUSHA_ID))
-    summon_res = session1.special_summon_extra_monster(mohousha_data)
+    summon_res = session4.special_summon_extra_monster(mohousha_data)
     assert "Special Summoned from Extra Deck" in summon_res
-    assert any(m["id"] == MOHOUSHA_ID for m in session1.player_field)
+    assert any(m["id"] == MOHOUSHA_ID for m in session4.player_field)
 
     # Test that attempting to Normal Play an Extra Deck monster from hand is strictly rejected
-    reject_msg = session1.play_player_card(mohousha_data)
+    reject_msg = session4.play_player_card(mohousha_data)
     assert "Extra Deck monster" in reject_msg or "Card not in hand" in reject_msg
 
-    # Execute Scripted Turn 1
-    action_text, dmg = await session1.execute_npc_turn(card_service)
+    # Execute Scripted Turn 1: Kasutamaiza summons Void of Creation & casts Seed of Creation
+    action_text, dmg = await session4.execute_npc_turn(card_service)
     assert dmg > 0
-    assert "Seed of Creation" in action_text or "Echo" in action_text
+    assert "Seed of Creation" in action_text or "Void of Creation" in action_text or "Kasutamaiza" in action_text
+    assert any(m.get("id") == 50000102 for m in session4.npc_field), "Void of Creation must be summoned onto NPC field"
+    assert 50000103 in session4.npc_gy, "Seed of Creation must be sent to NPC GY"
 
-    # --- 2. Test Stage 2: DYNAMIC AI Encounter ---
-    stage2 = await story_service.get_stage(1, 2)
-    assert stage2["encounter_type"] == "AI"
+    # Execute Scripted Turn 2 with Dynamic Pivot: player has a monster on field, should trigger pivot branch
+    action_text_t2, dmg_t2 = await session4.execute_npc_turn(card_service)
+    assert dmg_t2 > 0
+    assert "Spark of Creation" in action_text_t2 or "Kasutamaiza" in action_text_t2
 
-    session2 = StoryDuelSession(mock_user, stage2, player_deck, npc_deck)
-    assert session2.encounter_type == "AI"
+    # --- 2. Test Chapter 1 Stage 1: DYNAMIC AI Encounter (Echo of the Quiet Void) ---
+    stage1 = await story_service.get_stage(1, 1)
+    assert stage1["encounter_type"] == "AI"
+
+    session1 = StoryDuelSession(mock_user, stage1, player_deck, npc_deck)
+    assert session1.encounter_type == "AI"
 
     # Execute Dynamic AI Turn: draws card, inspects hand, summons/activates
-    action_text_ai, dmg_ai = await session2.execute_npc_turn(card_service)
+    action_text_ai, dmg_ai = await session1.execute_npc_turn(card_service)
     assert dmg_ai > 0
-    assert session2.npc_name in action_text_ai
+    assert session1.npc_name in action_text_ai
     # Assert that cards in hand were tracked with RNG
-    assert len(session2.npc_hand) >= 1
+    assert len(session1.npc_hand) >= 1
 
     # --- 3. Test Chapter 2 Stage 2: SCRIPTED Encounter (A Wicked Shadow) ---
     stage_spookie_shadow = await story_service.get_stage(2, 2)
@@ -501,21 +508,21 @@ async def test_story_json_sync_and_data_loading():
     story_service = StoryService(STORY_DB_PATH)
     res = await story_service.sync_all_story_files()
     assert res["chapters_synced"] >= 2
-    assert res["stages_synced"] >= 6
+    assert res["stages_synced"] >= 7
     assert "chapter_1_the_genesis_of_kustomazi.json" in res["files"]
     assert "chapter_2_the_lespookiest_night.json" in res["files"]
 
-    stage3 = await story_service.get_stage(1, 3)
-    assert stage3 is not None
-    assert stage3["opponent_name"] == "ProfessorSeanEX"
-    assert stage3["encounter_type"] == "SCRIPTED"
-    assert stage3["reward_title"] == "Architect's Champion"
+    stage4 = await story_service.get_stage(1, 4)
+    assert stage4 is not None
+    assert stage4["opponent_name"] == "Kasutamaiza, the Customizer"
+    assert stage4["encounter_type"] == "SCRIPTED"
+    assert stage4["reward_title"] == "Founder of Planet Kustomazi"
 
-    stage6 = await story_service.get_stage(2, 3)
-    assert stage6 is not None
-    assert stage6["opponent_name"] == "Magnolia, the Ghost of LeSpookie Street"
-    assert stage6["encounter_type"] == "SCRIPTED"
-    assert stage6["reward_title"] == "Lantern Maiden's Bond"
+    stage7 = await story_service.get_stage(2, 3)
+    assert stage7 is not None
+    assert stage7["opponent_name"] == "Magnolia, the Ghost of LeSpookie Street"
+    assert stage7["encounter_type"] == "SCRIPTED"
+    assert stage7["reward_title"] == "Lantern Maiden's Bond"
 
 
 @pytest.mark.anyio

@@ -3,103 +3,124 @@
   "chapter_number": 1,
   "title": "The Genesis of Kustomazi",
   "arc_id": 1,
-  "synopsis": "Before Planet Kustomazi was created, there was a quiet void—formless, without shape, teeming with potential, unmoved and aimless, carrying the stories to start worlds. Suddenly, there was a spark, and shining through the light was Kasutamaiza, the Customizer. Accompanied by his devout servants—heralds to the work he was about to do—Kasutamaiza shaped the void into a seed, springing forth Planet Kustomazi and establishing the foundational orders of creation: the alchemical Spellspires, the Counsel of Time, the teeming fields of Springtime, the enforcer Snares, and the mining Hidden Treasures. Duel through the awakening of existence and face the Supreme Architect in the ultimate creation trial.",
+  "synopsis": "Before Planet Kustomazi was created, there was a quiet void—formless, without shape, teeming with potential, unmoved and aimless, carrying the stories to start worlds. Suddenly, a cosmic spark ignited, and shining through the light was Kasutamaiza, the Customizer, accompanied by his devout servants. Shaping the void into a celestial seed, Kasutamaiza sprang forth Planet Kustomazi into existence. Duel through the primordial stillness, witness the first spark, test your resolve against the faithful heralds, and behold the miraculous creation of Planet Kustomazi!",
   "stages": [
     {
       "stage_id": 1,
       "stage_number": 1,
-      "title": "Whispers of the Primordial Void",
-      "intro_dialogue": "Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this cosmic abyss was unmoved and aimless, carrying the stories to start worlds. As you step into the darkness, a primordial spark flickers—an Echo of the Void awakens, testing if your spirit possesses the resolve to channel the unshaped potential of creation!",
-      "outro_dialogue": "The void hums in tranquil harmony. Its formless currents yield to your conviction. Suddenly, a radiant light pierces the infinite night—Kasutamaiza, the Customizer, has arrived!",
-      "opponent_name": "Echo of the Void",
-      "opponent_title": "Primordial Emanation",
+      "title": "The Quiet Void",
+      "intro_dialogue": "Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this cosmic abyss was unmoved and aimless, carrying the stories to start worlds. As you step into the darkness, a formless current stirs—an Echo of the Quiet Void awakens to test if your spirit can maintain form in the stillness!",
+      "outro_dialogue": "The quiet void hums in tranquil harmony. Its unshaped currents yield to your resolve. But the cosmic silence begins to tremble—a sudden warmth stirs in the deep!",
+      "opponent_name": "Echo of the Quiet Void",
+      "opponent_title": "Formless Emanation",
       "opponent_character_id": 1,
-      "opponent_deck_id": 4,
-      "encounter_type": "SCRIPTED",
+      "opponent_deck_id": 8,
+      "encounter_type": "AI",
       "boss_hp": 4000,
-      "reward_title": "Void Walker",
+      "reward_title": "Void Wanderer",
       "reward_card_id": 50000102,
-      "script_data": {
-        "turns": {
-          "1": {
-            "play": "The quiet void churns with formless potential. Echo activates **The Seed of Creation** (`TLOK-003`), Special Summoning **The Void of Creation** (`TLOK-002`)!",
-            "damage": 500,
-            "quote": "\"We are the silence before the first word, carrying the stories to start worlds...\""
-          },
-          "2": {
-            "play": "Echo banishes materials to Special Summon **Formless the True Void of Creation** (`TLOK-005`)! A wave of void distortion strikes!",
-            "damage": 800,
-            "quote": "\"Can your spirit maintain form against unshaped infinity?\""
-          },
-          "3": {
-            "play": "Echo casts **The Spark of Creation** (`TLOK-012`), retrieving void essences and unleashing a concentrated beam!",
-            "damage": 1000,
-            "quote": "\"From nothingness, the cosmic spark ignites!\""
-          }
-        },
-        "repeat": {
-          "play": "Echo lashes out with residual primordial void energy!",
-          "damage": 600,
-          "quote": "\"The quiet void remembers the dawn of time...\""
-        },
-        "threshold_2000": "🌌 *Echo of the Void falters as its cosmic density collapses! \"You... withstand the quiet void?! A new world awaits...\"*",
-        "threshold_4000": "🌌 *Echo of the Void falters as its cosmic density collapses! \"You... withstand the quiet void?! A new world awaits...\"*"
-      }
+      "script_data": null
     },
     {
       "stage_id": 2,
       "stage_number": 2,
-      "title": "Rites of the Celestial Temple",
-      "intro_dialogue": "Kasutamaiza gathers the formless void into his hands, shaping the darkness into a celestial seed. From this seed springs forth Planet Kustomazi! Around the golden spires of the celestial temple, the Creator establishes the first pieces of creation: the alchemical Spellspires, the temporal Counsel of Time, the teeming fields of Springtime, the watchful Snares, and the gem-hunting Hidden Treasures. Before you stands the Creator's devout Servants—workers and heralds guarding the sacred altar. Prove your mastery of sacrifice and order to enter the inner sanctum!",
-      "outro_dialogue": "The temple gates thunder open with resplendent golden aura. The devout Servants bow in profound reverence. You have proven yourself worthy to approach the throne of the Customizer himself.",
-      "opponent_name": "Acolytes of Kustomazi",
-      "opponent_title": "Temple Guardians & Devout Servants",
+      "title": "The Sudden Spark",
+      "intro_dialogue": "Suddenly, through the infinite stillness of the quiet void, a radiant spark ignites! Brilliant cosmic light pulses through the darkness, scattering the slumbering shadows. The primordial energy surges with nascent warmth—a Spark of the Primordial manifests, challenging you to test if your deck can withstand the awakening fires of creation!",
+      "outro_dialogue": "The radiant embers swirl gently around your cards. You have embraced the primordial spark without being consumed. Through the blinding light, a magnificent celestial presence begins to descend...",
+      "opponent_name": "Spark of the Primordial",
+      "opponent_title": "Awakened Ember",
       "opponent_character_id": 1,
-      "opponent_deck_id": 5,
+      "opponent_deck_id": 9,
       "encounter_type": "AI",
-      "boss_hp": 6000,
-      "reward_title": "Temple Guardian",
-      "reward_card_id": 50000111,
+      "boss_hp": 4000,
+      "reward_title": "Spark Bearer",
+      "reward_card_id": 50000112,
       "script_data": null
     },
     {
       "stage_id": 3,
       "stage_number": 3,
-      "title": "Trial of the Supreme Architect",
-      "intro_dialogue": "\"Welcome, duelist,\" a voice of cosmic authority resonates. ProfessorSeanEX, the Supreme Architect and Customizer, descends from the creation throne surrounded by radiant divine light. \"You have braved the quiet void and walked the sacred grounds of Planet Kustomazi. You have witnessed the birth of the Spellspires and the foundational orders. Now, let us test your bond with your deck against the supreme might of the Great Kasutamaiza! Let the creation duel begin!\"",
-      "outro_dialogue": "\"Astounding!\" ProfessorSeanEX beams with admiration as the skies of Planet Kustomazi erupt in celestial auroras. \"You have harmonized with the primordial spark and mastered the customs of creation. Planet Kustomazi has found its true champion! But beware—as our world shaped, the dimensional rift opened a passage to a curious counterworld...\"",
-      "opponent_name": "ProfessorSeanEX",
-      "opponent_title": "The Supreme Architect & Customizer",
+      "title": "Heralds of the Customizer",
+      "intro_dialogue": "Shining through the celestial light comes Kasutamaiza, the Customizer! He does not arrive alone—with him come his devout servants, faithful workers and heralds to the sacred work Kasutamaiza is about to begin. The heralds step forward, their eyes ablaze with divine purpose: 'Before the Master shapes the world, we must test if your bond with your cards is worthy of witnessing genesis!'",
+      "outro_dialogue": "The devout heralds bow in deep solemn reverence. 'Your spirit rings true, duelist. The Master prepares to forge the celestial seed. Step forward and behold the birth of a world!'",
+      "opponent_name": "Devout Servants of Kasutamaiza",
+      "opponent_title": "Faithful Heralds of Genesis",
       "opponent_character_id": 1,
-      "opponent_deck_id": 1,
+      "opponent_deck_id": 10,
+      "encounter_type": "AI",
+      "boss_hp": 4000,
+      "reward_title": "Servant's Blessing",
+      "reward_card_id": 50000104,
+      "script_data": null
+    },
+    {
+      "stage_id": 4,
+      "stage_number": 4,
+      "title": "The Shaping of Planet Kustomazi",
+      "intro_dialogue": "\"Welcome, duelist,\" a voice of supreme cosmic warmth resounds. Kasutamaiza, the Customizer, gathers the unshaped void into his hands, concentrating its infinite potential into a luminous celestial seed. \"You have braved the quiet void, withstood the primordial spark, and proven your spirit to my faithful servants. Now, watch as I spring forth the planet—Planet Kustomazi! Let our cards weave the foundation of a brand new world!\"",
+      "outro_dialogue": "\"Magnificent!\" Kasutamaiza smiles with profound joy as the crust of Planet Kustomazi solidifies beneath your feet, radiating with oceans, continents, and skies of golden aurora. \"Planet Kustomazi is born! Our world has taken form, and you are its first honored champion. Rest now, duelist—for as our world continues to shape, new orders shall rise upon its soil, and distant rifts shall awaken!\"",
+      "opponent_name": "Kasutamaiza, the Customizer",
+      "opponent_title": "The Creator of Kustomazi",
+      "opponent_character_id": 1,
+      "opponent_deck_id": 11,
       "encounter_type": "SCRIPTED",
       "boss_hp": 8000,
-      "reward_title": "Architect's Champion",
-      "reward_card_id": 50000101,
+      "reward_title": "Founder of Planet Kustomazi",
+      "reward_card_id": 50000110,
       "script_data": {
         "turns": {
           "1": {
-            "play": "ProfessorSeanEX steps forward as the skies radiate brilliant DIVINE amber. \"Let us begin with the foundation of all things.\" Normal Summons **Kasutamaiza, the Creator of Kustomazi** (`TLOK-001`) with 4000 ATK!",
-            "damage": 1000,
-            "quote": "\"Observe the power that crafted Planet Kustomazi!\""
+            "play": "Kasutamaiza gathers unshaped void potential into a celestial seed! Activates **The Seed of Creation** (`TLOK-003`), Special Summoning **The Void of Creation** (`TLOK-002`) in Defense Position!",
+            "summon_card_id": 50000102,
+            "activate_card_id": 50000103,
+            "damage": 500,
+            "quote": "\"From unshaped silence, the seed of our world is forged...\""
           },
           "2": {
-            "play": "ProfessorSeanEX channels the arcane light of the celestial Spellspires, activating **Alchemical Bonds** (`TLOK-013`) to weave the primordial essences into **Mohousha the Accursed of the Great Kasutamaiza** (`TLOK-006`)! A dark reflection strikes!",
-            "damage": 1500,
-            "quote": "\"The Spellspires revealed the sacred art of Fusion. Yet creation and corruption walk hand in hand. How will you respond?\""
+            "play": "Kasutamaiza channels the primordial void, Special Summoning **Formless the True Void of Creation** (`TLOK-005`)! A wave of unshaped energy ripples across the duel field!",
+            "summon_card_id": 50000105,
+            "damage": 800,
+            "quote": "\"Can your spirit maintain form against unshaped infinity?\"",
+            "pivots": [
+              {
+                "condition": "player_field_not_empty",
+                "play": "Observing your summoned monsters, Kasutamaiza activates **The Spark of Creation** (`TLOK-012`), banishing void essence from the GY to unleash a concentrated cosmic beam!",
+                "activate_card_id": 50000112,
+                "damage": 1000,
+                "quote": "\"A spark to test your resolve! Form cannot falter before creation!\""
+              },
+              {
+                "condition": "player_hp_low",
+                "play": "Kasutamaiza extends his hand with measured restraint, summoning **Servants of the Great Kasutamaiza** (`TLOK-004`) to prepare the celestial altar!",
+                "summon_card_id": 50000104,
+                "damage": 600,
+                "quote": "\"Stand firm! We are weaving the very foundation of existence!\""
+              }
+            ]
           },
           "3": {
-            "play": "ProfessorSeanEX channels the pinnacle Fusion of the Spellspires: \"Ascend to the cosmic zenith!\" Fusion Summons **The Great Kasutamaiza** (`TLOK-007`)! Celestial wrath strikes your field!",
-            "damage": 2000,
-            "quote": "\"Stand firm, duelist! Show me your bond with Planet Kustomazi!\""
+            "play": "The celestial seed bursts open in brilliant golden light! Kasutamaiza activates the Field Spell **Planet Kustomazi** (`TLOK-010`)! The new world springs forth into existence across the duel mat!",
+            "activate_card_id": 50000110,
+            "damage": 1200,
+            "quote": "\"Behold! Planet Kustomazi is born!\"",
+            "pivots": [
+              {
+                "condition": "player_field_empty",
+                "play": "With the field open to the heavens, Kasutamaiza invokes **Planet Kustomazi** (`TLOK-010`) and Normal Summons **Kasutamaiza, the Creator of Kustomazi** (`TLOK-001`) with 4000 ATK!",
+                "summon_card_id": 50000101,
+                "activate_card_id": 50000110,
+                "damage": 1500,
+                "quote": "\"Witness the dawn of Planet Kustomazi in all its majesty!\""
+              }
+            ]
           }
         },
         "repeat": {
-          "play": "The Great Kasutamaiza commands supreme elemental force!",
-          "damage": 1500,
-          "quote": "\"The chronicle must continue!\""
+          "play": "Planet Kustomazi radiates vibrant cosmic creation energy across the field!",
+          "damage": 1000,
+          "quote": "\"The chronicle of our world has just begun!\""
         },
-        "threshold_4000": "👑 *ProfessorSeanEX laughs heartily with profound respect! \"Splendid! Few have pushed my Kasutamaiza deck this far! Let us see this creation duel through to its magnificent conclusion!\"*"
+        "threshold_4000": "🌌 *Kasutamaiza's eyes radiate profound divine warmth! \"Magnificent! Your spirit has harmonized with the birth of our world! Planet Kustomazi is whole!\"*"
       }
     }
   ]

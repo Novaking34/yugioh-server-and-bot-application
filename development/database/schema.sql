@@ -37,6 +37,20 @@ CREATE TABLE IF NOT EXISTS factions (
 );
 
 -- ----------------------------------------------------------------------------
+-- 2b. Worldbuilding Lore & Cosmological Elements
+-- ----------------------------------------------------------------------------
+-- Detailed worldbuilding records: realms, landmarks, cosmological forces, and orders.
+CREATE TABLE IF NOT EXISTS worldbuilding_elements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,                  -- 'Cosmology', 'Landmark', 'Artifact', 'Order', 'Realm'
+    name TEXT NOT NULL UNIQUE,               -- e.g. "The Quiet Void", "Planet Kustomazi"
+    lore_description TEXT NOT NULL,          -- In-depth canon description of this element
+    significance TEXT,                       -- Role in the cosmic history of Kustomazi
+    arc_id INTEGER REFERENCES lore_arcs(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
 -- 3. Story Characters / Duelists
 -- ----------------------------------------------------------------------------
 -- In-universe duelists possessing signature decks and roleplay profiles.

@@ -194,7 +194,7 @@ async def test_deck_autocompletes():
 
     choices_char = await character_deck_autocomplete(interaction_mock, "Professor")
     assert len(choices_char) > 0
-    assert "Kasutamaiza - Creation Control" in choices_char[0].value
+    assert any("Kasutamaiza - Creation Control" in c.value for c in choices_char)
 
     interaction_mock.user.id = 123456789
     slot_choices = await user_deck_slot_autocomplete(interaction_mock, "")

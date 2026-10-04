@@ -89,17 +89,73 @@ def initialize_database():
                 lore_description = excluded.lore_description,
                 playstyle_overview = excluded.playstyle_overview
         """, (fid, fname, fdesc, fplay))
-    cur.execute("""
-        INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
-        VALUES (2, 'Magnolia, Ghost of LeSpookie Street', 'The Lantern Maiden',
-                'A wandering spirit of LeSpookie Street who guides the costumed children and dances when the shadows awaken under the streetlights.',
-                2, 1, 'https://images.duelingbook.com/custom-pics/800000/831546.jpg?version=3')
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            alias = excluded.alias,
-            bio = excluded.bio,
-            avatar_url = excluded.avatar_url
-    """)
+
+    # 2b. Seed Canonical Worldbuilding Lore Elements (Up to Planet Creation)
+    worldbuilding_data = [
+        (1, 'Cosmology', 'The Quiet Void',
+         'Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this cosmic abyss was unmoved and aimless, carrying the stories to start worlds.',
+         'The primordial state of existence preceding all celestial creation and order.', 1),
+        (2, 'Cosmology', 'The Sudden Spark',
+         'A brilliant, sudden flash of celestial light that cut through the darkness of the quiet void, heralding the emergence of the Customizer.',
+         'The catalyst event initiating the Genesis of Planet Kustomazi.', 1),
+        (3, 'Cosmology', 'Kasutamaiza, the Customizer',
+         'The supreme divine architect who emerged through the primordial spark, capable of shaping raw unformed void essence into living worlds, custom cards, and celestial laws.',
+         'The architect and sovereign creator of the entire Kustomazi universe.', 1),
+        (4, 'Artifact', 'The Seed of Creation',
+         'Kasutamaiza gathered the unshaped void into his hands and concentrated its boundless potential into a luminous celestial seed.',
+         'The cosmic catalyst from which Planet Kustomazi sprang forth into physical reality.', 1),
+        (5, 'Landmark', 'Planet Kustomazi',
+         'The celestial world sprung forth from the Seed of Creation. A realm of oceans, continents, and golden auroras, forged as the stage for all creation orders.',
+         'The foundational world setting of the Land of Kustomazi.', 1),
+        (6, 'Order', 'The Spellspires',
+         'The first order founded upon Planet Kustomazi: a guild of brilliant alchemists gifted a piece of the void by Kasutamaiza to study, dissect, and create arcane magic with.',
+         'Pioneers of alchemical transmutations and Fusion summoning arts.', 1),
+        (7, 'Order', 'The Counsel of Time',
+         'A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.',
+         'Guardians of temporal equilibrium and ritual summoning arts.', 1),
+        (8, 'Order', 'The Teeming Fields of Springtime',
+         'A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation and ecological vitality.',
+         'Cultivators of natural life and ecological swarming on Planet Kustomazi.', 1),
+        (9, 'Order', 'The Snares',
+         'A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule.',
+         'Defenders of celestial order and tactical continuous trap disruption.', 1),
+        (10, 'Order', 'The Hidden Treasures',
+         'Gem-infused subterranean beasts questing deep within the subterranean mines of Planet Kustomazi to unearth the world\'s ultimate energy source: The Hidden Treasure.',
+         'Excavators of subterranean mineral power and resource energy cores.', 1),
+        (11, 'Realm', 'The LeSpookie Commons & The Dimensional Rift',
+         'As Planet Kustomazi was forged, the celestial shaping tore a dimensional rift into a whimsical counterworld of Toontastic sights—where lovers of Halloween celebrate the boundary where mortal imagination and supernatural spirits intertwine.',
+         'A parallel whimsical counterworld born of the creation rift, governed by Gemini awakening.', 1)
+    ]
+    for wid, wcat, wname, wdesc, wsig, warc in worldbuilding_data:
+        cur.execute("""
+            INSERT INTO worldbuilding_elements (id, category, name, lore_description, significance, arc_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                category = excluded.category,
+                name = excluded.name,
+                lore_description = excluded.lore_description,
+                significance = excluded.significance,
+                arc_id = excluded.arc_id
+        """, (wid, wcat, wname, wdesc, wsig, warc))
+
+    # 3. Seed Canonical Characters
+    characters_data = [
+        (1, 'Kasutamaiza, the Creator of Kustomazi', 'The Supreme Architect',
+         'The divine sovereign who emerged through the primordial spark, shaped the quiet void into a seed, and brought forth Planet Kustomazi.',
+         1, 1, 'https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3'),
+        (2, 'Magnolia, Ghost of LeSpookie Street', 'The Lantern Maiden',
+         'A wandering spirit of LeSpookie Street who guides the costumed children and dances when the shadows awaken under the streetlights.',
+         2, 1, 'https://images.duelingbook.com/custom-pics/800000/831546.jpg?version=3'),
+        (4, 'ProfessorSeanEX', 'The Creator',
+         'The Supreme Architect behind Set 1: The Land of Kustomazi and master of creation decks.',
+         1, 1, 'https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3')
+    ]
+    cur.execute("DELETE FROM characters WHERE id IN (1, 2, 4) OR name IN ('Kasutamaiza, the Creator of Kustomazi', 'Magnolia, Ghost of LeSpookie Street', 'ProfessorSeanEX')")
+    for cid, cname, calias, cbio, cfac, carc, cavatar in characters_data:
+        cur.execute("""
+            INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (cid, cname, calias, cbio, cfac, carc, cavatar))
 
     # 4. Seed Canonical Deck: Kasutamaiza - Creation Control
     ydk_content = """#created by ProfessorSeanEX
@@ -154,6 +210,8 @@ def initialize_database():
                 'https://www.duelingbook.com', ?)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
+            character_id = excluded.character_id,
+            creator_name = excluded.creator_name,
             description = excluded.description,
             ydk_content = excluded.ydk_content
     """, (ydk_content,))
@@ -192,6 +250,7 @@ def initialize_database():
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             character_id = excluded.character_id,
+            creator_name = excluded.creator_name,
             description = excluded.description,
             ydk_content = excluded.ydk_content
     """, (lespookie_ydk,))
@@ -216,6 +275,7 @@ def initialize_database():
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             character_id = excluded.character_id,
+            creator_name = excluded.creator_name,
             description = excluded.description,
             duelingbook_deck_url = excluded.duelingbook_deck_url,
             ydk_content = excluded.ydk_content
@@ -229,7 +289,7 @@ def initialize_database():
     for p in base_story_side:
         cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (3, ?, 1, 'SIDE')", (p,))
 
-    # 4d. Seed Progressive Story Decks (4-7) from .ydk files
+    # 4d. Seed Progressive Story Decks (4-11) from .ydk files
     progressive_decks = [
         (4, 'Kasutamaiza: Genesis & The Mortal Realm', 1, 'ProfessorSeanEX',
          'Chapter 1 (ELO 1100): The dawn of Kustomazi. Primordial creator forces alongside mortal realm observers before the rift opened.',
@@ -243,6 +303,18 @@ def initialize_database():
         (7, 'The Lantern Ascension (Apex Boss)', 2, 'Magnolia',
          'Apex Boss (ELO 1800+): The dimensional breach peaks. High-tempo Link and Synchro climb with Magnolia Lantern Ascended and A Wicked Shadow.',
          'lantern_ascension.ydk'),
+        (8, 'Quiet Void - Formless Potential', 1, 'ProfessorSeanEX',
+         'Chapter 1 Stage 1 AI Deck: The formless quiet void before creation. Defensive stall and void spirit echoes.',
+         'quiet_void_potential.ydk'),
+        (9, 'The Spark of Genesis', 1, 'ProfessorSeanEX',
+         'Chapter 1 Stage 2 AI Deck: The sudden cosmic spark cutting through the void. Nascent flames and burn disruption.',
+         'spark_of_genesis.ydk'),
+        (10, 'Servants of Genesis', 1, 'ProfessorSeanEX',
+         'Chapter 1 Stage 3 AI Deck: Devout servants preparing the sacred altar of creation for the Customizer.',
+         'servants_of_genesis.ydk'),
+        (11, 'Kasutamaiza - Dawn of Planet Kustomazi', 1, 'Kasutamaiza',
+         'Chapter 1 Stage 4 Scripted Boss Deck: Kasutamaiza weaving the celestial seed to spring forth Planet Kustomazi into existence.',
+         'kasutamaiza_dawn_planet.ydk'),
     ]
 
     for d_id, d_name, d_char, d_creator, d_desc, d_filename in progressive_decks:
@@ -294,176 +366,71 @@ def initialize_database():
             duel_summary = excluded.duel_summary
     """)
 
-    # 6. Seed Story Chapters 1 & 2
-    cur.execute("""
-        INSERT INTO story_chapters (id, chapter_number, title, arc_id, synopsis)
-        VALUES (1, 1, 'The Genesis of Kustomazi', 1, 
-                'Kasutamaiza awakens to forge the celestial laws of creation. Duelists must navigate the primordial void, witness the rites of the temple, and face the Supreme Architect in the ultimate trial.')
-        ON CONFLICT(id) DO UPDATE SET
-            title = excluded.title,
-            synopsis = excluded.synopsis
-    """)
-    cur.execute("""
-        INSERT INTO story_chapters (id, chapter_number, title, arc_id, synopsis)
-        VALUES (2, 2, 'The LeSpookiest Night', 1,
-                'On a quiet Halloween night when Magnolia dances and shadows are a fright, costumed mortals awaken their inner spirits. Duel through the haunted streets and face the mysterious shadows.')
-        ON CONFLICT(id) DO UPDATE SET
-            title = excluded.title,
-            synopsis = excluded.synopsis
-    """)
-
+    # 6. Seed Story Chapters & Stages directly from scenario JSON files (Single Source of Truth)
+    import glob
     import json
+    story_dir = os.path.join(BASE_DIR, "production", "main", "discord_bot", "data", "story")
+    if os.path.exists(story_dir):
+        json_files = sorted(glob.glob(os.path.join(story_dir, "*.json")))
+        for json_path in json_files:
+            with open(json_path, "r", encoding="utf-8") as jf:
+                sdata = json.load(jf)
+            c_num = sdata.get("chapter_number", 1)
+            c_id = sdata.get("chapter_id", c_num)
+            c_title = sdata.get("title", f"Chapter {c_num}")
+            c_arc = sdata.get("arc_id", 1)
+            c_synopsis = sdata.get("synopsis", "")
+            cur.execute("""
+                INSERT INTO story_chapters (id, chapter_number, title, arc_id, synopsis)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    chapter_number = excluded.chapter_number,
+                    title = excluded.title,
+                    arc_id = excluded.arc_id,
+                    synopsis = excluded.synopsis
+            """, (c_id, c_num, c_title, c_arc, c_synopsis))
 
-    stage1_script = json.dumps({
-        "turns": {
-            "1": {
-                "play": "The dark abyss churns. Echo activates **The Seed of Creation** (`TLOK-003`), Special Summoning **The Void of Creation** (`TLOK-002`)!",
-                "damage": 500,
-                "quote": "\"We are the silence before the first word...\""
-            },
-            "2": {
-                "play": "Echo banishes materials to Special Summon **Formless the True Void of Creation** (`TLOK-005`)! A wave of void distortion strikes!",
-                "damage": 1000,
-                "quote": "\"Can your spirit maintain form against infinity?\""
-            },
-            "3": {
-                "play": "Echo casts **The Spark of Creation** (`TLOK-012`), retrieving void essences and unleashing a concentrated beam!",
-                "damage": 1200,
-                "quote": "\"From nothingness, the spark ignites!\""
-            }
-        },
-        "repeat": {
-            "play": "Echo lashes out with residual primordial void energy!",
-            "damage": 800,
-            "quote": "\"The void never sleeps...\""
-        },
-        "threshold_4000": "🌌 *Echo of the Void falters as its cosmic density collapses! \"You... withstand the void?!\"*"
-    })
+            for st in sdata.get("stages", []):
+                st_num = st.get("stage_number", 1)
+                st_id = st.get("stage_id") or (c_id * 100 + st_num)
+                script_raw = st.get("script_data")
+                script_str = json.dumps(script_raw) if (script_raw and not isinstance(script_raw, str)) else script_raw
 
-    stage3_script = json.dumps({
-        "turns": {
-            "1": {
-                "play": "ProfessorSeanEX steps forward as the skies radiate brilliant DIVINE amber. \"Let us begin with the foundation of all things.\" Normal Summons **Kasutamaiza, the Creator of Kustomazi** (`TLOK-001`) with 4000 ATK!",
-                "damage": 1000,
-                "quote": "\"Observe the power that crafted the stars!\""
-            },
-            "2": {
-                "play": "ProfessorSeanEX casts **Alchemical Bonds** (`TLOK-013`), conducting a contact summon of **Mohousha the Accursed of the Great Kasutamaiza** (`TLOK-006`)! A dark reflection strikes!",
-                "damage": 1500,
-                "quote": "\"Creation and corruption walk hand in hand. How will you respond?\""
-            },
-            "3": {
-                "play": "ProfessorSeanEX channels the cosmos: \"Ascend to the pinnacle!\" Contact Fuses into **The Great Kasutamaiza** (`TLOK-007`)! Celestial wrath strikes your field!",
-                "damage": 2000,
-                "quote": "\"Stand firm, duelist! Show me your bond with Kustomazi!\""
-            }
-        },
-        "repeat": {
-            "play": "The Great Kasutamaiza commands supreme elemental force!",
-            "damage": 1500,
-            "quote": "\"The chronicle must continue!\""
-        },
-        "threshold_4000": "👑 *ProfessorSeanEX laughs heartily with profound respect! \"Splendid! Few have pushed my Kasutamaiza deck this far! Let us see this duel through to its magnificent conclusion!\"*"
-    })
-
-    stage5_script = json.dumps({
-        "turns": {
-            "1": {
-                "play": "A chilly wind sweeps the lane. A Wicked Shadow manifests beneath the streetlamp, placing Trick-or-Treat Counters on all monsters and Normal Summoning **LeSpookie Jack, Ember of the Hollow Smile** (`TLOK-021`)!",
-                "damage": 800,
-                "quote": "\"When Magnolia dances and shadows are a fright... let's see if you can survive the night!\""
-            },
-            "2": {
-                "play": "A Wicked Shadow removes 3 Trick-or-Treat Counters to conduct an instant Quick Synchro! The flames erupt into **Jack-O-Lantern, Spirit Spark of LeSpookie** (`TLOK-054`)!",
-                "damage": 1200,
-                "quote": "\"The embers burn bright! Feel the bite of Halloween!\""
-            },
-            "3": {
-                "play": "The phantasm activates **LeSpookiest Trick!** (`TLOK-046`), shuffling cards and unleashing a wave of spectral fright!",
-                "damage": 1500,
-                "quote": "\"Trick or treat, smell my feet, give me something good to beat!\""
-            }
-        },
-        "repeat": {
-            "play": "A Wicked Shadow lashes out from the corners of the dark alley!",
-            "damage": 900,
-            "quote": "\"The shadows will never truly vanish!\""
-        },
-        "threshold_4000": "🎃 *A Wicked Shadow flickers wildly as its spectral form is destabilized! \"What an extraordinary duelist... your light burns too bright!\"*"
-    })
-
-    stage6_script = json.dumps({
-        "turns": {
-            "1": {
-                "play": "Magnolia glides across the cobbles as lanterns ignite. Normal Summons **Magnolia, the Ghost of LeSpookie Street** (`TLOK-030`) with 2500 ATK!",
-                "damage": 1000,
-                "quote": "\"Every child in costume carries an inner light waiting to be awakened...\""
-            },
-            "2": {
-                "play": "Magnolia raises her lantern! Activates **LeSpookiest Night** (`TLOK-040`), awakening her Gemini companions and Synchro Summoning **Magnolia, Lantern Eternal of LeSpookie** (`TLOK-058`) (3300 ATK)!",
-                "damage": 1600,
-                "quote": "\"Dance with me under the streetlights! Let the spirits celebrate!\""
-            },
-            "3": {
-                "play": "Magnolia conducts a Link Summon into **Magnolia, Lantern Ascended** (`TLOK-064`), linking the field with radiant protective light!",
-                "damage": 1800,
-                "quote": "\"Our inner lives shine eternal, even when the night draws to a close!\""
-            }
-        },
-        "repeat": {
-            "play": "Magnolia's lantern radiates warm spectral energy, illuminating the entire avenue!",
-            "damage": 1200,
-            "quote": "\"Let the music of the quiet town continue!\""
-        },
-        "threshold_4000": "🏮 *Magnolia's eyes sparkle with joyful wonder! \"Breathtaking! Your bond with your cards illuminates the entire LeSpookie Commons!\"*"
-    })
-
-    stages = [
-        (1, 1, 1, 'Whispers of the Primordial Void',
-         'The darkness stretches infinitely. Before the stars ignited, formless currents of cosmic energy churned in silence. A spiritual echo of The Void of Creation manifests before you, testing if your spirit possesses the spark to wield the custom cards of Kustomazi.',
-         'The void recedes with a gentle hum. A faint glimmer ignites within your deck—you have proven your resolve against the formless void.',
-         'Echo of the Void', 'Primordial Emanation', 1, 1, 'SCRIPTED', 8000, stage1_script, 'Void Walker', 50000102),
-        (2, 1, 2, 'Rites of the Celestial Temple',
-         'Golden spires pierce the starry gloom. You stand before the Temple of the Great Kasutamaiza. The Servants of the Great Kasutamaiza step forward, their eyes blazing with divine fire. Only those who master the delicate balance between sacrifice and creation may approach the grand altar!',
-         'The temple doors swing wide with resonant thunder. The acolytes bow in solemn reverence. You are deemed worthy to enter the inner sanctum.',
-         'Acolytes of Kustomazi', 'Temple Guardians', 1, 1, 'AI', 8000, None, 'Temple Guardian', 50000111),
-        (3, 1, 3, 'Trial of the Supreme Architect',
-         '"Welcome, duelist," a resonant voice proclaims. ProfessorSeanEX, the Supreme Architect himself, descends from the cosmic throne. "You have braved the void and walked the sacred temple grounds. Now, show me if your bond with your deck can withstand the might of the Great Kasutamaiza! Let the creation duel begin!"',
-         '"Astounding!" ProfessorSeanEX smiles with deep admiration. "You have harmonized with the primordial forces and mastered the customs of this realm. The Land of Kustomazi has found its true champion!" The heavens shine in celebration of your victory.',
-         'ProfessorSeanEX', 'The Supreme Architect', 1, 1, 'SCRIPTED', 8000, stage3_script, "Architect's Champion", 50000101),
-        (4, 2, 1, 'Halloween on LeSpookie Street',
-         'The autumn breeze carries the scent of caramel and fallen leaves. Children in handmade masks laugh beneath the glowing amber streetlights. But there is a peculiar resonance in the air—these aren\'t mere costumes. Tonight, the boundary between mortal whimsy and the spirit realm is gossamer-thin.',
-         'The costumed trick-or-treater giggles and hands you a handful of sugary sweets. \'You duel like you really believe in magic! Keep this safe—the shadows grow longer tonight!\'',
-         'Costumed Trick-or-Treater', 'Wandering Reveler', 2, 2, 'AI', 8000, None, 'Street Reveler', 50000128),
-        (5, 2, 2, 'When the Shadows Are a Fright',
-         'A flicker along the brick alleyway catches your eye. The streetlight flickers and dims to a pale violet hue. From the base of the lamppost, a silhouette detaches itself, grinning with needle-thin fangs. \'Trick or treat... or perhaps a duel in the dark?\'',
-         'The wicked shadow dissolves into tendrils of harmless dusk. \'Hehehe... delightful! You do not flinch from the twilight. Go forth—Magnolia awaits where the lanterns burn brightest!\'',
-         'A Wicked Shadow', 'Formless Phantasm', 2, 2, 'SCRIPTED', 8000, stage5_script, 'Shadow Weaver', 50000115),
-        (6, 2, 3, 'The Dance of Magnolia',
-         'At the town square fountain, floating jack-o\'-lanterns cast warm, undulating amber ripples. A spectral maiden with braided hair twirls softly, clutching an ancient, luminous lantern. She turns to you with gentle, ancient eyes. \'Welcome to our quiet town, traveler. When the world was created, our inner spirits were granted this sacred night. Shall we dance beneath the streetlights?\'',
-         'Magnolia lowers her lantern and bows gracefully. \'Magnificent! You have embraced the spirit of the Gemini—ordinary mortals capable of wondrous, supernatural awakening. Wherever the streetlights shine, LeSpookie Commons welcomes you home.\'',
-         'Magnolia, the Ghost of LeSpookie Street', 'The Lantern Maiden', 2, 2, 'SCRIPTED', 8000, stage6_script, "Lantern Maiden's Bond", 50000130)
-    ]
-
-    for s in stages:
-        cur.execute("""
-            INSERT INTO story_stages (id, chapter_id, stage_number, title, intro_dialogue, outro_dialogue,
-                                     opponent_name, opponent_title, opponent_character_id, opponent_deck_id,
-                                     encounter_type, boss_hp, script_data,
-                                     reward_title, reward_card_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                title = excluded.title,
-                intro_dialogue = excluded.intro_dialogue,
-                outro_dialogue = excluded.outro_dialogue,
-                opponent_name = excluded.opponent_name,
-                opponent_title = excluded.opponent_title,
-                encounter_type = excluded.encounter_type,
-                boss_hp = excluded.boss_hp,
-                script_data = excluded.script_data,
-                reward_title = excluded.reward_title,
-                reward_card_id = excluded.reward_card_id
-        """, s)
+                cur.execute("""
+                    INSERT INTO story_stages (
+                        id, chapter_id, stage_number, title, intro_dialogue, outro_dialogue,
+                        opponent_name, opponent_title, opponent_character_id, opponent_deck_id,
+                        encounter_type, boss_hp, script_data, reward_title, reward_card_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        chapter_id = excluded.chapter_id,
+                        stage_number = excluded.stage_number,
+                        title = excluded.title,
+                        intro_dialogue = excluded.intro_dialogue,
+                        outro_dialogue = excluded.outro_dialogue,
+                        opponent_name = excluded.opponent_name,
+                        opponent_title = excluded.opponent_title,
+                        opponent_character_id = excluded.opponent_character_id,
+                        opponent_deck_id = excluded.opponent_deck_id,
+                        encounter_type = excluded.encounter_type,
+                        boss_hp = excluded.boss_hp,
+                        script_data = excluded.script_data,
+                        reward_title = excluded.reward_title,
+                        reward_card_id = excluded.reward_card_id
+                """, (
+                    st_id, c_id, st_num, st.get("title", ""),
+                    st.get("intro_dialogue", ""), st.get("outro_dialogue", ""),
+                    st.get("opponent_name", "Story Opponent"),
+                    st.get("opponent_title", "Challenger"),
+                    st.get("opponent_character_id", 1),
+                    st.get("opponent_deck_id", 1),
+                    st.get("encounter_type", "AI"),
+                    st.get("boss_hp", 8000),
+                    script_str,
+                    st.get("reward_title"),
+                    st.get("reward_card_id")
+                ))
+        print(f"[+] Loaded story chapters and stages from {len(json_files)} scenario JSON files in {story_dir}")
 
     conn.commit()
 

@@ -209,15 +209,63 @@ class StoryDuelSession:
             except Exception:
                 pass
 
-        # Step 2: Check for database-loaded scripted event
+        # Step 2: Check for database-loaded scripted event with dynamic pivot options & decklist integration
         if self.encounter_type == ENCOUNTER_TYPE_SCRIPTED and self.script_data:
             turn_key = str(self.turn_count)
             turns_dict = self.script_data.get("turns", {})
             if turn_key in turns_dict:
                 turn_info = turns_dict[turn_key]
-                dmg = turn_info.get("damage", DEFAULT_AI_STRIKE_DAMAGE)
-                quote_str = f"\n💬 *{turn_info.get('quote')}*" if turn_info.get("quote") else ""
-                msg = f"{turn_info.get('play', 'The opponent acts.')}{quote_str}"
+                chosen_branch = turn_info
+
+                # Evaluate pivot options based on live duel state
+                pivots = turn_info.get("pivots")
+                if pivots and isinstance(pivots, list):
+                    for p in pivots:
+                        cond = p.get("condition")
+                        matched = False
+                        if cond == "player_field_not_empty" and len(self.player_field) > 0:
+                            matched = True
+                        elif cond == "player_field_empty" and len(self.player_field) == 0:
+                            matched = True
+                        elif cond == "player_hp_low" and self.lp.get(self.player.id, 8000) <= 4000:
+                            matched = True
+                        elif cond == "player_hp_high" and self.lp.get(self.player.id, 8000) > 4000:
+                            matched = True
+                        elif cond == "npc_field_empty" and len(self.npc_field) == 0:
+                            matched = True
+
+                        if matched:
+                            chosen_branch = p
+                            break
+
+                # Decklist-based Summon / Play logic onto live board
+                summon_id = chosen_branch.get("summon_card_id")
+                if summon_id and len(self.npc_field) < 3:
+                    scard = await card_service.get_card_by_query(str(summon_id))
+                    if scard and not any(m.get("id") == summon_id for m in self.npc_field):
+                        self.npc_field.append(scard)
+                        if summon_id in self.npc_hand:
+                            self.npc_hand.remove(summon_id)
+                        if hasattr(card_service, "track_card_play"):
+                            try:
+                                await card_service.track_card_play(summon_id)
+                            except Exception:
+                                pass
+
+                act_id = chosen_branch.get("activate_card_id")
+                if act_id:
+                    self.npc_gy.append(act_id)
+                    if act_id in self.npc_hand:
+                        self.npc_hand.remove(act_id)
+                    if hasattr(card_service, "track_card_play"):
+                        try:
+                            await card_service.track_card_play(act_id)
+                        except Exception:
+                            pass
+
+                dmg = chosen_branch.get("damage", DEFAULT_AI_STRIKE_DAMAGE)
+                quote_str = f"\n💬 *{chosen_branch.get('quote')}*" if chosen_branch.get("quote") else ""
+                msg = f"{chosen_branch.get('play', 'The opponent acts.')}{quote_str}"
                 return msg, dmg
             elif "repeat" in self.script_data:
                 rep = self.script_data["repeat"]

@@ -341,11 +341,13 @@ async def character_deck_autocomplete(
     for d in decks:
         dname = d["name"]
         duelist = d.get("duelist_name") or "Story Duelist"
+        creator = d.get("creator_name") or ""
         main_c = d.get("main_count", 0)
         extra_c = d.get("extra_count", 0)
         elo = d.get("ai_elo", 1200)
         label = f"{duelist} — {dname} ({main_c}M/{extra_c}E | ELO: {elo})"
-        if not current.strip() or current.lower() in label.lower():
+        search_target = f"{label} {creator}".lower()
+        if not current.strip() or current.lower() in search_target:
             if len(label) > 100:
                 label = label[:97] + "..."
             choices.append(app_commands.Choice(name=label, value=dname))
