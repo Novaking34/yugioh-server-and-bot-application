@@ -161,12 +161,6 @@ class GeneralCog(commands.Cog, name="General"):
 
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command(name="board", description="Visual guide and explanation of the Yu-Gi-Oh! duel field zones and card positions.")
-    async def board_command(self, interaction: discord.Interaction):
-        """Displays the official Master Rule duel mat map and zone breakdown."""
-        from utils import build_board_guide_embed
-        embed = build_board_guide_embed()
-        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="rules", description="Quick reference for duel rules, deckbuilding limits, and formats.")
     async def rules(self, interaction: discord.Interaction):
