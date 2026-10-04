@@ -65,6 +65,8 @@ from .foundation.types import (
 )
 
 from .foundation.classifier import (
+    is_extra_deck_card_id,
+    partition_card_ids,
     is_extra_deck_card,
     is_extra_deck_pendulum,
     is_main_deck_pendulum,
@@ -103,6 +105,7 @@ from .domain.cardpool import (
 from .domain.storage import (
     fetch_player_deck,
     fetch_player_card_ids,
+    fetch_player_duel_decks,
     partition_player_deck,
     add_card_to_player_deck,
     remove_card_from_player_deck,
@@ -201,6 +204,8 @@ __all__ = [
     "DeckAnalysisResult",
     "LegalityResult",
     # Core Classifier
+    "is_extra_deck_card_id",
+    "partition_card_ids",
     "is_extra_deck_card",
     "is_extra_deck_pendulum",
     "is_main_deck_pendulum",
@@ -229,6 +234,7 @@ __all__ = [
     "format_cardpool_summary",
     "fetch_player_deck",
     "fetch_player_card_ids",
+    "fetch_player_duel_decks",
     "partition_player_deck",
     "add_card_to_player_deck",
     "remove_card_from_player_deck",

@@ -67,6 +67,8 @@ from .types import (
 # Sub-Block 3.3: Card Classifiers & Zone Awareness
 # -----------------------------------------------------------------------------
 from .classifier import (
+    is_extra_deck_card_id,
+    partition_card_ids,
     is_extra_deck_card,
     is_extra_deck_pendulum,
     is_main_deck_pendulum,
@@ -138,6 +140,8 @@ __all__ = [
     "DeckAnalysisResult",
     "LegalityResult",
     # Classifier
+    "is_extra_deck_card_id",
+    "partition_card_ids",
     "is_extra_deck_card",
     "is_extra_deck_pendulum",
     "is_main_deck_pendulum",

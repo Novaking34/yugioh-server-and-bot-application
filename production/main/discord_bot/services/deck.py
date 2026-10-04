@@ -62,6 +62,8 @@ from .deck.foundation.types import (
 
 # 2.4 Foundation Classifiers & PSCT Zone Detectors
 from .deck.foundation.classifier import (
+    is_extra_deck_card_id,
+    partition_card_ids,
     is_extra_deck_card,
     is_extra_deck_pendulum,
     is_main_deck_pendulum,
@@ -98,6 +100,7 @@ from .deck.domain.cardpool import (
 from .deck.domain.storage import (
     fetch_player_deck,
     fetch_player_card_ids,
+    fetch_player_duel_decks,
     partition_player_deck,
     add_card_to_player_deck,
     remove_card_from_player_deck,
@@ -217,6 +220,8 @@ __all__ = [
     "DeckAnalysisResult",
     "LegalityResult",
     # Sub-Block 3.2: Foundation Classifiers & Math
+    "is_extra_deck_card_id",
+    "partition_card_ids",
     "is_extra_deck_card",
     "is_extra_deck_pendulum",
     "is_main_deck_pendulum",
@@ -244,6 +249,7 @@ __all__ = [
     "format_cardpool_summary",
     "fetch_player_deck",
     "fetch_player_card_ids",
+    "fetch_player_duel_decks",
     "partition_player_deck",
     "add_card_to_player_deck",
     "remove_card_from_player_deck",

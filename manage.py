@@ -600,6 +600,17 @@ def cmd_tracker(extra_args: Optional[List[str]] = None) -> None:
     tracker_sync.main()
 
 
+def cmd_sync_vm(extra_args: Optional[List[str]] = None) -> int:
+    """Synchronizes code, database, and bot services to the live Oracle Cloud VM."""
+    script_path = os.path.join(BASE_DIR, "scripts", "sync_oracle_vm.sh")
+    if not os.path.exists(script_path):
+        print(f"{RED}[!] Script not found at: {script_path}{NC}")
+        return 1
+    cmd = [script_path] + (extra_args or [])
+    res = subprocess.run(cmd, cwd=BASE_DIR)
+    return res.returncode
+
+
 # =============================================================================
 # SECTION 9: CLI Argument Parser & Router
 # =============================================================================
@@ -616,6 +627,7 @@ Platform Commands:
   stop                  Stop live simulator container
   restart               Restart live simulator container
   sync                  Rebuild simulator custom_cards.cdb and Lua effect scripts
+  sync-vm [msg...]      Sync code & services to Oracle Cloud VM (147.224.147.30)
   diagnose [args...]    Run system diagnostics and failpoint inspection tool
   logs [subcommand...]  Inspect logs (stats, tail -s <service>, query, clean)
   tracker [action...]   Manage Google Sheets tracker (upgrade, import, download-images, verify)
@@ -652,6 +664,8 @@ Platform Commands:
         sys.exit(cmd_restart())
     elif cmd == "sync":
         cmd_sync()
+    elif cmd in ("sync-vm", "sync_vm", "deploy-vm", "deploy"):
+        sys.exit(cmd_sync_vm(extra))
     elif cmd in ("diagnose", "diag", "debug"):
         sys.exit(cmd_diagnose(extra))
     elif cmd in ("logs", "log"):

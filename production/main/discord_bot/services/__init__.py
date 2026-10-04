@@ -9,14 +9,17 @@ story campaign progression, and card/deck usage telemetry.
 
 from .card import CardService
 from .deck import DeckService
-from .rating_service import RatingService
-from .story_service import StoryService
-from .duel_service import DuelManager
+from .rating import RatingService
+from .story import StoryService, story_service, StoryDuelSession
+from .duel import DuelService, DuelManager
 
 __all__ = [
     "CardService",
     "DeckService",
     "RatingService",
     "StoryService",
+    "story_service",
+    "StoryDuelSession",
+    "DuelService",
     "DuelManager",
 ]

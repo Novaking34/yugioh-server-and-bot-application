@@ -37,6 +37,7 @@ from .domain.cardpool import (
 from .domain.storage import (
     fetch_player_deck,
     fetch_player_card_ids,
+    fetch_player_duel_decks,
     partition_player_deck,
     add_card_to_player_deck,
     remove_card_from_player_deck,
@@ -129,9 +130,19 @@ class DeckService:
         """Retrieves all cards in a player's personal deck, sorted by category and name."""
         return await fetch_player_deck(self.db_path, user_id)
 
-    async def get_player_card_ids(self, user_id: str) -> List[int]:
-        """Returns flat list of card IDs (expanded by quantity) for duel initialization."""
-        return await fetch_player_card_ids(self.db_path, user_id)
+    async def get_player_card_ids(self, user_id: str, main_only: bool = True) -> List[int]:
+        """
+        Returns flat list of card IDs (expanded by quantity) for duel initialization.
+        Excludes Extra Deck monsters by default so they cannot be drawn into hands.
+        """
+        return await fetch_player_card_ids(self.db_path, user_id, main_only=main_only)
+
+    async def get_player_duel_decks(self, user_id: str) -> Tuple[List[int], List[int]]:
+        """
+        Returns partitioned (main_deck_ids, extra_deck_ids) for a player's active deck.
+        Guarantees strict separation of Extra Deck monsters from the Main Deck.
+        """
+        return await fetch_player_duel_decks(self.db_path, user_id)
 
     async def get_player_deck_partitioned(self, user_id: str) -> DeckPartition:
         """Partitions the player's deck and enforces MR5 Min/Max boundary checks."""

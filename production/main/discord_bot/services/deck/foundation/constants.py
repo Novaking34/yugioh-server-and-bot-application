@@ -69,7 +69,11 @@ BANLIST_LIMITS: Dict[str, int] = {
 SET_1_CARD_COUNT: int = 64             # Total canonical cards in Set 1: The Land of Kustomazi
 SET_1_MAIN_DECK_EXPECTED: int = 34     # Legacy Kasutamaiza Creation Control main count
 SET_1_EXTRA_DECK_EXPECTED: int = 6     # Legacy Kasutamaiza Creation Control extra count
-SET_1_EXTRA_DECK_IDS: Set[int] = {50000106, 50000107}
+SET_1_EXTRA_DECK_IDS: Set[int] = {
+    50000106, 50000107,  # Kasutamaiza Fusions (Mohousha, The Great Kasutamaiza)
+    50000151, 50000152, 50000153, 50000154, 50000155, 50000156, 50000157, 50000158, 50000159,  # LeSpookie Synchros
+    50000160, 50000161, 50000162, 50000163, 50000164,  # LeSpookie Links
+}
 
 
 # =============================================================================

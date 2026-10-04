@@ -24,7 +24,7 @@ def build_rank_embed(player: Dict[str, Any], user: Optional[discord.User] = None
     """
     Constructs an authentic Duelist License / Ranking card embed.
     """
-    from services.rating_service import RatingService
+    from services.rating import RatingService
     elo = player.get("elo", 1200)
     tier_name, badge, color = RatingService.get_tier_info(elo)
     username = player.get("username") or (user.display_name if user else "Duelist")
@@ -61,7 +61,7 @@ def build_leaderboard_embed(entries: List[Dict[str, Any]], season_id: str = "Sea
     """
     Constructs a rich competitive leaderboard for the custom card league.
     """
-    from services.rating_service import RatingService
+    from services.rating import RatingService
     embed = discord.Embed(
         title=f"🏆 The Land of Kustomazi — Leaderboard ({season_id})",
         description="Top rated duelists battling with Set 1 custom cards.",

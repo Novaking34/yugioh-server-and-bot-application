@@ -51,9 +51,12 @@ production/main/discord_bot/
 │   ├── card.py             # Root Card service entry point & translation bridge
 │   ├── deck/               # Modular Deck subsystem (foundation, domain storage, slots, story, YDK, visual)
 │   ├── deck.py             # Root Deck service entry point & translation bridge
-│   ├── rating_service.py   # ELO calculation, rank brackets & leaderboard generation
-│   ├── story_service.py    # Story chapters, stage encounters, dialogue & rewards
-│   └── duel_service.py     # In-memory live session registry & recovery tools
+│   ├── rating/             # Modular Rating subsystem (foundation math, domain profiles, matches, leaderboards)
+│   ├── rating.py           # Root Rating service entry point & translation bridge
+│   ├── duel/               # Modular Duel subsystem (foundation, domain manager, session state machine, core)
+│   ├── duel.py             # Root Duel service entry point & translation bridge
+│   ├── story/              # Modular Story subsystem (foundation, domain stages, progress, scenarios, session)
+│   └── story.py            # Root Story service entry point & translation bridge
 ├── cogs/                   # Discord Slash Command Modules
 │   ├── general.py          # /ping, /info, /rules, /board, /server_status
 │   ├── cardpool.py         # /card, /cardpool, /card_stats, /meta, /random_card, /recent_cards

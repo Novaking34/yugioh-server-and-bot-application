@@ -35,6 +35,7 @@ from .cardpool import (
 from .storage import (
     fetch_player_deck,
     fetch_player_card_ids,
+    fetch_player_duel_decks,
     partition_player_deck,
     add_card_to_player_deck,
     remove_card_from_player_deck,
@@ -88,6 +89,7 @@ __all__ = [
     # Storage
     "fetch_player_deck",
     "fetch_player_card_ids",
+    "fetch_player_duel_decks",
     "partition_player_deck",
     "add_card_to_player_deck",
     "remove_card_from_player_deck",

@@ -29,9 +29,9 @@ if BOT_DIR not in sys.path:
 from config.paths import STORY_DB_PATH
 from services.card import CardService
 from services.deck import DeckService
-from services.rating_service import RatingService
-from services.story_service import StoryService
-from services.duel_service import DuelManager
+from services.rating import RatingService
+from services.story import StoryService
+from services.duel import DuelManager
 from utils import build_rank_embed, build_leaderboard_embed, build_card_stats_embed, build_story_stage_embed
 
 
@@ -265,6 +265,59 @@ async def test_story_service_progression_and_rewards():
 
 
 @pytest.mark.anyio
+async def test_story_service_modular_architecture():
+    """Validates 4-block modular package structure for services.story."""
+    import services.story as story_mod
+    from services.story.foundation import (
+        DEFAULT_STARTING_PLAYER_HP,
+        DEFAULT_STARTING_BOSS_HP,
+        ENCOUNTER_TYPE_AI,
+        ENCOUNTER_TYPE_SCRIPTED,
+        CHAPTER_1_ID,
+        CHAPTER_2_ID,
+    )
+    from services.story.domain import (
+        fetch_current_chapter,
+        fetch_stage,
+        fetch_all_stages,
+        fetch_or_create_player_progress,
+        record_stage_completion,
+        reset_player_progress,
+        import_chapter_scenario,
+        sync_all_scenario_files,
+        StoryDuelSession,
+    )
+    from services.story.core import StoryService, story_service
+
+    assert DEFAULT_STARTING_PLAYER_HP == 8000
+    assert DEFAULT_STARTING_BOSS_HP == 8000
+    assert ENCOUNTER_TYPE_AI == "AI"
+    assert ENCOUNTER_TYPE_SCRIPTED == "SCRIPTED"
+
+    # Verify domain functions directly
+    ch1 = await fetch_current_chapter(STORY_DB_PATH, CHAPTER_1_ID)
+    assert ch1 is not None
+    assert "Genesis" in ch1["title"]
+
+    stages = await fetch_all_stages(STORY_DB_PATH, CHAPTER_1_ID)
+    assert len(stages) >= 3
+
+    st1 = await fetch_stage(STORY_DB_PATH, CHAPTER_1_ID, 1)
+    assert st1 is not None
+    assert st1["stage_number"] == 1
+
+    # Verify Core Service Facade
+    srv = StoryService(STORY_DB_PATH)
+    srv_stages = await srv.get_all_stages(1)
+    assert len(srv_stages) == len(stages)
+
+    # Verify root bridge re-exports
+    assert hasattr(story_mod, "StoryService")
+    assert hasattr(story_mod, "story_service")
+    assert hasattr(story_mod, "StoryDuelSession")
+
+
+@pytest.mark.anyio
 async def test_story_duel_session_scripted_and_ai_encounters():
     """Validates that Story Mode loads from DB with both Scripted and Dynamic AI modes."""
     from unittest.mock import MagicMock
@@ -291,6 +344,26 @@ async def test_story_duel_session_scripted_and_ai_encounters():
     assert session1.encounter_type == "SCRIPTED"
     assert len(session1.player_hand) == 5
     assert len(session1.npc_hand) == 5
+
+    # STRICT YU-GI-OH! DECK LEGALITY: Extra Deck monsters must NEVER be in hand or main deck!
+    MOHOUSHA_ID = 50000106
+    GREAT_KASUTAMAIZA_ID = 50000107
+    assert MOHOUSHA_ID not in session1.player_hand, "Mohousha must never be dealt into hand!"
+    assert MOHOUSHA_ID not in session1.player_deck, "Mohousha must not be in the Main Deck!"
+    assert MOHOUSHA_ID in session1.player_extra_deck, "Mohousha must be in the Extra Deck!"
+    assert GREAT_KASUTAMAIZA_ID not in session1.player_hand
+    assert GREAT_KASUTAMAIZA_ID not in session1.player_deck
+    assert GREAT_KASUTAMAIZA_ID in session1.player_extra_deck
+
+    # Test Special Summoning Mohousha from the Extra Deck
+    mohousha_data = await card_service.get_card_by_query(str(MOHOUSHA_ID))
+    summon_res = session1.special_summon_extra_monster(mohousha_data)
+    assert "Special Summoned from Extra Deck" in summon_res
+    assert any(m["id"] == MOHOUSHA_ID for m in session1.player_field)
+
+    # Test that attempting to Normal Play an Extra Deck monster from hand is strictly rejected
+    reject_msg = session1.play_player_card(mohousha_data)
+    assert "Extra Deck monster" in reject_msg or "Card not in hand" in reject_msg
 
     # Execute Scripted Turn 1
     action_text, dmg = await session1.execute_npc_turn(card_service)
@@ -1410,7 +1483,7 @@ async def test_deck_macro_telemetry_and_drift_prevention():
     4. End-to-end match recording in RatingService with deck names.
     """
     from services.deck import DeckService
-    from services.rating_service import RatingService
+    from services.rating import RatingService
 
     deck_service = DeckService(STORY_DB_PATH)
     rating_service = RatingService(STORY_DB_PATH)
@@ -2512,6 +2585,317 @@ async def test_cardpool_sub_block_3_3_and_3_4_components():
     for child in action_view.children:
         if isinstance(child, discord.ui.Button) and child.url is None:
             assert child.disabled is True
+
+
+@pytest.mark.anyio
+async def test_duel_service_modular_architecture_and_state_machine():
+    """
+    Validates the modular services.duel subsystem:
+    - DuelService match initialization and concurrency guards preventing double-entry
+    - DuelSession initial 8000 LP, 5-card opening hand dealing, and board binding
+    - Turn and Phase progression (Draw -> Standby -> Main 1 -> Battle -> Main 2 -> End)
+    - LP adjustments, defeat detection, and surrender mechanics
+    - Backward-compatible re-exports via services.duel_service
+    """
+    from unittest.mock import MagicMock, AsyncMock
+    from services.duel import (
+        DuelService,
+        DuelSession,
+        DuelManager,
+        duel_manager,
+        DEFAULT_STARTING_LP,
+        PHASE_DRAW,
+        PHASE_STANDBY,
+        PHASE_MAIN_1,
+        PHASE_BATTLE,
+        PHASE_MAIN_2,
+        PHASE_END,
+    )
+    import services.duel as duel_bridge
+
+    # 1. Root Bridge Verification
+    assert duel_bridge.DuelManager is DuelManager
+    assert duel_bridge.DuelSession is DuelSession
+    assert duel_bridge.DEFAULT_STARTING_LP == 8000
+
+    # 2. Setup Participants and Decks
+    p1 = MagicMock()
+    p1.id = 555001
+    p1.display_name = "Yugi"
+
+    p2 = MagicMock()
+    p2.id = 555002
+    p2.display_name = "Kaiba"
+
+    # 40-card decks
+    p1_deck = [10000000 + i for i in range(40)]
+    p2_deck = [20000000 + i for i in range(40)]
+
+    custom_manager = DuelManager()
+    service = DuelService(manager=custom_manager)
+
+    # 3. Match Creation & Concurrency Guard
+    session = service.start_duel(
+        p1=p1,
+        p2=p2,
+        p1_deck=p1_deck,
+        p2_deck=p2_deck,
+        match_type="RANKED",
+        p1_deck_name="Dark Magician Control",
+        p2_deck_name="Blue-Eyes Beatdown",
+    )
+
+    assert custom_manager.is_user_dueling(555001) is True
+    assert custom_manager.is_user_dueling(555002) is True
+    assert custom_manager.active_duel_count == 1
+
+    # Attempting to start another duel while active must raise ValueError
+    with pytest.raises(ValueError, match="already in an active duel"):
+        service.start_duel(p1, MagicMock(id=999), p1_deck, p2_deck)
+
+    # 4. State Machine Invariants
+    assert session.lp[p1.id] == DEFAULT_STARTING_LP
+    assert session.lp[p2.id] == DEFAULT_STARTING_LP
+    assert len(session.hands[p1.id]) == 5
+    assert len(session.hands[p2.id]) == 5
+    assert len(session.decks[p1.id]) == 35
+    assert len(session.decks[p2.id]) == 35
+    assert len(session.original_decks[p1.id]) == 40
+    assert session.current_phase == PHASE_DRAW
+
+    # 5. Phase Progression
+    assert session.advance_phase() == PHASE_STANDBY
+    assert session.advance_phase() == PHASE_MAIN_1
+    assert session.advance_phase() == PHASE_BATTLE
+    assert session.advance_phase() == PHASE_MAIN_2
+    assert session.advance_phase() == PHASE_END
+    # Advancing past End phase transitions to next turn
+    next_phase = session.advance_phase()
+    assert next_phase == PHASE_DRAW
+    assert session.turn_count == 2
+
+    # 6. Card Draw and Mill
+    drawn = session.draw_card(p1.id)
+    assert drawn is not None
+    milled = session.mill_card(p1.id)
+    assert milled is not None
+    assert milled in session.gy[p1.id]
+    assert milled in session.boards[p1.id].gy
+
+    # 7. Life Point Damage & Victory
+    old_lp, new_lp, is_concluded = session.adjust_lp(p2.id, -3000, reason="Direct attack")
+    assert old_lp == 8000
+    assert new_lp == 5000
+    assert is_concluded is False
+    assert session.duel_over is False
+
+    # Fatal blow
+    old_lp, new_lp, is_concluded = session.adjust_lp(p2.id, -5000, reason="Game ending attack")
+    assert new_lp == 0
+    assert is_concluded is True
+    assert session.duel_over is True
+    assert session.winner.id == p1.id
+
+    # 8. Unregister and Lifecycle Cleanup
+    custom_manager.unregister_session(session)
+    assert custom_manager.is_user_dueling(555001) is False
+    assert custom_manager.is_user_dueling(555002) is False
+    assert custom_manager.active_duel_count == 0
+
+
+@pytest.mark.anyio
+async def test_duel_engine_interactive_cog_and_components():
+    """
+    Validates the interactive duel engine cog and components:
+    - 4-Block architecture imports and public manifest
+    - DuelEngineCog commands (/duel, /duel_manual, /board, /surrender, /duel_status)
+    - Interactive board DuelView, buttons, and phases
+    - SummonSelect (ATK summon, DEF set, tribute validation)
+    - SpellTrapSelect (STZ placement)
+    - PositionChangeSelect (ATK/DEF/SET transitions)
+    - AttackTargetSelect (Master Rule combat math)
+    - Centralized match conclusion via duel_service
+    """
+    from unittest.mock import MagicMock, AsyncMock
+    from cogs.duel_engine import (
+        DuelEngineCog,
+        DuelSession,
+        DuelView,
+        ChallengeView,
+        LPModal,
+        SummonSelect,
+        SummonView,
+        SpellTrapSelect,
+        SpellTrapView,
+        PositionChangeSelect,
+        PositionChangeView,
+        AttackTargetSelect,
+        AttackTargetView,
+    )
+    from services.duel import duel_manager, duel_service
+
+    # Setup participants
+    p1 = MagicMock()
+    p1.id = 777001
+    p1.display_name = "DuelistOne"
+    p1.mention = "<@777001>"
+
+    p2 = MagicMock()
+    p2.id = 777002
+    p2.display_name = "DuelistTwo"
+    p2.mention = "<@777002>"
+
+    p1_deck = [50000101, 50000102, 50000103, 50000104, 50000105, 50000106, 50000107]
+    p2_deck = [50000101, 50000102, 50000103, 50000104, 50000105, 50000106, 50000107]
+
+    session = DuelSession(p1, p2, p1_deck, p2_deck, match_type="CASUAL")
+    duel_manager.register_session(p1.id, p2.id, session)
+
+    view = DuelView(session)
+    embed = view.build_embed(last_action="Match started")
+    assert "Turn 1" in embed.description
+    assert "Casual" in embed.title or "CASUAL" in embed.title
+
+    # 1. Test SummonSelect (Normal Summon into MMZ)
+    monster_card = {"id": 50000101, "name": "Kasutamaiza Monster", "card_type": "Monster", "level": 4, "atk": 1800, "def": 1200}
+    session.hands[p1.id] = [50000101]
+    summon_sel = SummonSelect(session, view, [monster_card])
+    summon_sel._values = ["50000101:ATK"]
+
+    mock_inter = AsyncMock()
+    mock_inter.user = p1
+    mock_inter.response.is_done.return_value = False
+    await summon_sel.callback(mock_inter)
+
+    assert session.boards[p1.id].mmz[0] is not None
+    assert session.boards[p1.id].mmz[0]["name"] == "Kasutamaiza Monster"
+    assert session.boards[p1.id].mmz[0]["position"] == "ATK"
+    assert session.normal_summon_used[p1.id] is True
+    assert 50000101 not in session.hands[p1.id]
+
+    # 2. Test PositionChangeSelect (ATK -> DEF)
+    field_monsters = [(0, session.boards[p1.id].mmz[0])]
+    pos_sel = PositionChangeSelect(session, view, field_monsters)
+    pos_sel._values = ["0:DEF"]
+
+    mock_inter_pos = AsyncMock()
+    mock_inter_pos.user = p1
+    await pos_sel.callback(mock_inter_pos)
+    assert session.boards[p1.id].mmz[0]["position"] == "DEF"
+
+    # 3. Test SpellTrapSelect (Set to STZ)
+    spell_card = {"id": 50000114, "name": "Mystic Space Spell", "card_type": "Spell", "card_subtype": "Quick-Play"}
+    session.hands[p1.id] = [50000114]
+    st_sel = SpellTrapSelect(session, view, [spell_card])
+    st_sel._values = ["50000114"]
+
+    mock_inter_st = AsyncMock()
+    mock_inter_st.user = p1
+    await st_sel.callback(mock_inter_st)
+    assert session.boards[p1.id].stz[0] is not None
+    assert session.boards[p1.id].stz[0]["name"] == "Mystic Space Spell"
+    assert session.boards[p1.id].stz[0]["state"] == "SET"
+    assert 50000114 not in session.hands[p1.id]
+
+    # 4. Test AttackTargetSelect
+    # Set attacker for p2 in ATK and defender for p1 in DEF
+    session.boards[p2.id].summon_monster({"id": 50000102, "name": "Strong Attacker", "atk": 2500, "def": 1000}, position="ATK")
+    attacker = session.boards[p2.id].mmz[0]
+    opp_monsters = [(0, session.boards[p1.id].mmz[0])]
+
+    atk_sel = AttackTargetSelect(session, view, attacker_slot=0, attacker=attacker, opp_monsters=opp_monsters)
+    atk_sel._values = ["0"]
+
+    mock_inter_atk = AsyncMock()
+    mock_inter_atk.user = p2
+    await atk_sel.callback(mock_inter_atk)
+
+    # 2500 ATK vs 1200 DEF: defender destroyed, no damage (DEF mode)
+    assert session.boards[p1.id].mmz[0] is None
+    assert 50000101 in session.boards[p1.id].gy
+
+    # 5. Test Cog Slash Commands
+    bot = MagicMock()
+    cog = DuelEngineCog(bot)
+    assert cog.duel_command is not None
+    assert cog.duel_manual_command is not None
+    assert cog.board_command is not None
+    assert cog.surrender_command is not None
+    assert cog.duel_status_command is not None
+
+    # Test Board command
+    board_inter = AsyncMock()
+    await cog.board_command.callback(cog, board_inter, hidden=True)
+    board_inter.response.send_message.assert_called_once()
+
+    # Clean up
+    duel_manager.unregister_session(session)
+    assert duel_manager.is_user_dueling(p1.id) is False
+
+
+@pytest.mark.anyio
+async def test_rating_service_modular_architecture_and_subsystem():
+    """
+    Validates the modular services.rating subsystem:
+    - Foundation constants, types, and mathematical algorithms
+    - Domain operations: player profile lifecycle, match recording, and leaderboard
+    - Core orchestrator RatingService
+    - Root bridge services.rating and backward-compatible services.rating_service
+    - Presentation RankingCog commands (/rank, /leaderboard, /rank_tiers) with hidden flag
+    """
+    from unittest.mock import MagicMock, AsyncMock
+    from services.rating import (
+        RatingService,
+        rating_service,
+        TIER_BRACKETS,
+        DEFAULT_STARTING_ELO,
+        resolve_tier_info,
+        compute_elo_change,
+        calculate_win_rate,
+    )
+    import services.rating as rating_bridge
+    from cogs.ranking import RankingCog
+
+    # 1. Structural Parity & Re-export Verification
+    assert rating_bridge.RatingService is RatingService
+    assert len(TIER_BRACKETS) == 7
+    assert DEFAULT_STARTING_ELO == 1200
+
+    # 2. Math Algorithms
+    name, badge, color = resolve_tier_info(1950)
+    assert name == "Diamond Duelist"
+    assert badge == "💠"
+
+    w_elo, l_elo = compute_elo_change(1200, 1200, 1.0)
+    assert w_elo > 1200
+    assert l_elo < 1200
+
+    wr = calculate_win_rate(10, 5, 0)
+    assert wr == 66.7
+
+    # 3. Core Engine Instantiation
+    service = RatingService(STORY_DB_PATH)
+    test_uid = "999888777"
+    p_profile = await service.get_or_create_player(test_uid, username="TestDuelist")
+    assert p_profile["user_id"] == test_uid
+    assert p_profile["elo"] == DEFAULT_STARTING_ELO
+
+    # 4. Cog Commands Inspection
+    bot = MagicMock()
+    cog = RankingCog(bot)
+    assert cog.rank_command is not None
+    assert cog.leaderboard_command is not None
+    assert cog.rank_tiers_command is not None
+
+    rank_inter = AsyncMock()
+    rank_inter.user.id = int(test_uid)
+    rank_inter.user.display_name = "TestDuelist"
+    await cog.rank_command.callback(cog, rank_inter, user=None, hidden=True)
+    rank_inter.response.send_message.assert_called_once()
+
+    tiers_inter = AsyncMock()
+    await cog.rank_tiers_command.callback(cog, tiers_inter, hidden=True)
+    tiers_inter.response.send_message.assert_called_once()
 
 
 

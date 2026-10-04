@@ -36,9 +36,10 @@ class DuelBoard:
         self.stz: List[Optional[Dict[str, Any]]] = [None] * 5
         # Field Spell Zone: None or dict with {id, name}
         self.field_spell: Optional[Dict[str, Any]] = None
-        # Graveyard and Banished piles
+        # Graveyard, Banished, and Extra Deck piles
         self.gy: List[int] = []
         self.banished: List[int] = []
+        self.extra_deck: List[int] = []
 
     def summon_monster(self, card_data: Dict[str, Any], position: str = "ATK", zone_idx: Optional[int] = None) -> Optional[int]:
         """Places a monster in an available MMZ (0 to 4). Returns zone index or None if full."""
@@ -64,6 +65,17 @@ class DuelBoard:
                 return i
         return None
 
+    # Alias for compatibility with duel engine
+    place_monster = summon_monster
+
+    def has_available_mmz(self) -> bool:
+        """Returns True if at least one MMZ slot is unoccupied."""
+        return any(slot is None for slot in self.mmz)
+
+    def has_available_stz(self) -> bool:
+        """Returns True if at least one STZ slot is unoccupied."""
+        return any(slot is None for slot in self.stz)
+
     def play_spell_or_trap(self, card_data: Dict[str, Any], state: str = "FACEUP", zone_idx: Optional[int] = None) -> Optional[int]:
         """Places a Spell or Trap in an available S/T Zone (0 to 4). Returns zone index or None if full."""
         st_entry = {
@@ -82,6 +94,32 @@ class DuelBoard:
             if self.stz[i] is None:
                 self.stz[i] = st_entry
                 return i
+        return None
+
+    def change_position(self, zone_idx: int, new_position: str) -> bool:
+        """Changes the battle position of a monster in the specified MMZ slot (0 to 4)."""
+        if not (0 <= zone_idx < 5) or self.mmz[zone_idx] is None:
+            return False
+        pos = new_position.upper()
+        if pos not in ("ATK", "DEF", "SET"):
+            return False
+        self.mmz[zone_idx]["position"] = pos
+        return True
+
+    def remove_monster(self, zone_idx: int) -> Optional[Dict[str, Any]]:
+        """Removes and returns monster at specified MMZ slot (0 to 4)."""
+        if 0 <= zone_idx < 5:
+            m = self.mmz[zone_idx]
+            self.mmz[zone_idx] = None
+            return m
+        return None
+
+    def remove_spell_trap(self, zone_idx: int) -> Optional[Dict[str, Any]]:
+        """Removes and returns spell/trap at specified STZ slot (0 to 4)."""
+        if 0 <= zone_idx < 5:
+            st = self.stz[zone_idx]
+            self.stz[zone_idx] = None
+            return st
         return None
 
     def play_field_spell(self, card_data: Dict[str, Any]) -> str:

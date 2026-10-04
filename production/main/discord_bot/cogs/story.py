@@ -1,205 +1,49 @@
 #!/usr/bin/env python3
+# =============================================================================
+# BLOCK 1: METADATA BLOCK
+# =============================================================================
 """
-=============================================================================
-Discord Bot Cog: Story Mode RPG & Lore Campaign
-=============================================================================
-Allows non-competitive and lore-focused duelists to experience the custom card
-sagas of The Land of Kustomazi. Loads chapter and stage encounters directly from
-the database (no hardcoding), supporting both pre-determined scripted encounters
-and dynamic AI duels with real deck RNG and manual duel state controls.
-=============================================================================
+Module: discord_bot.cogs.story
+Description:
+    Discord Bot Cog: Story Mode RPG & Lore Campaign Gateway.
+    Allows non-competitive and lore-focused duelists to experience the custom card
+    sagas of The Land of Kustomazi. Loads chapter and stage encounters directly
+    from the database, supporting both scripted encounter timelines and dynamic
+    AI duels with true deck RNG and manual Master Rule 5 field state controls.
+
+Architectural Classification:
+    Layer 3 (L3) - Presentation & Discord Gateway Cog
+    Subsystem: Story & Lore Campaign RPG
 """
+
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Inclusions & Imports)
+# =============================================================================
+
+import random
+from typing import Any, Dict, List, Optional, Tuple
 
 import discord
 from discord import app_commands, ui
 from discord.ext import commands
-import random
-from typing import Optional, List, Dict, Any, Tuple
 
-from services.story_service import StoryService
-from services.deck import DeckService
-from services.card import CardService
-from services.duel_service import duel_manager
-from utils import build_story_stage_embed
+from bot_config import BOT_CONFIG
 from production.main.logger import get_logger
+from services.card import CardService
+from services.deck import DeckService, is_extra_deck_card
+from services.duel import duel_manager
+from services.story import StoryDuelSession, StoryService, story_service
+from utils import build_story_stage_embed
 
 logger = get_logger("discord_bot.cogs.story")
 
-
 # =============================================================================
-# 1. STORY DUEL STATE MACHINE (DATABASE-DRIVEN SCRIPTED & AI ENCOUNTERS)
-# =============================================================================
-
-class StoryDuelSession:
-    """
-    Live duel session between a human player and an in-universe Story NPC.
-    Loads narrative cues, scripted timelines, or AI behavior directly from
-    the database `story_stages` record.
-    """
-
-    def __init__(self, player: discord.User, stage: Dict[str, Any], player_deck: List[int], npc_deck: List[int]):
-        self.player = player
-        self.stage = stage
-        self.stage_number = stage.get("stage_number", 1)
-        self.npc_name = stage.get("opponent_name", "Story NPC")
-        self.encounter_type = stage.get("encounter_type", "AI").upper()
-        self.script_data = stage.get("script") or {}
-
-        # Starting Life Points
-        boss_starting_lp = stage.get("boss_hp") or 8000
-        self.lp = {player.id: 8000, "npc": boss_starting_lp}
-
-        # True Deck RNG Shuffling
-        self.player_deck = player_deck.copy()
-        self.npc_deck = npc_deck.copy()
-        random.shuffle(self.player_deck)
-        random.shuffle(self.npc_deck)
-
-        # Opening Hands: Deal 5 cards each with RNG
-        self.player_hand: List[int] = [self.player_deck.pop() for _ in range(min(5, len(self.player_deck)))]
-        self.npc_hand: List[int] = [self.npc_deck.pop() for _ in range(min(5, len(self.npc_deck)))]
-
-        # Field and GY tracking for both sides
-        self.player_field: List[Dict[str, Any]] = []
-        self.npc_field: List[Dict[str, Any]] = []
-        self.player_gy: List[int] = []
-        self.npc_gy: List[int] = []
-
-        self.turn_count = 1
-        self.duel_over = False
-        self.winner = None
-        self.threshold_triggered = False
-
-    def draw_player_card(self) -> Optional[int]:
-        """Draws 1 card from player's deck into their private hand."""
-        if self.player_deck:
-            c = self.player_deck.pop()
-            self.player_hand.append(c)
-            return c
-        return None
-
-    def mill_player_card(self) -> Optional[int]:
-        """Sends the top card of player's deck directly to the Graveyard with RNG."""
-        if self.player_deck:
-            c = self.player_deck.pop()
-            self.player_gy.append(c)
-            return c
-        return None
-
-    def play_player_card(self, card_data: Dict[str, Any]) -> str:
-        """Plays a card from player's hand onto their field (if monster) or GY (if spell)."""
-        cid = card_data["id"]
-        if cid in self.player_hand:
-            self.player_hand.remove(cid)
-            if card_data.get("card_type") == "Monster":
-                self.player_field.append(card_data)
-                return (
-                    f"⚔️ **{self.player.display_name}** Normal Summoned **{card_data['name']}** "
-                    f"[{card_data.get('attribute', 'DIVINE')}] (ATK {card_data.get('atk', 0)} / DEF {card_data.get('def', 0)})!"
-                )
-            else:
-                self.player_gy.append(cid)
-                return f"✨ **{self.player.display_name}** activated Spell: **{card_data['name']}**!"
-        return "Card not in hand."
-
-    def draw_npc_card(self) -> Optional[int]:
-        """Draws 1 card from NPC's deck into the NPC hand using RNG."""
-        if self.npc_deck:
-            c = self.npc_deck.pop()
-            self.npc_hand.append(c)
-            return c
-        return None
-
-    async def execute_npc_turn(self, card_service: CardService) -> Tuple[str, int]:
-        """
-        Executes the NPC turn.
-        If encounter_type == 'SCRIPTED' and stage script has a defined turn event:
-            Executes pre-determined script event loaded from database.
-        Otherwise (or in AI mode):
-            Dynamic AI: draws a card from deck with RNG, inspects its real hand,
-            plays monsters/spells, and computes dynamic attack damage.
-        """
-        # Step 1: Draw card with RNG
-        drawn_cid = self.draw_npc_card()
-        if drawn_cid:
-            await card_service.track_card_draw(drawn_cid)
-
-        # Step 2: Check for database-loaded scripted event
-        if self.encounter_type == "SCRIPTED" and self.script_data:
-            turn_key = str(self.turn_count)
-            turns_dict = self.script_data.get("turns", {})
-            if turn_key in turns_dict:
-                turn_info = turns_dict[turn_key]
-                dmg = turn_info.get("damage", 800)
-                quote_str = f"\n💬 *{turn_info.get('quote')}*" if turn_info.get("quote") else ""
-                msg = f"{turn_info.get('play', 'The opponent acts.')}{quote_str}"
-                return msg, dmg
-            elif "repeat" in self.script_data:
-                rep = self.script_data["repeat"]
-                dmg = rep.get("damage", 800)
-                quote_str = f"\n💬 *{rep.get('quote')}*" if rep.get("quote") else ""
-                msg = f"{rep.get('play', 'The opponent presses their advance.')}{quote_str}"
-                return msg, dmg
-
-        # Step 3: Dynamic AI Logic (Inspect actual drawn cards from NPC hand)
-        monsters = []
-        spells = []
-
-        for cid in list(self.npc_hand):
-            card = await card_service.get_card_by_query(str(cid))
-            if card:
-                if card.get("card_type") == "Monster":
-                    monsters.append(card)
-                else:
-                    spells.append(card)
-
-        action_lines = []
-        combat_damage = 0
-
-        # AI Action: Play a Spell/Trap if available
-        if spells:
-            chosen_spell = random.choice(spells)
-            self.npc_hand.remove(chosen_spell["id"])
-            self.npc_gy.append(chosen_spell["id"])
-            await card_service.track_card_play(chosen_spell["id"])
-            set_tag = f" [{chosen_spell['set_number']}]" if chosen_spell.get("set_number") else ""
-            action_lines.append(f"✨ **{self.npc_name}** activated Spell: **{chosen_spell['name']}**{set_tag}!")
-
-        # AI Action: Normal Summon best monster from hand to field
-        if monsters and len(self.npc_field) < 3:
-            # Pick monster with highest ATK
-            chosen_monster = max(monsters, key=lambda m: (m.get("atk") or 0))
-            self.npc_hand.remove(chosen_monster["id"])
-            self.npc_field.append(chosen_monster)
-            await card_service.track_card_play(chosen_monster["id"])
-            set_tag = f" [{chosen_monster['set_number']}]" if chosen_monster.get("set_number") else ""
-            action_lines.append(
-                f"⚔️ **{self.npc_name}** Normal Summoned **{chosen_monster['name']}**{set_tag} "
-                f"[{chosen_monster.get('attribute', 'DIVINE')}] (ATK {chosen_monster.get('atk', 0)})!"
-            )
-
-        # AI Action: Battle Phase attack with field monsters
-        if self.npc_field:
-            lead_monster = self.npc_field[0]
-            lead_atk = lead_monster.get("atk") or 1200
-            # Calculate battle damage (half ATK for direct story hit, minimum 600, max 2000)
-            combat_damage = max(600, min(2000, lead_atk // 2))
-            action_lines.append(
-                f"💥 **{lead_monster['name']}** attacks directly, dealing **{combat_damage}** battle damage!"
-            )
-        else:
-            # Default direct strike if hand was empty of monsters
-            combat_damage = 800
-            action_lines.append(f"💥 **{self.npc_name}** launches a direct spiritual assault dealing **{combat_damage}** damage!")
-
-        full_msg = "\n".join(action_lines)
-        return full_msg, combat_damage
-
-
-# =============================================================================
-# 2. STORY MANUAL LP MODAL
+# BLOCK 3: BODY BLOCK (UI Modals, Views, and Story Gateway Cog)
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# Sub-Block 3.1: Story LP Adjustment Modal
+# -----------------------------------------------------------------------------
 class StoryLPModal(ui.Modal, title="Manual LP Adjustment (Story Duel)"):
     """Allows players or moderators to manually apply arbitrary damage or healing."""
 
@@ -209,7 +53,11 @@ class StoryLPModal(ui.Modal, title="Manual LP Adjustment (Story Duel)"):
         self.target = target
         self.story_view = view
 
-        target_name = session.player.display_name if target == "player" else session.npc_name
+        target_name = (
+            getattr(session.player, "display_name", str(session.player))
+            if target == "player"
+            else session.npc_name
+        )
         self.amount = ui.TextInput(
             label=f"Adjust {target_name}'s LP (+ or -)",
             placeholder="e.g. -1500 or +800",
@@ -236,7 +84,11 @@ class StoryLPModal(ui.Modal, title="Manual LP Adjustment (Story Duel)"):
         new_lp = max(0, old_lp + val)
         self.session.lp[key] = new_lp
 
-        target_name = self.session.player.display_name if self.target == "player" else self.session.npc_name
+        target_name = (
+            getattr(self.session.player, "display_name", str(self.session.player))
+            if self.target == "player"
+            else self.session.npc_name
+        )
         sign = "+" if val >= 0 else ""
         reason_txt = self.reason.value or "Manual Adjustment"
         msg = f"❤️ **{target_name}** LP: {old_lp} ➔ **{new_lp}** ({sign}{val}) [{reason_txt}]"
@@ -270,12 +122,9 @@ class StoryLPModal(ui.Modal, title="Manual LP Adjustment (Story Duel)"):
         )
 
 
-# =============================================================================
-# 3. STORY DUEL INTERACTIVE VIEW
-# =============================================================================
-# 3. STORY DUEL INTERACTIVE VIEW & CARD PICKER
-# =============================================================================
-
+# -----------------------------------------------------------------------------
+# Sub-Block 3.2: Card Selection & Extra Deck Views
+# -----------------------------------------------------------------------------
 class StoryPlayCardPickerView(ui.View):
     """Ephemeral selection view for playing or summoning a card from hand."""
 
@@ -301,7 +150,7 @@ class StoryPlayCardPickerView(ui.View):
                 )
             )
 
-        self.select_menu = ui.Select(placeholder="Choose card to play onto the field...", options=options)
+        self.select_menu = ui.Select(placeholder="Choose card from Hand to play onto the field...", options=options)
         self.select_menu.callback = self.select_callback
         self.add_item(self.select_menu)
 
@@ -313,7 +162,11 @@ class StoryPlayCardPickerView(ui.View):
             return
 
         play_msg = self.session.play_player_card(card_data)
-        await self.story_view.card_service.track_card_play(cid)
+        if hasattr(self.story_view.card_service, "track_card_play"):
+            try:
+                await self.story_view.card_service.track_card_play(cid)
+            except Exception:
+                pass
 
         # Update main board embed
         embed = self.story_view.build_embed(action_text=play_msg)
@@ -325,17 +178,74 @@ class StoryPlayCardPickerView(ui.View):
         await interaction.response.send_message(f"✅ {play_msg}", ephemeral=True)
 
 
+class StoryExtraDeckPickerView(ui.View):
+    """Ephemeral selection view for Special Summoning a monster from the Extra Deck."""
+
+    def __init__(self, session: StoryDuelSession, cards: List[Dict[str, Any]], story_view: "StoryDuelView"):
+        super().__init__(timeout=60)
+        self.session = session
+        self.story_view = story_view
+
+        options = []
+        seen = set()
+        for c in cards[:25]:
+            cid = c["id"]
+            if cid in seen:
+                continue
+            seen.add(cid)
+            subtype = c.get("card_subtype") or "Extra"
+            stat = f"ATK {c.get('atk', 0)} / DEF {c.get('def', 0)}"
+            options.append(
+                discord.SelectOption(
+                    label=c["name"][:100],
+                    value=str(cid),
+                    description=f"{subtype} • {stat}"[:100],
+                    emoji="🌀"
+                )
+            )
+
+        self.select_menu = ui.Select(placeholder="Choose Extra Deck monster to Special Summon...", options=options)
+        self.select_menu.callback = self.select_callback
+        self.add_item(self.select_menu)
+
+    async def select_callback(self, interaction: discord.Interaction):
+        cid = int(self.select_menu.values[0])
+        card_data = await self.story_view.card_service.get_card_by_query(str(cid))
+        if not card_data:
+            await interaction.response.send_message("❌ Card not found.", ephemeral=True)
+            return
+
+        play_msg = self.session.special_summon_extra_monster(card_data)
+        if hasattr(self.story_view.card_service, "track_card_play"):
+            try:
+                await self.story_view.card_service.track_card_play(cid)
+            except Exception:
+                pass
+
+        # Update main board embed
+        embed = self.story_view.build_embed(action_text=play_msg)
+        if hasattr(self.story_view, "message") and self.story_view.message:
+            try:
+                await self.story_view.message.edit(embed=embed, view=self.story_view)
+            except Exception:
+                pass
+        await interaction.response.send_message(f"✅ {play_msg}", ephemeral=True)
+
+
+# -----------------------------------------------------------------------------
+# Sub-Block 3.3: Interactive Board View
+# -----------------------------------------------------------------------------
 class StoryDuelView(ui.View):
     """
     Main interactive board view for Story Mode encounters.
     Combines scripted/AI NPC turns with full manual duel controls.
     """
 
-    def __init__(self, session: StoryDuelSession, story_service: StoryService, card_service: CardService):
+    def __init__(self, session: StoryDuelSession, story_srv: StoryService, card_srv: CardService):
         super().__init__(timeout=900)  # 15 minute timeout
         self.session = session
-        self.story_service = story_service
-        self.card_service = card_service
+        self.story_service = story_srv
+        self.card_service = card_srv
         self.message: Optional[discord.Message] = None
 
     def disable_all(self):
@@ -349,9 +259,10 @@ class StoryDuelView(ui.View):
         )
 
         mode_badge = "📜 [SCRIPTED STORY]" if self.session.encounter_type == "SCRIPTED" else "🤖 [AI DUEL]"
+        p_name = getattr(self.session.player, "display_name", str(self.session.player))
         embed = discord.Embed(
-            title=f"{mode_badge} Stage {stage['stage_number']}: {stage['title']}",
-            description=f"⚔️ **{self.session.player.display_name}** vs **{self.session.npc_name}**",
+            title=f"{mode_badge} Stage {stage.get('stage_number', 1)}: {stage.get('title', 'Encounter')}",
+            description=f"⚔️ **{p_name}** vs **{self.session.npc_name}**",
             color=color
         )
 
@@ -365,13 +276,23 @@ class StoryDuelView(ui.View):
         n_field_str = f"\nField: {', '.join([m['name'] for m in self.session.npc_field])}" if self.session.npc_field else ""
 
         embed.add_field(
-            name=f"👤 {self.session.player.display_name}",
-            value=f"**{p_lp} LP**\nHand: `{len(self.session.player_hand)}` | Deck: `{len(self.session.player_deck)}` | GY: `{len(self.session.player_gy)}`{p_field_str}\n{p_bar}",
+            name=f"👤 {p_name}",
+            value=(
+                f"**{p_lp} LP**\n"
+                f"Hand: `{len(self.session.player_hand)}` | Deck: `{len(self.session.player_deck)}` | "
+                f"Extra: `{len(self.session.player_extra_deck)}` | GY: `{len(self.session.player_gy)}`"
+                f"{p_field_str}\n{p_bar}"
+            ),
             inline=True
         )
         embed.add_field(
             name=f"🤖 {self.session.npc_name}",
-            value=f"**{n_lp} LP**\nHand: `{len(self.session.npc_hand)}` | Deck: `{len(self.session.npc_deck)}` | GY: `{len(self.session.npc_gy)}`{n_field_str}\n{n_bar}",
+            value=(
+                f"**{n_lp} LP**\n"
+                f"Hand: `{len(self.session.npc_hand)}` | Deck: `{len(self.session.npc_deck)}` | "
+                f"Extra: `{len(self.session.npc_extra_deck)}` | GY: `{len(self.session.npc_gy)}`"
+                f"{n_field_str}\n{n_bar}"
+            ),
             inline=True
         )
 
@@ -382,7 +303,7 @@ class StoryDuelView(ui.View):
             if self.session.winner == self.session.player.id:
                 embed.add_field(
                     name="🏆 VICTORY!",
-                    value=f"*{stage['outro_dialogue']}*",
+                    value=f"*{stage.get('outro_dialogue', 'Congratulations on your victory!')}*",
                     inline=False
                 )
             else:
@@ -478,7 +399,7 @@ class StoryDuelView(ui.View):
 
     @ui.button(label="🎴 View Hand", style=discord.ButtonStyle.secondary, row=0)
     async def view_hand_btn(self, interaction: discord.Interaction, button: ui.Button):
-        """Inspect private secret hand drawn with RNG from player's deck."""
+        """Inspect private secret hand drawn with RNG from player's Main Deck."""
         if interaction.user.id != self.session.player.id:
             await interaction.response.send_message("❌ This is not your story duel.", ephemeral=True)
             return
@@ -497,7 +418,7 @@ class StoryDuelView(ui.View):
 
         card_lines = []
         for i, c in enumerate(cards, 1):
-            stat_str = f"ATK {c['atk']}/{c['def']}" if c['card_type'] == 'Monster' else f"{c['card_subtype'] or 'Normal'} {c['card_type']}"
+            stat_str = f"ATK {c['atk']}/{c['def']}" if c['card_type'] == 'Monster' else f"{c.get('card_subtype') or 'Normal'} {c['card_type']}"
             card_lines.append(f"**{i}. {c['name']}** [{stat_str}]\n*{c['effect_text'][:100]}...*")
 
         hand_embed = discord.Embed(
@@ -509,7 +430,7 @@ class StoryDuelView(ui.View):
 
     @ui.button(label="🃏 Draw Card", style=discord.ButtonStyle.secondary, row=0)
     async def draw_card_btn(self, interaction: discord.Interaction, button: ui.Button):
-        """Draws 1 card from player's real deck with RNG."""
+        """Draws 1 card from player's real Main Deck with RNG."""
         if interaction.user.id != self.session.player.id:
             await interaction.response.send_message("❌ This is not your story duel.", ephemeral=True)
             return
@@ -517,12 +438,16 @@ class StoryDuelView(ui.View):
         self.message = interaction.message
         drawn = self.session.draw_player_card()
         if drawn:
-            await self.card_service.track_card_draw(drawn)
+            if hasattr(self.card_service, "track_card_draw"):
+                try:
+                    await self.card_service.track_card_draw(drawn)
+                except Exception:
+                    pass
             card_info = await self.card_service.get_card_by_query(str(drawn))
             cname = card_info["name"] if card_info else f"Card #{drawn}"
             await interaction.response.send_message(f"🎴 You drew: **{cname}**! (Secret Hand)", ephemeral=True)
         else:
-            await interaction.response.send_message("⚠️ Your deck is empty!", ephemeral=True)
+            await interaction.response.send_message("⚠️ Your Main Deck is empty!", ephemeral=True)
 
     @ui.button(label="🏳️ Surrender", style=discord.ButtonStyle.danger, row=0)
     async def surrender_btn(self, interaction: discord.Interaction, button: ui.Button):
@@ -565,7 +490,37 @@ class StoryDuelView(ui.View):
 
         picker_view = StoryPlayCardPickerView(self.session, cards, self)
         await interaction.response.send_message(
-            "Select a card from your hand to summon or activate:",
+            "Select a card from your Hand to summon or activate:",
+            view=picker_view,
+            ephemeral=True
+        )
+
+    @ui.button(label="🌀 Extra Deck", style=discord.ButtonStyle.primary, row=1)
+    async def extra_deck_btn(self, interaction: discord.Interaction, button: ui.Button):
+        """Inspects Extra Deck and allows Special Summoning Fusion, Synchro, or Link monsters."""
+        if interaction.user.id != self.session.player.id:
+            await interaction.response.send_message("❌ This is not your story duel.", ephemeral=True)
+            return
+
+        self.message = interaction.message
+        extra_cids = self.session.player_extra_deck
+        if not extra_cids:
+            await interaction.response.send_message("📭 Your Extra Deck is empty.", ephemeral=True)
+            return
+
+        cards = []
+        for cid in extra_cids:
+            c = await self.card_service.get_card_by_query(str(cid))
+            if c:
+                cards.append(c)
+
+        if not cards:
+            await interaction.response.send_message("❌ No Extra Deck monsters available.", ephemeral=True)
+            return
+
+        picker_view = StoryExtraDeckPickerView(self.session, cards, self)
+        await interaction.response.send_message(
+            "Select an Extra Deck monster (Fusion, Synchro, Link) to Special Summon:",
             view=picker_view,
             ephemeral=True
         )
@@ -580,7 +535,7 @@ class StoryDuelView(ui.View):
         self.message = interaction.message
         drawn = self.session.mill_player_card()
         if not drawn:
-            await interaction.response.send_message("⚠️ Your deck is empty!", ephemeral=True)
+            await interaction.response.send_message("⚠️ Your Main Deck is empty!", ephemeral=True)
             return
 
         card_info = await self.card_service.get_card_by_query(str(drawn))
@@ -607,21 +562,28 @@ class StoryDuelView(ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
 
-# =============================================================================
-# 4. STORY JOURNEY INTERACTION VIEW
-# =============================================================================
-
+# -----------------------------------------------------------------------------
+# Sub-Block 3.4: Story Journey Hub View
+# -----------------------------------------------------------------------------
 class StoryJourneyView(ui.View):
     """Hub view for browsing story stages and launching encounters."""
 
-    def __init__(self, user: discord.User, stage: dict, progress: dict, story_service: StoryService, deck_service: DeckService, card_service: CardService):
+    def __init__(
+        self,
+        user: discord.User,
+        stage: dict,
+        progress: dict,
+        story_srv: StoryService,
+        deck_srv: DeckService,
+        card_srv: CardService
+    ):
         super().__init__(timeout=180)
         self.user = user
         self.stage = stage
         self.progress = progress
-        self.story_service = story_service
-        self.deck_service = deck_service
-        self.card_service = card_service
+        self.story_service = story_srv
+        self.deck_service = deck_srv
+        self.card_service = card_srv
 
     @ui.button(label="⚔️ Begin Story Duel", style=discord.ButtonStyle.success)
     async def begin_duel(self, interaction: discord.Interaction, button: ui.Button):
@@ -636,30 +598,52 @@ class StoryJourneyView(ui.View):
             )
             return
 
-        # Fetch player deck or fallback to Set 1 pool
-        player_deck = await self.deck_service.get_player_card_ids(str(interaction.user.id))
-        if len(player_deck) < 5:
-            cards = await self.card_service.get_all_cards()
-            player_deck = [c["id"] for c in cards] * 2
+        # Fetch player deck partitioned into (Main, Extra)
+        player_main, player_extra = await self.deck_service.get_player_duel_decks(str(interaction.user.id))
 
-        # Fetch NPC deck
+        # Legal Yu-Gi-Oh! Deck fallback: 40+ cards strictly from Main Deck pool
+        all_cards = await self.card_service.get_all_cards()
+        main_pool = [c["id"] for c in all_cards if not is_extra_deck_card(c)]
+        extra_pool = [c["id"] for c in all_cards if is_extra_deck_card(c)]
+
+        if len(player_main) < 40:
+            player_main = main_pool.copy()
+        if not player_extra:
+            player_extra = extra_pool.copy()
+
+        # Fetch NPC deck partitioned into (Main, Extra)
         npc_deck_id = self.stage.get("opponent_deck_id") or 1
         npc_deck_obj = await self.deck_service.get_character_deck_by_id(npc_deck_id)
-        if npc_deck_obj and npc_deck_obj.get("cards"):
-            npc_deck = []
-            for c in npc_deck_obj["cards"]:
-                npc_deck.extend([c["id"]] * c["quantity"])
-        else:
-            cards = await self.card_service.get_all_cards()
-            npc_deck = [c["id"] for c in cards] * 2
+        npc_main: List[int] = []
+        npc_extra: List[int] = []
 
-        session = StoryDuelSession(interaction.user, self.stage, player_deck, npc_deck)
+        if npc_deck_obj and npc_deck_obj.get("cards"):
+            for c in npc_deck_obj["cards"]:
+                section = (c.get("section") or "").upper()
+                if section == "EXTRA" or is_extra_deck_card(c):
+                    npc_extra.extend([c["id"]] * c["quantity"])
+                else:
+                    npc_main.extend([c["id"]] * c["quantity"])
+
+        if len(npc_main) < 40:
+            npc_main = main_pool.copy()
+        if not npc_extra:
+            npc_extra = extra_pool.copy()
+
+        session = StoryDuelSession(
+            player=interaction.user,
+            stage=self.stage,
+            player_deck=player_main,
+            npc_deck=npc_main,
+            player_extra_deck=player_extra,
+            npc_extra_deck=npc_extra,
+        )
         duel_manager.register_session(interaction.user.id, 0, session)
 
         duel_view = StoryDuelView(session, self.story_service, self.card_service)
         mode_label = "Scripted Encounter" if session.encounter_type == "SCRIPTED" else "Dynamic AI Duel"
         embed = duel_view.build_embed(
-            action_text=f"🌌 **{self.stage['title']}** begins! ({mode_label})\nConfront **{session.npc_name}**."
+            action_text=f"🌌 **{self.stage.get('title', 'Encounter')}** begins! ({mode_label})\nConfront **{session.npc_name}**."
         )
         await interaction.response.send_message(embed=embed, view=duel_view)
         try:
@@ -668,10 +652,9 @@ class StoryJourneyView(ui.View):
             pass
 
 
-# =============================================================================
-# 5. STORY COG COMMANDS
-# =============================================================================
-
+# -----------------------------------------------------------------------------
+# Sub-Block 3.5: Story Presentation Cog Gateway
+# -----------------------------------------------------------------------------
 class StoryCog(commands.Cog, name="Story"):
     """Commands for experiencing the in-server custom card RPG campaign."""
 
@@ -682,7 +665,8 @@ class StoryCog(commands.Cog, name="Story"):
         self.card_service = CardService()
 
     @app_commands.command(name="story", description="Embark on your journey in The Land of Kustomazi campaign")
-    async def story_journey_command(self, interaction: discord.Interaction):
+    @app_commands.describe(hidden="Whether the campaign screen should be private to you")
+    async def story_journey_command(self, interaction: discord.Interaction, hidden: Optional[bool] = False):
         """Displays current story chapter, active stage, and dialog encounter."""
         progress = await self.story_service.get_or_create_player_progress(str(interaction.user.id))
         stage_num = progress["current_stage_number"]
@@ -697,10 +681,11 @@ class StoryCog(commands.Cog, name="Story"):
         view = StoryJourneyView(
             interaction.user, stage, progress, self.story_service, self.deck_service, self.card_service
         )
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=bool(hidden))
 
     @app_commands.command(name="story_duel", description="Directly launch the story duel encounter for your current stage")
-    async def story_duel_direct_command(self, interaction: discord.Interaction):
+    @app_commands.describe(hidden="Whether the encounter launch should be private")
+    async def story_duel_direct_command(self, interaction: discord.Interaction, hidden: Optional[bool] = False):
         """Direct launch shortcut for the active story stage encounter."""
         if duel_manager.is_user_dueling(interaction.user.id):
             await interaction.response.send_message(
@@ -718,37 +703,60 @@ class StoryCog(commands.Cog, name="Story"):
             await interaction.response.send_message("❌ Active story stage not found in database.", ephemeral=True)
             return
 
-        player_deck = await self.deck_service.get_player_card_ids(str(interaction.user.id))
-        if len(player_deck) < 5:
-            cards = await self.card_service.get_all_cards()
-            player_deck = [c["id"] for c in cards] * 2
+        # Fetch player deck partitioned into (Main, Extra)
+        player_main, player_extra = await self.deck_service.get_player_duel_decks(str(interaction.user.id))
+
+        all_cards = await self.card_service.get_all_cards()
+        main_pool = [c["id"] for c in all_cards if not is_extra_deck_card(c)]
+        extra_pool = [c["id"] for c in all_cards if is_extra_deck_card(c)]
+
+        if len(player_main) < 40:
+            player_main = main_pool.copy()
+        if not player_extra:
+            player_extra = extra_pool.copy()
 
         npc_deck_id = stage.get("opponent_deck_id") or 1
         npc_deck_obj = await self.deck_service.get_character_deck_by_id(npc_deck_id)
-        if npc_deck_obj and npc_deck_obj.get("cards"):
-            npc_deck = []
-            for c in npc_deck_obj["cards"]:
-                npc_deck.extend([c["id"]] * c["quantity"])
-        else:
-            cards = await self.card_service.get_all_cards()
-            npc_deck = [c["id"] for c in cards] * 2
+        npc_main: List[int] = []
+        npc_extra: List[int] = []
 
-        session = StoryDuelSession(interaction.user, stage, player_deck, npc_deck)
+        if npc_deck_obj and npc_deck_obj.get("cards"):
+            for c in npc_deck_obj["cards"]:
+                section = (c.get("section") or "").upper()
+                if section == "EXTRA" or is_extra_deck_card(c):
+                    npc_extra.extend([c["id"]] * c["quantity"])
+                else:
+                    npc_main.extend([c["id"]] * c["quantity"])
+
+        if len(npc_main) < 40:
+            npc_main = main_pool.copy()
+        if not npc_extra:
+            npc_extra = extra_pool.copy()
+
+        session = StoryDuelSession(
+            player=interaction.user,
+            stage=stage,
+            player_deck=player_main,
+            npc_deck=npc_main,
+            player_extra_deck=player_extra,
+            npc_extra_deck=npc_extra,
+        )
         duel_manager.register_session(interaction.user.id, 0, session)
 
         duel_view = StoryDuelView(session, self.story_service, self.card_service)
         mode_label = "Scripted Encounter" if session.encounter_type == "SCRIPTED" else "Dynamic AI Duel"
         embed = duel_view.build_embed(
-            action_text=f"🌌 **Stage {stage_num}: {stage['title']}** begins! ({mode_label})\nConfront **{session.npc_name}**."
+            action_text=f"🌌 **Stage {stage_num}: {stage.get('title', 'Encounter')}** begins! ({mode_label})\nConfront **{session.npc_name}**."
         )
-        await interaction.response.send_message(embed=embed, view=duel_view)
+        await interaction.response.send_message(embed=embed, view=duel_view, ephemeral=bool(hidden))
         try:
             duel_view.message = await interaction.original_response()
         except Exception:
             pass
 
     @app_commands.command(name="story_stages", description="View all stages in Chapter 1: The Genesis of Kustomazi")
-    async def story_stages_command(self, interaction: discord.Interaction):
+    @app_commands.describe(hidden="Whether the stages list should be private")
+    async def story_stages_command(self, interaction: discord.Interaction, hidden: Optional[bool] = False):
         """Displays the campaign stage map with completion status."""
         progress = await self.story_service.get_or_create_player_progress(str(interaction.user.id))
         stages = await self.story_service.get_all_stages(chapter_id=1)
@@ -783,10 +791,11 @@ class StoryCog(commands.Cog, name="Story"):
             )
 
         embed.set_footer(text="Use /story or /story_duel to challenge your current objective!")
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=bool(hidden))
 
     @app_commands.command(name="story_progress", description="Inspect your campaign achievements and unlocked lore titles")
-    async def story_progress_command(self, interaction: discord.Interaction):
+    @app_commands.describe(hidden="Whether your duelist chronicle should be private")
+    async def story_progress_command(self, interaction: discord.Interaction, hidden: Optional[bool] = False):
         """Displays player's story campaign summary and unlocked titles."""
         progress = await self.story_service.get_or_create_player_progress(str(interaction.user.id))
 
@@ -798,7 +807,7 @@ class StoryCog(commands.Cog, name="Story"):
 
         embed.add_field(
             name="📍 Current Objective",
-            value=f"Chapter {progress['current_chapter_id']} • Stage {progress['current_stage_number']}",
+            value=f"Chapter {progress.get('current_chapter_id', 1)} • Stage {progress.get('current_stage_number', 1)}",
             inline=True
         )
         embed.add_field(
@@ -819,9 +828,23 @@ class StoryCog(commands.Cog, name="Story"):
         if interaction.user.display_avatar:
             embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=bool(hidden))
 
+
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Extension Loader Entrypoint)
+# =============================================================================
 
 async def setup(bot: commands.Bot):
     """Extension loader entrypoint."""
     await bot.add_cog(StoryCog(bot))
+
+__all__ = [
+    "StoryLPModal",
+    "StoryPlayCardPickerView",
+    "StoryExtraDeckPickerView",
+    "StoryDuelView",
+    "StoryJourneyView",
+    "StoryCog",
+    "setup",
+]

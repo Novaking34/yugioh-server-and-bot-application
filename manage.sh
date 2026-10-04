@@ -25,6 +25,7 @@
 #   ./manage.sh stop               # Stop the live duel simulator container
 #   ./manage.sh restart            # Restart the live duel simulator container
 #   ./manage.sh sync               # Compile SQLite CDB and regenerate Lua scripts
+#   ./manage.sh sync-vm            # Sync git repo & restart services on Oracle Cloud VM
 #   ./manage.sh web                # Launch the FastAPI web portal (Port 8000)
 #   ./manage.sh bot                # Launch The Great Kasutamaiza Discord bot
 #   ./manage.sh tunnel             # Launch Cloudflare HTTPS Tunnel

@@ -25,7 +25,7 @@ from ..foundation.constants import (
     MAX_COPIES_PER_CARD,
     BANLIST_LIMITS,
 )
-from ..foundation.classifier import is_extra_deck_card
+from ..foundation.classifier import is_extra_deck_card, is_extra_deck_card_id, partition_card_ids
 from ..foundation.types import DeckPartition
 
 # =============================================================================
@@ -65,8 +65,12 @@ async def fetch_player_deck(db_path: str, user_id: str) -> List[Dict[str, Any]]:
         return [dict(r) for r in rows]
 
 
-async def fetch_player_card_ids(db_path: str, user_id: str) -> List[int]:
-    """Returns flat list of card IDs (expanded by quantity) for duel initialization."""
+async def fetch_player_card_ids(db_path: str, user_id: str, main_only: bool = True) -> List[int]:
+    """
+    Returns flat list of card IDs (expanded by quantity) for duel initialization.
+    If main_only is True (default), excludes Extra Deck monsters (Fusion, Synchro,
+    Xyz, Link) so they are NEVER drawn into hand or treated as Main Deck cards.
+    """
     async with aiosqlite.connect(db_path) as db:
         cur = await db.execute(
             "SELECT card_id, quantity FROM player_decks WHERE user_id = ?",
@@ -75,8 +79,31 @@ async def fetch_player_card_ids(db_path: str, user_id: str) -> List[int]:
         rows = await cur.fetchall()
         cards = []
         for cid, qty in rows:
+            if main_only and is_extra_deck_card_id(cid):
+                continue
             cards.extend([cid] * qty)
         return cards
+
+
+async def fetch_player_duel_decks(db_path: str, user_id: str) -> Tuple[List[int], List[int]]:
+    """
+    Returns partitioned (main_deck_ids, extra_deck_ids) for a player's active deck.
+    Ensures Extra Deck cards (like Mohousha) are strictly partitioned into the Extra Deck.
+    """
+    async with aiosqlite.connect(db_path) as db:
+        cur = await db.execute(
+            "SELECT card_id, quantity FROM player_decks WHERE user_id = ?",
+            (str(user_id),)
+        )
+        rows = await cur.fetchall()
+        main_cards: List[int] = []
+        extra_cards: List[int] = []
+        for cid, qty in rows:
+            if is_extra_deck_card_id(cid):
+                extra_cards.extend([cid] * qty)
+            else:
+                main_cards.extend([cid] * qty)
+        return main_cards, extra_cards
 
 
 # -----------------------------------------------------------------------------
@@ -363,6 +390,7 @@ async def clear_player_deck(db_path: str, user_id: str) -> int:
 __all__ = [
     "fetch_player_deck",
     "fetch_player_card_ids",
+    "fetch_player_duel_decks",
     "partition_player_deck",
     "add_card_to_player_deck",
     "remove_card_from_player_deck",

@@ -201,7 +201,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
     @app_commands.describe(user="The duelist whose duel session should be cleared")
     async def reset_duel(self, interaction: discord.Interaction, user: discord.User):
         """Emergency reset tool to recover duelists from interrupted or frozen duels."""
-        from services.duel_service import duel_manager
+        from services.duel import duel_manager
         success = duel_manager.force_reset_user(user.id)
         if success:
             await interaction.response.send_message(
@@ -217,7 +217,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
     @app_commands.command(name="clear_all_duels", description="Emergency purge for all active live duel sessions across the server")
     async def clear_all_duels(self, interaction: discord.Interaction):
         """Purges all running in-memory duel sessions."""
-        from services.duel_service import duel_manager
+        from services.duel import duel_manager
         count = duel_manager.clear_all()
         await interaction.response.send_message(
             f"🧹 Cleared all **{count}** active duel sessions.",
@@ -228,7 +228,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
     @app_commands.describe(user="Player to modify", stage="Target stage number (1 = beginning)")
     async def reset_story(self, interaction: discord.Interaction, user: discord.User, stage: Optional[int] = 1):
         """Sets a player's story stage progress."""
-        from services.story_service import StoryService
+        from services.story import StoryService
         service = StoryService()
         target_stage = max(1, stage or 1)
         await service.reset_progress(str(user.id), target_stage)
@@ -240,7 +240,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
     @app_commands.command(name="sync_story", description="Synchronize story chapters and stages from JSON scenario files into the database")
     async def sync_story(self, interaction: discord.Interaction):
         """Scans data/story/*.json scenario files and refreshes all story stages with zero downtime."""
-        from services.story_service import StoryService
+        from services.story import StoryService
         service = StoryService()
         await interaction.response.defer(ephemeral=True)
         res = await service.sync_all_story_files()
@@ -261,7 +261,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
     @app_commands.command(name="status", description="Inspect live bot diagnostics, active duels, and gateway health")
     async def status(self, interaction: discord.Interaction):
         """Displays live platform and bot observability metrics."""
-        from services.duel_service import duel_manager
+        from services.duel import duel_manager
         gateway_ping = round(self.bot.latency * 1000, 1)
         guilds_count = len(self.bot.guilds)
         active_duels = duel_manager.active_duel_count

@@ -14,7 +14,8 @@ Description:
 # =============================================================================
 
 import re
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List, Set
+from .constants import SET_1_EXTRA_DECK_IDS
 
 # =============================================================================
 # BLOCK 3: BODY BLOCK (Card Classification & Zone Awareness Engine)
@@ -24,12 +25,36 @@ from typing import Dict, Any, Tuple
 # Sub-Block 3.1: Extra Deck & Pendulum Classifiers
 # -----------------------------------------------------------------------------
 
+def is_extra_deck_card_id(card_id: int) -> bool:
+    """Returns True if the card passcode corresponds to a known Extra Deck monster."""
+    return card_id in SET_1_EXTRA_DECK_IDS
+
+
+def partition_card_ids(card_ids: List[int]) -> Tuple[List[int], List[int]]:
+    """
+    Partitions a flat list of card IDs into (main_deck_ids, extra_deck_ids).
+    Guarantees strict Yu-Gi-Oh! MR5 legality: Extra Deck monsters are NEVER in the Main Deck.
+    """
+    main_deck: List[int] = []
+    extra_deck: List[int] = []
+    for cid in card_ids:
+        if is_extra_deck_card_id(cid):
+            extra_deck.append(cid)
+        else:
+            main_deck.append(cid)
+    return main_deck, extra_deck
+
+
 def is_extra_deck_card(card: Dict[str, Any]) -> bool:
     """
     Determines whether a card belongs in the Extra Deck.
     Extra Deck categories: Fusion, Synchro, Xyz, Link.
     (Pendulums go to Extra Deck only if they are also Fusion/Synchro/Xyz).
     """
+    cid = card.get("id")
+    if cid and is_extra_deck_card_id(cid):
+        return True
+
     card_type = (card.get("card_type") or "").strip().lower()
     card_subtype = (card.get("card_subtype") or "").strip().lower()
     
@@ -179,6 +204,8 @@ def has_pendulum_zone_interaction(card: Dict[str, Any]) -> bool:
 # =============================================================================
 
 __all__ = [
+    "is_extra_deck_card_id",
+    "partition_card_ids",
     "is_extra_deck_card",
     "is_extra_deck_pendulum",
     "is_main_deck_pendulum",
