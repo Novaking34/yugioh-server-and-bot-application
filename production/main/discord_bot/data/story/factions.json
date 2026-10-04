@@ -1,0 +1,51 @@
+[
+  {
+    "id": 1,
+    "name": "The Creators of Kustomazi",
+    "lore_description": "Kasutamaiza the Customizer and his devout Servants, heralds of genesis who shaped the quiet void into a seed to birth Planet Kustomazi.",
+    "playstyle_overview": "Tribute and Fusion summoning centered on high-stat DIVINE Divine-Beast deities and void recursion.",
+    "arc_id": 1
+  },
+  {
+    "id": 2,
+    "name": "The LeSpookiest Night",
+    "lore_description": "Born from the dimensional rift left by the shaping of Planet Kustomazi, the LeSpookies inhabit a counterworld of Toontastic sights where lovers of Halloween awaken their inner supernatural spirits under glowing streetlights.",
+    "playstyle_overview": "Gemini and Trick-or-Treat Counter strategy transitioning costumed Normal mortals into supernatural Effect, Synchro, and Link evolutions.",
+    "arc_id": 1
+  },
+  {
+    "id": 3,
+    "name": "The Spellspires",
+    "lore_description": "The first order founded upon Planet Kustomazi: a team of brilliant alchemists gifted a piece of the primordial void by Kasutamaiza to study, dissect, and create arcane magic with.",
+    "playstyle_overview": "Alchemical Fusion arts and spellbook transmutations (Alchemical Bonds), weaving void essence into ascended Fusion forms.",
+    "arc_id": 1
+  },
+  {
+    "id": 4,
+    "name": "The Counsel of Time",
+    "lore_description": "A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.",
+    "playstyle_overview": "Ritual Summoning, temporal phase control, dimensional manipulation, and turn-pacing disruption.",
+    "arc_id": 1
+  },
+  {
+    "id": 5,
+    "name": "The Teeming Fields of Springtime",
+    "lore_description": "A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation, life, and ecological vitality across Planet Kustomazi.",
+    "playstyle_overview": "Swarm field presence, Plant/Insect token generation, nature-based resource ramp, and ecological swarming.",
+    "arc_id": 1
+  },
+  {
+    "id": 6,
+    "name": "The Snares",
+    "lore_description": "A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule and order.",
+    "playstyle_overview": "Continuous Trap control, counter-punishment, Reptile/Fiend tactical disruption, and lock-down mechanics.",
+    "arc_id": 1
+  },
+  {
+    "id": 7,
+    "name": "The Hidden Treasures",
+    "lore_description": "Gem-infused beasts questing deep within the subterranean mines of Planet Kustomazi to uncover the ultimate source of energy for the world: The Hidden Treasure.",
+    "playstyle_overview": "Subterranean excavation from Deck/GY, mineral and gem counter accumulation, energy charging, and explosive resource recovery.",
+    "arc_id": 1
+  }
+]

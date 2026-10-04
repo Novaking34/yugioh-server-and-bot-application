@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "category": "Cosmology",
+    "name": "The Quiet Void",
+    "lore_description": "Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this cosmic abyss was unmoved and aimless, carrying the stories to start worlds.",
+    "significance": "The primordial state of existence preceding all celestial creation and order.",
+    "arc_id": 1
+  },
+  {
+    "id": 2,
+    "category": "Cosmology",
+    "name": "The Sudden Spark",
+    "lore_description": "A brilliant, sudden flash of celestial light that cut through the darkness of the quiet void, heralding the emergence of the Customizer.",
+    "significance": "The catalyst event initiating the Genesis of Planet Kustomazi.",
+    "arc_id": 1
+  },
+  {
+    "id": 3,
+    "category": "Cosmology",
+    "name": "Kasutamaiza, the Customizer",
+    "lore_description": "The supreme divine architect who emerged through the primordial spark, capable of shaping raw unformed void essence into living worlds, custom cards, and celestial laws.",
+    "significance": "The architect and sovereign creator of the entire Kustomazi universe.",
+    "arc_id": 1
+  },
+  {
+    "id": 4,
+    "category": "Artifact",
+    "name": "The Seed of Creation",
+    "lore_description": "Kasutamaiza gathered the unshaped void into his hands and concentrated its boundless potential into a luminous celestial seed.",
+    "significance": "The cosmic catalyst from which Planet Kustomazi sprang forth into physical reality.",
+    "arc_id": 1
+  },
+  {
+    "id": 5,
+    "category": "Landmark",
+    "name": "Planet Kustomazi",
+    "lore_description": "The celestial world sprung forth from the Seed of Creation. A realm of oceans, continents, and golden auroras, forged as the stage for all creation orders.",
+    "significance": "The foundational world setting of the Land of Kustomazi.",
+    "arc_id": 1
+  },
+  {
+    "id": 6,
+    "category": "Order",
+    "name": "The Spellspires",
+    "lore_description": "The first order founded upon Planet Kustomazi: a guild of brilliant alchemists gifted a piece of the void by Kasutamaiza to study, dissect, and create arcane magic with.",
+    "significance": "Pioneers of alchemical transmutations and Fusion summoning arts.",
+    "arc_id": 1
+  },
+  {
+    "id": 7,
+    "category": "Order",
+    "name": "The Counsel of Time",
+    "lore_description": "A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.",
+    "significance": "Guardians of temporal equilibrium and ritual summoning arts.",
+    "arc_id": 1
+  },
+  {
+    "id": 8,
+    "category": "Order",
+    "name": "The Teeming Fields of Springtime",
+    "lore_description": "A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation and ecological vitality.",
+    "significance": "Cultivators of natural life and ecological swarming on Planet Kustomazi.",
+    "arc_id": 1
+  },
+  {
+    "id": 9,
+    "category": "Order",
+    "name": "The Snares",
+    "lore_description": "A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule.",
+    "significance": "Defenders of celestial order and tactical continuous trap disruption.",
+    "arc_id": 1
+  },
+  {
+    "id": 10,
+    "category": "Order",
+    "name": "The Hidden Treasures",
+    "lore_description": "Gem-infused subterranean beasts questing deep within the subterranean mines of Planet Kustomazi to unearth the world's ultimate energy source: The Hidden Treasure.",
+    "significance": "Excavators of subterranean mineral power and resource energy cores.",
+    "arc_id": 1
+  },
+  {
+    "id": 11,
+    "category": "Realm",
+    "name": "The LeSpookie Commons & The Dimensional Rift",
+    "lore_description": "As Planet Kustomazi was forged, the celestial shaping tore a dimensional rift into a whimsical counterworld of Toontastic sights—where lovers of Halloween celebrate the boundary where mortal imagination and supernatural spirits intertwine.",
+    "significance": "A parallel whimsical counterworld born of the creation rift, governed by Gemini awakening.",
+    "arc_id": 1
+  }
+]

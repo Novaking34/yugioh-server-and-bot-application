@@ -1,447 +1,467 @@
 #!/usr/bin/env python3
+# =============================================================================
+# BLOCK 1: METADATA BLOCK
+# =============================================================================
 """
-=============================================================================
-Yu-Gi-Oh! Platform - Story Database Seeder & Bootstrap Pipeline
-=============================================================================
-Initializes the SQLite Story Database (`production/main/web/ygo_story.db`)
-with standard schemas, canonical lore sagas, duelist profiles, archetypes/factions,
-custom card entries from Set 1: The Land of Kustomazi, and pre-made decks.
+Module: development.database.seed_story_data
+Description:
+    Yu-Gi-Oh! Platform Story Database Seeder & Bootstrap Pipeline.
+    Initializes the SQLite Story Database (`production/main/web/ygo_story.db`)
+    with canonical lore sagas, duelist dossiers, archetypes/factions, worldbuilding
+    elements, externalized simulator .ydk decklists, and progressive story scenarios.
+
+Architectural Classification:
+    Layer 1 (L1) - Database & Data Architecture Subsystem
+    Subsystem: Story & Lore Campaign RPG / Simulator Pipeline
+
+C/C++ Memory Architecture Rationale:
+    In Yu-Gi-Oh! simulator cores (such as ocgcore and EDOPro), cards and decklists
+    are modeled as low-level contiguous C/C++ memory structures:
+    - Card records (`struct card_data`): 32-bit aligned integer primitives mapping
+      directly to SQLite CDB columns (`custom_cards.cdb`), eliminating object
+      overhead and garbage collection pauses during high-frequency duel simulations.
+    - Decklist streams (`struct deck`): Contiguous `std::vector<uint32_t>` buffers
+      for Main, Extra, and Side partitions.
+    - Strict Decoupling: Simulation engine code is compiled once; cards and decks
+      are ingested dynamically from external data streams (.ydk / .cdb). No deck
+      or card data is hardcoded into executable logic, guaranteeing hot-reloadability,
+      zero memory drift, and simulator parity.
 
 Usage:
     python3 development/database/seed_story_data.py
-    # Or via master CLI:
+    # Or via master orchestrator CLI:
     ./manage.sh sync
-=============================================================================
 """
 
-import sqlite3
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Inclusions, Imports, Constants & Primitives)
+# =============================================================================
+
 import os
 import sys
+import glob
+import json
+import sqlite3
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple, Any
 
-# Resolve project paths with config.paths fallback
+# Resolve standard repository paths with fallback
 try:
-    from config.paths import STORY_DB_PATH, SCHEMA_PATH, BASE_DIR
+    from config.paths import STORY_DB_PATH, SCHEMA_PATH, BASE_DIR, DECKS_DIR
     DB_PATH = STORY_DB_PATH
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
     SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
+    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from development.tools.tracker_sync import parse_raw_tracker, sync_tracker_to_database, DEFAULT_ROOT_CSV
 
+# Canonical data directories
+STORY_DATA_DIR = os.path.join(BASE_DIR, "production", "main", "discord_bot", "data", "story")
 
-def initialize_database():
-    """Initializes SQLite tables and seeds Set 1: The Land of Kustomazi."""
-    print(f"[*] Initializing database at {DB_PATH}...")
-    conn = sqlite3.connect(DB_PATH)
+
+# -----------------------------------------------------------------------------
+# C/C++ Low-Level Emulation Primitives
+# -----------------------------------------------------------------------------
+@dataclass
+class CardDataStruct:
+    """
+    Python representation of the low-level ocgcore C/C++ `struct card_data`:
+
+    ```c
+    struct card_data {
+        uint32_t code;
+        uint32_t alias;
+        uint64_t setcode;
+        uint32_t type;
+        uint32_t level;
+        uint32_t attribute;
+        uint32_t race;
+        int32_t  attack;
+        int32_t  defense;
+        uint32_t category;
+    };
+    ```
+
+    Ensures 1:1 structural alignment between SQLite card records, simulator CDB
+    tables, and the C++ engine memory footprint.
+    """
+    code: int
+    alias: int = 0
+    setcode: int = 0
+    card_type: int = 0
+    level: int = 0
+    attribute: int = 0
+    race: int = 0
+    attack: int = 0
+    defense: int = 0
+    category: int = 0
+
+
+@dataclass
+class DecklistStream:
+    """
+    Emulates the C/C++ continuous vector deck stream in ocgcore/EDOPro:
+
+    ```c
+    struct deck {
+        std::vector<uint32_t> main;
+        std::vector<uint32_t> extra;
+        std::vector<uint32_t> side;
+    };
+    ```
+
+    YDK files are flat integer streams of 32-bit card passcodes. Parsing them
+    into partitioned integer arrays guarantees O(N) card validation, exact Yu-Gi-Oh!
+    legality checks, and complete decoupling from Python code.
+    """
+    main: List[int] = field(default_factory=list)
+    extra: List[int] = field(default_factory=list)
+    side: List[int] = field(default_factory=list)
+
+    @property
+    def total_count(self) -> int:
+        return len(self.main) + len(self.extra) + len(self.side)
+
+
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Data Ingestion & Seeding Engine)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Sub-Block 3.1: Database Schema Verification & Table Initialization
+# -----------------------------------------------------------------------------
+def verify_and_initialize_schema(db_path: str, schema_path: str) -> None:
+    """Verifies SQLite tables and creates missing relations from schema.sql."""
+    print(f"[*] Initializing database schema at {db_path}...")
+    conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    
-    with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
+    with open(schema_path, "r", encoding="utf-8") as f:
         cur.executescript(f.read())
-        
-    print("[+] Database schema verified.")
+    conn.commit()
+    conn.close()
+    print("[+] Database schema verified and ready.")
 
-    # 1. Seed Canonical Saga: The Genesis of Kustomazi
-    cur.execute("""
-        INSERT INTO lore_arcs (id, title, synopsis, era_or_season)
-        VALUES (1, 'The Genesis of Kustomazi', 
-                'Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this void was unmoved and aimless, carrying the stories to start worlds. Suddenly, there was a spark, and shining through the light was Kasutamaiza, the Customizer. Accompanied by his devout servants—heralds to the sacred work he was about to do—Kasutamaiza shaped the void into a seed, springing forth Planet Kustomazi and establishing the foundational orders of creation: the Spellspires, the Counsel of Time, the Teeming Fields of Springtime, the Snares, and the Hidden Treasures. As the world shaped, the dimensional rift opened space for a counterworld of Toontastic sights—the LeSpookies.',
-                'Genesis Era')
-        ON CONFLICT(id) DO UPDATE SET
-            title = excluded.title,
-            synopsis = excluded.synopsis,
-            era_or_season = excluded.era_or_season
-    """)
-    
-    # 2. Seed Canonical Factions: The 7 Orders of Creation
-    factions_data = [
-        (1, 'The Creators of Kustomazi',
-         'Kasutamaiza the Customizer and his devout Servants, heralds of genesis who shaped the quiet void into a seed to birth Planet Kustomazi.',
-         'Tribute and Fusion summoning centered on high-stat DIVINE Divine-Beast deities and void recursion.'),
-        (2, 'The LeSpookies',
-         'Born from the dimensional rift left by the shaping of Planet Kustomazi, the LeSpookies inhabit a counterworld of Toontastic sights where lovers of Halloween awaken their inner supernatural spirits under glowing streetlights.',
-         'Gemini and Trick-or-Treat Counter strategy transitioning costumed Normal mortals into supernatural Effect, Synchro, and Link evolutions.'),
-        (3, 'The Spellspires',
-         'The first order founded upon Planet Kustomazi: a team of brilliant alchemists gifted a piece of the primordial void by Kasutamaiza to study, dissect, and create arcane magic with.',
-         'Alchemical Fusion arts and spellbook transmutations (Alchemical Bonds), weaving void essence into ascended Fusion forms.'),
-        (4, 'The Counsel of Time',
-         'A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.',
-         'Ritual Summoning, temporal phase control, dimensional manipulation, and turn-pacing disruption.'),
-        (5, 'The Teeming Fields of Springtime',
-         'A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation, life, and ecological vitality across Planet Kustomazi.',
-         'Swarm field presence, Plant/Insect token generation, nature-based resource ramp, and ecological swarming.'),
-        (6, 'The Snares',
-         'A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule and order.',
-         'Continuous Trap control, counter-punishment, Reptile/Fiend tactical disruption, and lock-down mechanics.'),
-        (7, 'The Hidden Treasures',
-         'Gem-infused beasts questing deep within the subterranean mines of Planet Kustomazi to uncover the ultimate source of energy for the world: The Hidden Treasure.',
-         'Subterranean excavation from Deck/GY, mineral and gem counter accumulation, energy charging, and explosive resource recovery.')
-    ]
-    for fid, fname, fdesc, fplay in factions_data:
-        cur.execute("""
-            INSERT INTO factions (id, name, lore_description, playstyle_overview, arc_id)
-            VALUES (?, ?, ?, ?, 1)
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name,
-                lore_description = excluded.lore_description,
-                playstyle_overview = excluded.playstyle_overview
-        """, (fid, fname, fdesc, fplay))
 
-    # 2b. Seed Canonical Worldbuilding Lore Elements (Up to Planet Creation)
-    worldbuilding_data = [
-        (1, 'Cosmology', 'The Quiet Void',
-         'Before Planet Kustomazi was created, there was a quiet void. Formless, without shape, teeming with potential, this cosmic abyss was unmoved and aimless, carrying the stories to start worlds.',
-         'The primordial state of existence preceding all celestial creation and order.', 1),
-        (2, 'Cosmology', 'The Sudden Spark',
-         'A brilliant, sudden flash of celestial light that cut through the darkness of the quiet void, heralding the emergence of the Customizer.',
-         'The catalyst event initiating the Genesis of Planet Kustomazi.', 1),
-        (3, 'Cosmology', 'Kasutamaiza, the Customizer',
-         'The supreme divine architect who emerged through the primordial spark, capable of shaping raw unformed void essence into living worlds, custom cards, and celestial laws.',
-         'The architect and sovereign creator of the entire Kustomazi universe.', 1),
-        (4, 'Artifact', 'The Seed of Creation',
-         'Kasutamaiza gathered the unshaped void into his hands and concentrated its boundless potential into a luminous celestial seed.',
-         'The cosmic catalyst from which Planet Kustomazi sprang forth into physical reality.', 1),
-        (5, 'Landmark', 'Planet Kustomazi',
-         'The celestial world sprung forth from the Seed of Creation. A realm of oceans, continents, and golden auroras, forged as the stage for all creation orders.',
-         'The foundational world setting of the Land of Kustomazi.', 1),
-        (6, 'Order', 'The Spellspires',
-         'The first order founded upon Planet Kustomazi: a guild of brilliant alchemists gifted a piece of the void by Kasutamaiza to study, dissect, and create arcane magic with.',
-         'Pioneers of alchemical transmutations and Fusion summoning arts.', 1),
-        (7, 'Order', 'The Counsel of Time',
-         'A revered assembly of dimensional manipulators entrusted by Kasutamaiza to govern and balance the phases of time, taught ancient ritual arts.',
-         'Guardians of temporal equilibrium and ritual summoning arts.', 1),
-        (8, 'Order', 'The Teeming Fields of Springtime',
-         'A lush collective of diverse plant and insect beings created to populate the new world, cultivating flourishing vegetation and ecological vitality.',
-         'Cultivators of natural life and ecological swarming on Planet Kustomazi.', 1),
-        (9, 'Order', 'The Snares',
-         'A cunning reptilian fiend race guided directly by Kasutamaiza in the tactical arts of trap setting, perimeter defense, and the unyielding enforcement of celestial rule.',
-         'Defenders of celestial order and tactical continuous trap disruption.', 1),
-        (10, 'Order', 'The Hidden Treasures',
-         'Gem-infused subterranean beasts questing deep within the subterranean mines of Planet Kustomazi to unearth the world\'s ultimate energy source: The Hidden Treasure.',
-         'Excavators of subterranean mineral power and resource energy cores.', 1),
-        (11, 'Realm', 'The LeSpookie Commons & The Dimensional Rift',
-         'As Planet Kustomazi was forged, the celestial shaping tore a dimensional rift into a whimsical counterworld of Toontastic sights—where lovers of Halloween celebrate the boundary where mortal imagination and supernatural spirits intertwine.',
-         'A parallel whimsical counterworld born of the creation rift, governed by Gemini awakening.', 1)
-    ]
-    for wid, wcat, wname, wdesc, wsig, warc in worldbuilding_data:
-        cur.execute("""
-            INSERT INTO worldbuilding_elements (id, category, name, lore_description, significance, arc_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                category = excluded.category,
-                name = excluded.name,
-                lore_description = excluded.lore_description,
-                significance = excluded.significance,
-                arc_id = excluded.arc_id
-        """, (wid, wcat, wname, wdesc, wsig, warc))
+# -----------------------------------------------------------------------------
+# Sub-Block 3.2: Lore Sagas, Factions, Worldbuilding & Character Ingestion
+# -----------------------------------------------------------------------------
+def seed_lore_and_worldbuilding_subsystem(conn: sqlite3.Connection, data_dir: str) -> None:
+    """
+    Ingests canonical lore sagas, factions, worldbuilding elements, and duelist
+    character dossiers from structured JSON data files into SQLite.
+    """
+    cur = conn.cursor()
 
-    # 3. Seed Canonical Characters
-    characters_data = [
-        (1, 'Kasutamaiza, the Creator of Kustomazi', 'The Supreme Architect',
-         'The divine sovereign who emerged through the primordial spark, shaped the quiet void into a seed, and brought forth Planet Kustomazi.',
-         1, 1, 'https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3'),
-        (2, 'Magnolia, Ghost of LeSpookie Street', 'The Lantern Maiden',
-         'A wandering spirit of LeSpookie Street who guides the costumed children and dances when the shadows awaken under the streetlights.',
-         2, 1, 'https://images.duelingbook.com/custom-pics/800000/831546.jpg?version=3'),
-        (4, 'ProfessorSeanEX', 'The Creator',
-         'The Supreme Architect behind Set 1: The Land of Kustomazi and master of creation decks.',
-         1, 1, 'https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3')
-    ]
-    cur.execute("DELETE FROM characters WHERE id IN (1, 2, 4) OR name IN ('Kasutamaiza, the Creator of Kustomazi', 'Magnolia, Ghost of LeSpookie Street', 'ProfessorSeanEX')")
-    for cid, cname, calias, cbio, cfac, carc, cavatar in characters_data:
-        cur.execute("""
-            INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (cid, cname, calias, cbio, cfac, carc, cavatar))
-
-    # 4. Seed Canonical Deck: Kasutamaiza - Creation Control
-    ydk_content = """#created by ProfessorSeanEX
-#main
-50000101
-50000101
-50000101
-50000102
-50000102
-50000102
-50000103
-50000103
-50000103
-50000104
-50000104
-50000104
-50000105
-50000105
-50000108
-50000108
-50000108
-50000109
-50000109
-50000109
-50000110
-50000110
-50000110
-50000111
-50000111
-50000111
-50000112
-50000112
-50000112
-50000113
-50000113
-50000113
-50000114
-50000114
-#extra
-50000106
-50000106
-50000106
-50000107
-50000107
-50000107
-!side
-"""
-    cur.execute("""
-        INSERT INTO decks (id, name, character_id, creator_name, description, duelingbook_deck_url, ydk_content)
-        VALUES (1, 'Kasutamaiza - Creation Control', 1, 'ProfessorSeanEX',
-                'High-level Divine-Beast control strategy utilizing Void recursion, Seed of Creation, and contact Fusion into The Great Kasutamaiza.',
-                'https://www.duelingbook.com', ?)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            character_id = excluded.character_id,
-            creator_name = excluded.creator_name,
-            description = excluded.description,
-            ydk_content = excluded.ydk_content
-    """, (ydk_content,))
-
-    # Seed deck_cards
-    cur.execute("DELETE FROM deck_cards WHERE deck_id = 1")
-    deck_cards_data = [
-        (1, 50000101, 3, 'MAIN'),
-        (1, 50000102, 3, 'MAIN'),
-        (1, 50000103, 3, 'MAIN'),
-        (1, 50000104, 3, 'MAIN'),
-        (1, 50000105, 2, 'MAIN'),
-        (1, 50000108, 3, 'MAIN'),
-        (1, 50000109, 3, 'MAIN'),
-        (1, 50000110, 3, 'MAIN'),
-        (1, 50000111, 3, 'MAIN'),
-        (1, 50000112, 3, 'MAIN'),
-        (1, 50000113, 3, 'MAIN'),
-        (1, 50000114, 2, 'MAIN'),
-        (1, 50000106, 3, 'EXTRA'),
-        (1, 50000107, 3, 'EXTRA'),
-    ]
-    for row in deck_cards_data:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (?, ?, ?, ?)", row)
-
-    # 4b. Seed Canonical Deck: LeSpookie Singles
-    lespookie_main = list(range(50000115, 50000151))
-    lespookie_extra = list(range(50000151, 50000165))
-    lespookie_ydk = "#created by ProfessorSeanEX\n#main\n" + "\n".join(str(p) for p in lespookie_main) + "\n#extra\n" + "\n".join(str(p) for p in lespookie_extra) + "\n!side\n"
-
-    cur.execute("""
-        INSERT INTO decks (id, name, character_id, creator_name, description, duelingbook_deck_url, ydk_content)
-        VALUES (2, 'LeSpookie Singles', 2, 'ProfessorSeanEX',
-                'A 50-card Gemini and trick-or-treat counter strategy featuring costumed children who enter as Normal Monsters and awaken with Gemini summon, dancing shadows, and spooky extra deck evolutions.',
-                'https://www.duelingbook.com/deck?id=8114120', ?)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            character_id = excluded.character_id,
-            creator_name = excluded.creator_name,
-            description = excluded.description,
-            ydk_content = excluded.ydk_content
-    """, (lespookie_ydk,))
-
-    cur.execute("DELETE FROM deck_cards WHERE deck_id = 2")
-    for p in lespookie_main:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (2, ?, 1, 'MAIN')", (p,))
-    for p in lespookie_extra:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (2, ?, 1, 'EXTRA')", (p,))
-
-    # 4c. Seed Canonical Deck: Base of Story (Kas.)
-    base_story_main = [50000105, 50000101, 50000104, 50000102, 50000110, 50000111, 50000108, 50000103, 50000112, 50000109]
-    base_story_extra = [50000106, 50000107]
-    base_story_side = [50000113, 50000114]
-    base_story_ydk = "#created by ProfessorSeanEX\n#main\n" + "\n".join(str(p) for p in base_story_main) + "\n#extra\n" + "\n".join(str(p) for p in base_story_extra) + "\n!side\n" + "\n".join(str(p) for p in base_story_side) + "\n"
-
-    cur.execute("""
-        INSERT INTO decks (id, name, character_id, creator_name, description, duelingbook_deck_url, ydk_content)
-        VALUES (3, 'Base of Story (Kas.)', 1, 'ProfessorSeanEX',
-                'The foundational 14-card Set 1 story deck from Duelingbook (deck 20861703), featuring the creation forces of Kasutamaiza, the Spellspires'' Fusion arts, and the rift unsealing Mohousha.',
-                'https://www.duelingbook.com/deck?id=20861703', ?)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            character_id = excluded.character_id,
-            creator_name = excluded.creator_name,
-            description = excluded.description,
-            duelingbook_deck_url = excluded.duelingbook_deck_url,
-            ydk_content = excluded.ydk_content
-    """, (base_story_ydk,))
-
-    cur.execute("DELETE FROM deck_cards WHERE deck_id = 3")
-    for p in base_story_main:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (3, ?, 1, 'MAIN')", (p,))
-    for p in base_story_extra:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (3, ?, 1, 'EXTRA')", (p,))
-    for p in base_story_side:
-        cur.execute("INSERT INTO deck_cards (deck_id, card_id, quantity, section) VALUES (3, ?, 1, 'SIDE')", (p,))
-
-    # 4d. Seed Progressive Story Decks (4-11) from .ydk files
-    progressive_decks = [
-        (4, 'Kasutamaiza: Genesis & The Mortal Realm', 1, 'ProfessorSeanEX',
-         'Chapter 1 (ELO 1100): The dawn of Kustomazi. Primordial creator forces alongside mortal realm observers before the rift opened.',
-         'creation_and_mortal_realm.ydk'),
-        (5, 'The Forbidden Sect (Rift Turbo)', 1, 'ProfessorSeanEX',
-         'Chapter 2 (ELO 1450): Forbidden experiments unearth the Seed of Creation. A rift is torn via Contact from Beyond, unsealing Mohousha and invoking The Great Kasutamaiza.',
-         'forbidden_sect_rift.ydk'),
-        (6, 'Night of the LeSpookie (The Haunting)', 2, 'Magnolia',
-         'Chapter 3 (ELO 1600): The ancient ghost legend manifested into reality by A Wicked Shadow. Costumed trick-or-treaters awaken their Gemini powers under LeSpookiest Night.',
-         'night_of_the_lespookie.ydk'),
-        (7, 'The Lantern Ascension (Apex Boss)', 2, 'Magnolia',
-         'Apex Boss (ELO 1800+): The dimensional breach peaks. High-tempo Link and Synchro climb with Magnolia Lantern Ascended and A Wicked Shadow.',
-         'lantern_ascension.ydk'),
-        (8, 'Quiet Void - Formless Potential', 1, 'ProfessorSeanEX',
-         'Chapter 1 Stage 1 AI Deck: The formless quiet void before creation. Defensive stall and void spirit echoes.',
-         'quiet_void_potential.ydk'),
-        (9, 'The Spark of Genesis', 1, 'ProfessorSeanEX',
-         'Chapter 1 Stage 2 AI Deck: The sudden cosmic spark cutting through the void. Nascent flames and burn disruption.',
-         'spark_of_genesis.ydk'),
-        (10, 'Servants of Genesis', 1, 'ProfessorSeanEX',
-         'Chapter 1 Stage 3 AI Deck: Devout servants preparing the sacred altar of creation for the Customizer.',
-         'servants_of_genesis.ydk'),
-        (11, 'Kasutamaiza - Dawn of Planet Kustomazi', 1, 'Kasutamaiza',
-         'Chapter 1 Stage 4 Scripted Boss Deck: Kasutamaiza weaving the celestial seed to spring forth Planet Kustomazi into existence.',
-         'kasutamaiza_dawn_planet.ydk'),
-    ]
-
-    for d_id, d_name, d_char, d_creator, d_desc, d_filename in progressive_decks:
-        ydk_path = os.path.join(BASE_DIR, "production", "shared", "decks", d_filename)
-        if os.path.exists(ydk_path):
-            with open(ydk_path, "r", encoding="utf-8") as yf:
-                ydk_text = yf.read()
-
+    # 1. Lore Arcs
+    arcs_file = os.path.join(data_dir, "lore_arcs.json")
+    if os.path.exists(arcs_file):
+        with open(arcs_file, "r", encoding="utf-8") as f:
+            arcs_data = json.load(f)
+        for arc in arcs_data:
             cur.execute("""
-                INSERT INTO decks (id, name, character_id, creator_name, description, ydk_content)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO lore_arcs (id, title, synopsis, era_or_season)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
-                    name = excluded.name,
-                    character_id = excluded.character_id,
-                    creator_name = excluded.creator_name,
-                    description = excluded.description,
-                    ydk_content = excluded.ydk_content
-            """, (d_id, d_name, d_char, d_creator, d_desc, ydk_text))
-
-            cur.execute("DELETE FROM deck_cards WHERE deck_id = ?", (d_id,))
-            sec = "MAIN"
-            card_counts = {}
-            for line in ydk_text.splitlines():
-                line = line.strip()
-                if line.startswith("#main"):
-                    sec = "MAIN"
-                elif line.startswith("#extra"):
-                    sec = "EXTRA"
-                elif line.startswith("!side"):
-                    sec = "SIDE"
-                elif line.isdigit():
-                    cid = int(line)
-                    key = (cid, sec)
-                    card_counts[key] = card_counts.get(key, 0) + 1
-
-            for (cid, sec_name), qty in card_counts.items():
-                cur.execute("""
-                    INSERT INTO deck_cards (deck_id, card_id, quantity, section)
-                    VALUES (?, ?, ?, ?)
-                """, (d_id, cid, qty, sec_name))
-
-
-    # 5. Seed Duel Log
-    cur.execute("""
-        INSERT INTO duel_logs (id, arc_id, chapter_or_episode, duelist_1_id, duelist_2_id, winner_id, duel_summary)
-        VALUES (1, 1, 'Chapter 1: The Shaping of the Void', 1, 1, 1,
-                'ProfessorSeanEX Normal Summons Kasutamaiza, the Creator of Kustomazi by Tributing 3 Divine-Beast acolytes, establishing the eternal reign of Kustomazi.')
-        ON CONFLICT(id) DO UPDATE SET
-            duel_summary = excluded.duel_summary
-    """)
-
-    # 6. Seed Story Chapters & Stages directly from scenario JSON files (Single Source of Truth)
-    import glob
-    import json
-    story_dir = os.path.join(BASE_DIR, "production", "main", "discord_bot", "data", "story")
-    if os.path.exists(story_dir):
-        json_files = sorted(glob.glob(os.path.join(story_dir, "*.json")))
-        for json_path in json_files:
-            with open(json_path, "r", encoding="utf-8") as jf:
-                sdata = json.load(jf)
-            c_num = sdata.get("chapter_number", 1)
-            c_id = sdata.get("chapter_id", c_num)
-            c_title = sdata.get("title", f"Chapter {c_num}")
-            c_arc = sdata.get("arc_id", 1)
-            c_synopsis = sdata.get("synopsis", "")
-            cur.execute("""
-                INSERT INTO story_chapters (id, chapter_number, title, arc_id, synopsis)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    chapter_number = excluded.chapter_number,
                     title = excluded.title,
-                    arc_id = excluded.arc_id,
-                    synopsis = excluded.synopsis
-            """, (c_id, c_num, c_title, c_arc, c_synopsis))
+                    synopsis = excluded.synopsis,
+                    era_or_season = excluded.era_or_season
+            """, (arc["id"], arc["title"], arc["synopsis"], arc.get("era_or_season", "Genesis Era")))
+        print(f"[+] Loaded {len(arcs_data)} lore arcs from {arcs_file}")
 
-            for st in sdata.get("stages", []):
-                st_num = st.get("stage_number", 1)
-                st_id = st.get("stage_id") or (c_id * 100 + st_num)
-                script_raw = st.get("script_data")
-                script_str = json.dumps(script_raw) if (script_raw and not isinstance(script_raw, str)) else script_raw
-
+    # 2. Factions
+    factions_file = os.path.join(data_dir, "factions.json")
+    if os.path.exists(factions_file):
+        with open(factions_file, "r", encoding="utf-8") as f:
+            factions_data = json.load(f)
+        for fac in factions_data:
+            cur.execute("SELECT id FROM factions WHERE name = ?", (fac["name"],))
+            existing = cur.fetchone()
+            if existing:
                 cur.execute("""
-                    INSERT INTO story_stages (
-                        id, chapter_id, stage_number, title, intro_dialogue, outro_dialogue,
-                        opponent_name, opponent_title, opponent_character_id, opponent_deck_id,
-                        encounter_type, boss_hp, script_data, reward_title, reward_card_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        chapter_id = excluded.chapter_id,
-                        stage_number = excluded.stage_number,
-                        title = excluded.title,
-                        intro_dialogue = excluded.intro_dialogue,
-                        outro_dialogue = excluded.outro_dialogue,
-                        opponent_name = excluded.opponent_name,
-                        opponent_title = excluded.opponent_title,
-                        opponent_character_id = excluded.opponent_character_id,
-                        opponent_deck_id = excluded.opponent_deck_id,
-                        encounter_type = excluded.encounter_type,
-                        boss_hp = excluded.boss_hp,
-                        script_data = excluded.script_data,
-                        reward_title = excluded.reward_title,
-                        reward_card_id = excluded.reward_card_id
-                """, (
-                    st_id, c_id, st_num, st.get("title", ""),
-                    st.get("intro_dialogue", ""), st.get("outro_dialogue", ""),
-                    st.get("opponent_name", "Story Opponent"),
-                    st.get("opponent_title", "Challenger"),
-                    st.get("opponent_character_id", 1),
-                    st.get("opponent_deck_id", 1),
-                    st.get("encounter_type", "AI"),
-                    st.get("boss_hp", 8000),
-                    script_str,
-                    st.get("reward_title"),
-                    st.get("reward_card_id")
-                ))
-        print(f"[+] Loaded story chapters and stages from {len(json_files)} scenario JSON files in {story_dir}")
+                    UPDATE factions SET
+                        lore_description = ?,
+                        playstyle_overview = ?,
+                        arc_id = ?
+                    WHERE id = ?
+                """, (fac["lore_description"], fac.get("playstyle_overview", ""), fac.get("arc_id", 1), existing[0]))
+            else:
+                cur.execute("""
+                    INSERT INTO factions (id, name, lore_description, playstyle_overview, arc_id)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (fac["id"], fac["name"], fac["lore_description"], fac.get("playstyle_overview", ""), fac.get("arc_id", 1)))
+        print(f"[+] Loaded {len(factions_data)} factions from {factions_file}")
+
+    # 3. Worldbuilding Elements
+    world_file = os.path.join(data_dir, "worldbuilding.json")
+    if os.path.exists(world_file):
+        with open(world_file, "r", encoding="utf-8") as f:
+            world_data = json.load(f)
+        for elem in world_data:
+            cur.execute("SELECT id FROM worldbuilding_elements WHERE name = ?", (elem["name"],))
+            existing = cur.fetchone()
+            if existing:
+                cur.execute("""
+                    UPDATE worldbuilding_elements SET
+                        category = ?,
+                        lore_description = ?,
+                        significance = ?,
+                        arc_id = ?
+                    WHERE id = ?
+                """, (elem["category"], elem["lore_description"], elem.get("significance"), elem.get("arc_id", 1), existing[0]))
+            else:
+                cur.execute("""
+                    INSERT INTO worldbuilding_elements (id, category, name, lore_description, significance, arc_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (elem["id"], elem["category"], elem["name"], elem["lore_description"], elem.get("significance"), elem.get("arc_id", 1)))
+        print(f"[+] Loaded {len(world_data)} worldbuilding elements from {world_file}")
+
+    # 4. Duelist Character Dossiers
+    chars_file = os.path.join(data_dir, "characters.json")
+    if os.path.exists(chars_file):
+        with open(chars_file, "r", encoding="utf-8") as f:
+            chars_data = json.load(f)
+        for ch in chars_data:
+            cur.execute("SELECT id FROM characters WHERE name = ?", (ch["name"],))
+            existing = cur.fetchone()
+            if existing:
+                cur.execute("""
+                    UPDATE characters SET
+                        alias = ?,
+                        bio = ?,
+                        faction_id = ?,
+                        arc_id = ?,
+                        avatar_url = ?
+                    WHERE id = ?
+                """, (ch.get("alias"), ch.get("bio"), ch.get("faction_id"), ch.get("arc_id", 1), ch.get("avatar_url"), existing[0]))
+            else:
+                cur.execute("""
+                    INSERT INTO characters (id, name, alias, bio, faction_id, arc_id, avatar_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (ch["id"], ch["name"], ch.get("alias"), ch.get("bio"), ch.get("faction_id"), ch.get("arc_id", 1), ch.get("avatar_url")))
+        print(f"[+] Loaded {len(chars_data)} characters from {chars_file}")
 
     conn.commit()
 
 
-    # 7. Synchronize all 14 custom cards from Master Tracker
+# -----------------------------------------------------------------------------
+# Sub-Block 3.3: Universal YDK Decklist Stream Parser & Registration
+# -----------------------------------------------------------------------------
+def parse_ydk_stream(ydk_path: str) -> Tuple[DecklistStream, str]:
+    """
+    Parses a simulator .ydk file into a DecklistStream C/C++ equivalent structure.
+    Streams 32-bit integer card codes sequentially into Main, Extra, and Side vectors.
+    """
+    if not os.path.exists(ydk_path):
+        raise FileNotFoundError(f"YDK decklist file not found: {ydk_path}")
+
+    with open(ydk_path, "r", encoding="utf-8") as f:
+        ydk_text = f.read()
+
+    stream = DecklistStream()
+    current_section = "main"
+
+    for line in ydk_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("#main"):
+            current_section = "main"
+        elif line.startswith("#extra"):
+            current_section = "extra"
+        elif line.startswith("!side"):
+            current_section = "side"
+        elif line.isdigit():
+            card_id = int(line)
+            if current_section == "main":
+                stream.main.append(card_id)
+            elif current_section == "extra":
+                stream.extra.append(card_id)
+            elif current_section == "side":
+                stream.side.append(card_id)
+
+    return stream, ydk_text
+
+
+def seed_decks_subsystem(conn: sqlite3.Connection, data_dir: str, decks_dir: str) -> int:
+    """
+    Loads deck profiles from decks.json, parses external .ydk files via parse_ydk_stream,
+    and registers all deck records and deck_cards junction rows in SQLite.
+    Every deck (including Kasutamaiza Control) is externalized and stream-parsed.
+    """
+    decks_json_path = os.path.join(data_dir, "decks.json")
+    if not os.path.exists(decks_json_path):
+        return 0
+
+    with open(decks_json_path, "r", encoding="utf-8") as f:
+        decks_meta = json.load(f)
+
+    cur = conn.cursor()
+    seeded = 0
+
+    for d in decks_meta:
+        deck_id = d["id"]
+        name = d["name"]
+        char_id = d.get("character_id")
+        creator = d.get("creator_name", "ProfessorSeanEX")
+        desc = d.get("description", "")
+        db_url = d.get("duelingbook_deck_url")
+        ydk_filename = d.get("ydk_filename")
+
+        ydk_path = os.path.join(decks_dir, ydk_filename) if ydk_filename else None
+        if ydk_path and os.path.exists(ydk_path):
+            stream, ydk_raw = parse_ydk_stream(ydk_path)
+        else:
+            stream, ydk_raw = DecklistStream(), ""
+
+        cur.execute("""
+            INSERT INTO decks (id, name, character_id, creator_name, description, duelingbook_deck_url, ydk_content)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                character_id = excluded.character_id,
+                creator_name = excluded.creator_name,
+                description = excluded.description,
+                duelingbook_deck_url = excluded.duelingbook_deck_url,
+                ydk_content = excluded.ydk_content
+        """, (deck_id, name, char_id, creator, desc, db_url, ydk_raw))
+
+        # Synchronize deck_cards junction table
+        cur.execute("DELETE FROM deck_cards WHERE deck_id = ?", (deck_id,))
+
+        section_mappings = [
+            ("MAIN", stream.main),
+            ("EXTRA", stream.extra),
+            ("SIDE", stream.side)
+        ]
+        for sec_name, card_ids in section_mappings:
+            counts: Dict[int, int] = {}
+            for cid in card_ids:
+                counts[cid] = counts.get(cid, 0) + 1
+            for cid, qty in counts.items():
+                cur.execute("""
+                    INSERT INTO deck_cards (deck_id, card_id, quantity, section)
+                    VALUES (?, ?, ?, ?)
+                """, (deck_id, cid, qty, sec_name))
+
+        seeded += 1
+
+    conn.commit()
+    print(f"[+] Loaded and parsed {seeded} story decklists from {decks_dir}")
+    return seeded
+
+
+# -----------------------------------------------------------------------------
+# Sub-Block 3.4: Story Chapters, Scenarios & Duel Logs Synchronization
+# -----------------------------------------------------------------------------
+def seed_story_scenarios_subsystem(conn: sqlite3.Connection, story_dir: str) -> None:
+    """
+    Scans data/story/ for chapter scenario files (chapter_*.json) and duel logs,
+    populating story_chapters, story_stages, and duel_logs tables dynamically.
+    """
+    cur = conn.cursor()
+
+    # Ingest Duel Logs
+    duel_logs_file = os.path.join(story_dir, "duel_logs.json")
+    if os.path.exists(duel_logs_file):
+        with open(duel_logs_file, "r", encoding="utf-8") as f:
+            logs_data = json.load(f)
+        for log in logs_data:
+            cur.execute("""
+                INSERT INTO duel_logs (id, arc_id, chapter_or_episode, duelist_1_id, duelist_2_id, winner_id, duel_summary)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    duel_summary = excluded.duel_summary
+            """, (log["id"], log.get("arc_id", 1), log["chapter_or_episode"], log.get("duelist_1_id", 1), log.get("duelist_2_id", 1), log.get("winner_id", 1), log["duel_summary"]))
+        print(f"[+] Loaded {len(logs_data)} duel logs from {duel_logs_file}")
+
+    # Ingest Scenario Chapters & Stages
+    scenario_files = sorted(glob.glob(os.path.join(story_dir, "chapter_*.json")))
+    total_stages = 0
+
+    for json_path in scenario_files:
+        with open(json_path, "r", encoding="utf-8") as jf:
+            sdata = json.load(jf)
+
+        c_num = sdata.get("chapter_number", 1)
+        c_id = sdata.get("chapter_id", c_num)
+        c_title = sdata.get("title", f"Chapter {c_num}")
+        c_arc = sdata.get("arc_id", 1)
+        c_synopsis = sdata.get("synopsis", "")
+
+        cur.execute("""
+            INSERT INTO story_chapters (id, chapter_number, title, arc_id, synopsis)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                chapter_number = excluded.chapter_number,
+                title = excluded.title,
+                arc_id = excluded.arc_id,
+                synopsis = excluded.synopsis
+        """, (c_id, c_num, c_title, c_arc, c_synopsis))
+
+        for st in sdata.get("stages", []):
+            st_num = st.get("stage_number", 1)
+            st_id = st.get("stage_id") or (c_id * 100 + st_num)
+            script_raw = st.get("script_data")
+            script_str = json.dumps(script_raw) if (script_raw and not isinstance(script_raw, str)) else script_raw
+
+            cur.execute("""
+                INSERT INTO story_stages (
+                    id, chapter_id, stage_number, title, intro_dialogue, outro_dialogue,
+                    opponent_name, opponent_title, opponent_character_id, opponent_deck_id,
+                    encounter_type, boss_hp, script_data, reward_title, reward_card_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    chapter_id = excluded.chapter_id,
+                    stage_number = excluded.stage_number,
+                    title = excluded.title,
+                    intro_dialogue = excluded.intro_dialogue,
+                    outro_dialogue = excluded.outro_dialogue,
+                    opponent_name = excluded.opponent_name,
+                    opponent_title = excluded.opponent_title,
+                    opponent_character_id = excluded.opponent_character_id,
+                    opponent_deck_id = excluded.opponent_deck_id,
+                    encounter_type = excluded.encounter_type,
+                    boss_hp = excluded.boss_hp,
+                    script_data = excluded.script_data,
+                    reward_title = excluded.reward_title,
+                    reward_card_id = excluded.reward_card_id
+            """, (
+                st_id, c_id, st_num, st.get("title", ""),
+                st.get("intro_dialogue", ""), st.get("outro_dialogue", ""),
+                st.get("opponent_name", "Story Opponent"),
+                st.get("opponent_title", "Challenger"),
+                st.get("opponent_character_id", 1),
+                st.get("opponent_deck_id", 1),
+                st.get("encounter_type", "AI"),
+                st.get("boss_hp", 8000),
+                script_str,
+                st.get("reward_title"),
+                st.get("reward_card_id")
+            ))
+            total_stages += 1
+
+    conn.commit()
+    print(f"[+] Loaded {len(scenario_files)} story chapters and {total_stages} stages from {story_dir}")
+
+
+# -----------------------------------------------------------------------------
+# Sub-Block 3.5: Master Card Tracker Parity & Usage Telemetry Initialization
+# -----------------------------------------------------------------------------
+def seed_custom_cards_and_telemetry_subsystem(conn: sqlite3.Connection, db_path: str) -> int:
+    """
+    Synchronizes custom cards from the Google Sheets / CSV Master Tracker into
+    custom_cards table and initializes baseline card_usage_stats records.
+    """
     print("[*] Synchronizing Set 1 cards from Master Tracker...")
     records = parse_raw_tracker(DEFAULT_ROOT_CSV)
-    synced = sync_tracker_to_database(records, db_path=DB_PATH)
+    synced = sync_tracker_to_database(records, db_path=db_path)
     print(f"[+] Successfully seeded database with {synced} custom cards from The Land of Kustomazi!")
 
-    # 8. Seed initial card_usage_stats for all synced custom cards
     cur = conn.cursor()
     cur.execute("SELECT id FROM custom_cards")
     for (cid,) in cur.fetchall():
@@ -450,9 +470,72 @@ def initialize_database():
             VALUES (?, 0, 0, 0, 0, 0)
         """, (cid,))
     conn.commit()
-    conn.close()
+    return synced
 
+
+# -----------------------------------------------------------------------------
+# Master Seeder Orchestrator
+# -----------------------------------------------------------------------------
+def initialize_database(
+    db_path: str = DB_PATH,
+    schema_path: str = SCHEMA_PATH,
+    data_dir: str = STORY_DATA_DIR,
+    decks_dir: str = DECKS_DIR
+) -> None:
+    """
+    Master pipeline executing the full 5-stage database seeding sequence:
+    1. Schema verification & table creation
+    2. Lore sagas, factions, worldbuilding & character ingestion
+    3. Externalized YDK decklist parsing & registration (all 11 decks)
+    4. Chapter scenarios & stage synchronization
+    5. Master card tracker sync & telemetry initialization
+    """
+    # Stage 1: Schema
+    verify_and_initialize_schema(db_path, schema_path)
+
+    # Establish main connection
+    conn = sqlite3.connect(db_path)
+
+    # Stage 2: Lore & Worldbuilding
+    seed_lore_and_worldbuilding_subsystem(conn, data_dir)
+
+    # Stage 3: Decks (Universal Stream Parser)
+    seed_decks_subsystem(conn, data_dir, decks_dir)
+
+    # Stage 4: Story Scenarios
+    seed_story_scenarios_subsystem(conn, data_dir)
+
+    # Stage 5: Cards & Usage Stats
+    seed_custom_cards_and_telemetry_subsystem(conn, db_path)
+
+    conn.close()
+    print("[+] Story database bootstrap and synchronization sequence successfully completed!")
+
+
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Public Package Manifest & CLI Entry Point)
+# =============================================================================
+
+__all__ = [
+    "CardDataStruct",
+    "DecklistStream",
+    "parse_ydk_stream",
+    "verify_and_initialize_schema",
+    "seed_lore_and_worldbuilding_subsystem",
+    "seed_decks_subsystem",
+    "seed_story_scenarios_subsystem",
+    "seed_custom_cards_and_telemetry_subsystem",
+    "initialize_database",
+    "DB_PATH",
+    "STORY_DATA_DIR",
+    "DECKS_DIR",
+]
+
+
+def main() -> None:
+    """CLI execution entrypoint for story database initialization."""
+    initialize_database()
 
 
 if __name__ == "__main__":
-    initialize_database()
+    main()

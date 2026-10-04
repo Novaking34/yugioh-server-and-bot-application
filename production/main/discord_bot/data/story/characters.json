@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Kasutamaiza, the Creator of Kustomazi",
+    "alias": "The Supreme Architect",
+    "bio": "The divine sovereign who emerged through the primordial spark, shaped the quiet void into a seed, and brought forth Planet Kustomazi.",
+    "faction_id": 1,
+    "arc_id": 1,
+    "avatar_url": "https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3"
+  },
+  {
+    "id": 2,
+    "name": "Magnolia, Ghost of LeSpookie Street",
+    "alias": "The Lantern Maiden",
+    "bio": "A wandering spirit of LeSpookie Street who guides the costumed children and dances when the shadows awaken under the streetlights.",
+    "faction_id": 2,
+    "arc_id": 1,
+    "avatar_url": "https://images.duelingbook.com/custom-pics/800000/831546.jpg?version=3"
+  },
+  {
+    "id": 4,
+    "name": "ProfessorSeanEX",
+    "alias": "The Creator",
+    "bio": "The Supreme Architect behind Set 1: The Land of Kustomazi and master of creation decks.",
+    "faction_id": 1,
+    "arc_id": 1,
+    "avatar_url": "https://images.duelingbook.com/custom-pics/800000/831545.jpg?version=3"
+  }
+]

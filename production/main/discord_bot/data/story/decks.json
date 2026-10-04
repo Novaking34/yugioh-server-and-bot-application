@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1,
+    "name": "Kasutamaiza - Creation Control",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "High-level Divine-Beast control strategy utilizing Void recursion, Seed of Creation, and contact Fusion into The Great Kasutamaiza.",
+    "duelingbook_deck_url": "https://www.duelingbook.com",
+    "ydk_filename": "Kasutamaiza - Creation Control.ydk"
+  },
+  {
+    "id": 2,
+    "name": "LeSpookie Singles",
+    "character_id": 2,
+    "creator_name": "ProfessorSeanEX",
+    "description": "A 50-card Gemini and trick-or-treat counter strategy featuring costumed children who enter as Normal Monsters and awaken with Gemini summon, dancing shadows, and spooky extra deck evolutions.",
+    "duelingbook_deck_url": "https://www.duelingbook.com/deck?id=8114120",
+    "ydk_filename": "LeSpookie Singles.ydk"
+  },
+  {
+    "id": 3,
+    "name": "Base of Story (Kas.)",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "The foundational 14-card Set 1 story deck from Duelingbook (deck 20861703), featuring the creation forces of Kasutamaiza, the Spellspires' Fusion arts, and the rift unsealing Mohousha.",
+    "duelingbook_deck_url": "https://www.duelingbook.com/deck?id=20861703",
+    "ydk_filename": "Base of Story (Kas.).ydk"
+  },
+  {
+    "id": 4,
+    "name": "Kasutamaiza: Genesis & The Mortal Realm",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "Chapter 1 (ELO 1100): The dawn of Kustomazi. Primordial creator forces alongside mortal realm observers before the rift opened.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "creation_and_mortal_realm.ydk"
+  },
+  {
+    "id": 5,
+    "name": "The Forbidden Sect (Rift Turbo)",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "Chapter 2 (ELO 1450): Forbidden experiments unearth the Seed of Creation. A rift is torn via Contact from Beyond, unsealing Mohousha and invoking The Great Kasutamaiza.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "forbidden_sect_rift.ydk"
+  },
+  {
+    "id": 6,
+    "name": "Night of the LeSpookie (The Haunting)",
+    "character_id": 2,
+    "creator_name": "Magnolia",
+    "description": "Chapter 3 (ELO 1600): The ancient ghost legend manifested into reality by A Wicked Shadow. Costumed trick-or-treaters awaken their Gemini powers under LeSpookiest Night.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "night_of_the_lespookie.ydk"
+  },
+  {
+    "id": 7,
+    "name": "The Lantern Ascension (Apex Boss)",
+    "character_id": 2,
+    "creator_name": "Magnolia",
+    "description": "Apex Boss (ELO 1800+): The dimensional breach peaks. High-tempo Link and Synchro climb with Magnolia Lantern Ascended and A Wicked Shadow.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "lantern_ascension.ydk"
+  },
+  {
+    "id": 8,
+    "name": "Quiet Void - Formless Potential",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "Chapter 1 Stage 1 AI Deck: The formless quiet void before creation. Defensive stall and void spirit echoes.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "quiet_void_potential.ydk"
+  },
+  {
+    "id": 9,
+    "name": "The Spark of Genesis",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "Chapter 1 Stage 2 AI Deck: The sudden cosmic spark cutting through the void. Nascent flames and burn disruption.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "spark_of_genesis.ydk"
+  },
+  {
+    "id": 10,
+    "name": "Servants of Genesis",
+    "character_id": 1,
+    "creator_name": "ProfessorSeanEX",
+    "description": "Chapter 1 Stage 3 AI Deck: Devout servants preparing the sacred altar of creation for the Customizer.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "servants_of_genesis.ydk"
+  },
+  {
+    "id": 11,
+    "name": "Kasutamaiza - Dawn of Planet Kustomazi",
+    "character_id": 1,
+    "creator_name": "Kasutamaiza",
+    "description": "Chapter 1 Stage 4 Scripted Boss Deck: Kasutamaiza weaving the celestial seed to spring forth Planet Kustomazi into existence.",
+    "duelingbook_deck_url": null,
+    "ydk_filename": "kasutamaiza_dawn_planet.ydk"
+  }
+]
