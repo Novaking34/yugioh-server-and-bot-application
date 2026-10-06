@@ -23,11 +23,16 @@ from .sync_client import (
     install_to_client,
 )
 
-from .client_app import (
-    PlayerClientApp,
-    PlayerSetupWizardDialog,
-    main as run_client_gui,
-)
+try:
+    from .client_app import (
+        PlayerClientApp,
+        PlayerSetupWizardDialog,
+        main as run_client_gui,
+    )
+except Exception:
+    PlayerClientApp = None  # type: ignore
+    PlayerSetupWizardDialog = None  # type: ignore
+    run_client_gui = None  # type: ignore
 
 __all__ = [
     "ClientConfig",

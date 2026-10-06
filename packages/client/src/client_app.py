@@ -21,8 +21,21 @@ import shutil
 import threading
 import webbrowser
 import subprocess
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+try:
+    import tkinter as tk
+    from tkinter import ttk, filedialog, messagebox
+    HAS_TKINTER = True
+    _BaseTk = tk.Tk
+    _BaseToplevel = tk.Toplevel
+except ImportError:
+    tk = None
+    ttk = None
+    filedialog = None
+    messagebox = None
+    HAS_TKINTER = False
+    _BaseTk = object
+    _BaseToplevel = object
+
 from typing import Optional, Dict, Any
 
 # Ensure local package modules are accessible
@@ -69,10 +82,15 @@ DEFAULT_WEB_URL: str = CLIENT_CONFIG.get("web_catalog_url", "https://thelandofku
 DEFAULT_FALLBACK_HOST: str = CLIENT_CONFIG.get("fallback_host", "thelandofkustomazi.duckdns.org")
 
 
-class PlayerClientApp(tk.Tk):
+class PlayerClientApp(_BaseTk):
     """Main desktop application window for the Player Expansion Manager."""
 
     def __init__(self):
+        if not HAS_TKINTER:
+            raise RuntimeError(
+                "Tkinter desktop GUI framework is not available in this Python environment. "
+                "For headless server or CLI environments, please use 'sync_client.py' instead."
+            )
         super().__init__()
         self.title("Yu-Gi-Oh! Expansion Manager & Duel Connector")
         self.geometry("780x560")
@@ -364,10 +382,12 @@ class PlayerClientApp(tk.Tk):
         PlayerSetupWizardDialog(self)
 
 
-class PlayerSetupWizardDialog(tk.Toplevel):
+class PlayerSetupWizardDialog(_BaseToplevel):
     """Step-by-step interactive player onboarding and setup wizard dialog."""
 
     def __init__(self, parent: PlayerClientApp):
+        if not HAS_TKINTER:
+            raise RuntimeError("Tkinter desktop GUI framework is not available.")
         super().__init__(parent)
         self.parent_app = parent
         self.title("Yu-Gi-Oh! Player Quick-Start Wizard")
@@ -497,6 +517,14 @@ class PlayerSetupWizardDialog(tk.Toplevel):
 
 def main() -> None:
     """Entrypoint function for starting the desktop GUI application."""
+    if not HAS_TKINTER:
+        print(
+            "[-] Error: Tkinter is not installed in this Python environment.\n"
+            "    On Ubuntu/Debian: sudo apt-get install python3-tk\n"
+            "    Alternatively, use the CLI client: python3 packages/client/src/sync_client.py --help",
+            file=sys.stderr
+        )
+        sys.exit(1)
     app = PlayerClientApp()
     app.mainloop()
 
