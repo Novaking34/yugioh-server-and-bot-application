@@ -8,9 +8,16 @@ Provides client-side tools for players:
 =============================================================================
 """
 
-from .sync_client import (
+from .client_config import (
+    ClientConfig,
     CLIENT_CONFIG,
+    CLIENT_SETTINGS,
+    load_client_config,
     resolve_config_manifest,
+    sync_manifest_from_settings,
+)
+
+from .sync_client import (
     find_game_directory,
     sync_from_remote,
     install_to_client,
@@ -23,8 +30,12 @@ from .client_app import (
 )
 
 __all__ = [
+    "ClientConfig",
     "CLIENT_CONFIG",
+    "CLIENT_SETTINGS",
+    "load_client_config",
     "resolve_config_manifest",
+    "sync_manifest_from_settings",
     "find_game_directory",
     "sync_from_remote",
     "install_to_client",
@@ -32,3 +43,4 @@ __all__ = [
     "PlayerSetupWizardDialog",
     "run_client_gui",
 ]
+

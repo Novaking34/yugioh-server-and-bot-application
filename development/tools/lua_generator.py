@@ -44,11 +44,13 @@ from typing import Optional, List, Tuple, Dict, Any
 
 # Resolve project base directory
 try:
-    from config.paths import BASE_DIR, STORY_DB_PATH, SCRIPTS_DIR
+    from config.paths import BASE_DIR, CONTENT_DB_PATH, SCRIPTS_DIR
+    STORY_DB_PATH = CONTENT_DB_PATH
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
-    SCRIPTS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions", "scripts")
+    CONTENT_DB_PATH = os.path.join(BASE_DIR, "data", "authoritative", "content.db")
+    STORY_DB_PATH = CONTENT_DB_PATH
+    SCRIPTS_DIR = os.path.join(BASE_DIR, "data", "expansions", "scripts")
 
 
 def clean_text(text: Optional[str]) -> str:

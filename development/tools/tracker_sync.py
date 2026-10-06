@@ -4,7 +4,7 @@
 Yu-Gi-Oh! Platform - Master Card Tracker & Database Synchronization Tool
 =============================================================================
 Bridges spreadsheet card trackers (Google Sheets / Excel) with the SQLite
-story database (`ygo_story.db`), the simulator binary CDB (`custom_cards.cdb`),
+content database (`content.db`), the simulator binary CDB (`custom_cards.cdb`),
 and local artwork assets (`production/shared/expansions/pics/`).
 
 Capabilities:
@@ -49,15 +49,15 @@ if BASE_DIR not in sys.path:
 
 from config.paths import (
     STORY_DB_PATH, CDB_OUTPUT_PATH, SCRIPTS_DIR, PICS_DIR, THUMBNAILS_DIR,
-    TRACKERS_DIR, ensure_directories
+    TRACKERS_DIR, RAW_CARD_ART_DIR, ensure_directories
 )
 from config.logging import get_logger, audit_operation
 
 logger = get_logger("tracker_sync", service="TOOLS")
 
-DEFAULT_ROOT_CSV = os.path.join(BASE_DIR, "Duelingbook Master Tracker - Set 1 - The Land of Kustomazi.csv")
 DEFAULT_TRACKER_CSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.csv")
 DEFAULT_TRACKER_TSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.tsv")
+DEFAULT_ROOT_CSV = DEFAULT_TRACKER_CSV  # Canonical alias pointing to canonical tracker in TRACKERS_DIR
 
 # Master Header Columns optimized for Google Sheets and Database 1:1 Mapping
 MASTER_HEADERS = [
@@ -267,7 +267,7 @@ CANONICAL_CARD_METADATA = {
 }
 
 
-def parse_raw_tracker(csv_path: str = DEFAULT_ROOT_CSV) -> List[Dict[str, Any]]:
+def parse_raw_tracker(csv_path: str = DEFAULT_TRACKER_CSV) -> List[Dict[str, Any]]:
     """Reads legacy tracker CSV and parses into standardized record list."""
     if not os.path.exists(csv_path):
         logger.error(f"Tracker file not found: {csv_path}")
@@ -447,14 +447,6 @@ def write_master_trackers(records: List[Dict[str, Any]], csv_path: str = DEFAULT
         writer.writerow(MASTER_HEADERS)
         for i, r in enumerate(records, 2):
             writer.writerow(build_row(r, i))
-
-    # Also update root CSV for backward compatibility
-    if csv_path != DEFAULT_ROOT_CSV:
-        with open(DEFAULT_ROOT_CSV, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(MASTER_HEADERS)
-            for i, r in enumerate(records, 2):
-                writer.writerow(build_row(r, i))
 
     # 2. Write TSV (Ideal for direct paste into Google Sheets)
     with open(tsv_path, "w", encoding="utf-8", newline="") as f:
@@ -709,12 +701,14 @@ def verify_tracker_health(records: List[Dict[str, Any]]) -> bool:
     return all_ok
 
 
-def sync_local_art(records: List[Dict[str, Any]], art_dir: str = os.path.join(BASE_DIR, "card-art")) -> Tuple[int, int]:
+def sync_local_art(records: List[Dict[str, Any]], art_dir: Optional[str] = None) -> Tuple[int, int]:
     """
-    Scans a local directory of artwork (e.g. card-art/) organized by archetype
+    Scans a local directory of artwork (e.g. data/artwork/raw/ or card-art/) organized by archetype
     or card name, and copies matching image files into the expansion pics directory.
     """
     ensure_directories()
+    if art_dir is None:
+        art_dir = RAW_CARD_ART_DIR if os.path.exists(RAW_CARD_ART_DIR) else os.path.join(BASE_DIR, "card-art")
     if not os.path.exists(art_dir):
         print(f"[-] Art directory not found: {art_dir}")
         return 0, 0
@@ -756,7 +750,7 @@ def sync_local_art(records: List[Dict[str, Any]], art_dir: str = os.path.join(BA
 def main():
     parser = argparse.ArgumentParser(description="Master Card Tracker & Database Sync Utility")
     parser.add_argument("action", nargs="?", default="upgrade", choices=["upgrade", "import", "export", "download-images", "sync-local-art", "verify"], help="Operation to perform")
-    parser.add_argument("-f", "--file", default=DEFAULT_ROOT_CSV, help="Path to input/output CSV file")
+    parser.add_argument("-f", "--file", default=DEFAULT_TRACKER_CSV, help="Path to input/output CSV file")
     args = parser.parse_args()
 
     records = parse_raw_tracker(args.file)
@@ -769,7 +763,6 @@ def main():
         print(f"[+] Master Tracker upgraded and generated at:")
         print(f"    - Google Sheets CSV: {DEFAULT_TRACKER_CSV}")
         print(f"    - Google Sheets TSV: {DEFAULT_TRACKER_TSV}")
-        print(f"    - Root Master CSV:   {DEFAULT_ROOT_CSV}")
         print(f"    Cards processed: {len(records)}")
 
     elif args.action == "import":
@@ -783,7 +776,7 @@ def main():
         print(f"[+] Download complete: {succ} downloaded, {fail} failed.")
 
     elif args.action == "sync-local-art":
-        print(f"[*] Ingesting artwork from card-art/ directory...")
+        print(f"[*] Ingesting artwork from {RAW_CARD_ART_DIR}...")
         matched, skipped = sync_local_art(records)
         print(f"[+] Ingestion complete: {matched} cards matched and updated in {PICS_DIR}.")
 

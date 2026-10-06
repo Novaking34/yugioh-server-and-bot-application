@@ -15,10 +15,15 @@ packages/
 │   ├── docker-compose.yml             # Container orchestration manifest (symlink to root)
 │   ├── start_server.bat               # Windows server host launcher & service controller
 │   ├── start_server.sh                # Linux/macOS local server host launcher & controller
+│   ├── dns/                           # BIND RFC 1035 zone file & Cloudflare manager
+│   │   ├── README.md                  # DNS routing & Cloudflare proxy architecture guide
+│   │   ├── thelandofkustomazi.com.zone# Authoritative BIND zone file for Cloudflare import
+│   │   └── zone_manager.py            # Strongly-typed zone renderer, validator & sync engine
 │   ├── scripts/                       # Dedicated networking & DNS automation scripts
 │   │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel manager (Linux/macOS)
 │   │   ├── setup_cloudflare_tunnel.bat# Cloudflare Tunnel manager (Windows Batch)
 │   │   ├── setup_cloudflare_tunnel.ps1# Cloudflare Tunnel manager (Windows PowerShell)
+│   │   ├── sync_oracle_vm.sh          # Oracle Cloud VM automated deployment gateway
 │   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS auto-updater (Linux/macOS)
 │   │   ├── update_duckdns.bat         # DuckDNS dynamic DNS auto-updater (Windows Batch)
 │   │   ├── update_duckdns.ps1         # DuckDNS dynamic DNS auto-updater (Windows PowerShell)
@@ -33,7 +38,7 @@ packages/
 │
 └── client/                            # Player & Client Distribution Package
     ├── README.md                      # Player setup & connection guide
-    ├── config.json                    # Symlink to config/client/config.json
+    ├── config.json                    # Standalone client connection manifest
     ├── install_client.sh              # Linux / macOS one-click installer
     ├── install_client.bat             # Windows one-click installer
     ├── launch_client.sh               # Linux / macOS launcher for Player GUI

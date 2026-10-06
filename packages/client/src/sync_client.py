@@ -36,52 +36,27 @@ _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _PACKAGE_DIR = os.path.dirname(_SRC_DIR)
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(_PACKAGE_DIR))
 
+# Import authoritative client configuration
+try:
+    from .client_config import (
+        CLIENT_CONFIG,
+        CLIENT_SETTINGS,
+        resolve_config_manifest,
+        load_client_config,
+    )
+except ImportError:
+    from client_config import (
+        CLIENT_CONFIG,
+        CLIENT_SETTINGS,
+        resolve_config_manifest,
+        load_client_config,
+    )
 
-def resolve_config_manifest() -> Dict[str, Any]:
-    """Resolve and load the client configuration manifest (config.json).
-    
-    Search Order:
-    1. Parent package directory (_PACKAGE_DIR/config.json)
-    2. Local source directory (_SRC_DIR/config.json)
-    3. Centralized platform repository (config/client/config.json)
-    4. Safe hardcoded fallback defaults
-    
-    Returns:
-        Dict[str, Any]: Parsed configuration dictionary.
-    """
-    candidates = [
-        os.path.join(_PACKAGE_DIR, "config.json"),
-        os.path.join(_SRC_DIR, "config.json"),
-        os.path.join(_PROJECT_ROOT, "config", "client", "config.json"),
-    ]
-
-    for candidate in candidates:
-        if os.path.isfile(candidate):
-            try:
-                with open(candidate, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                sys.stderr.write(f"[WARN] Error reading config from {candidate}: {e}\n")
-
-    # Safe production defaults if config.json is absent
-    return {
-        "server_name": "The Great Kasutamaiza Duel Server",
-        "server_host": "thelandofkustomazi.com",
-        "server_port": 7911,
-        "room_port": 7922,
-        "fallback_host": "thelandofkustomazi.duckdns.org",
-        "web_catalog_url": "https://thelandofkustomazi.com",
-        "expansions_update_url": "https://thelandofkustomazi.com/api/expansions/download",
-    }
-
-
-# Active client manifest
-CLIENT_CONFIG = resolve_config_manifest()
 
 # Resolve local expansion and deck paths (bundled package vs live repository)
 EXPANSIONS_DIR = os.path.join(_PACKAGE_DIR, "expansions")
 if not os.path.isdir(EXPANSIONS_DIR):
-    repo_exp = os.path.join(_PROJECT_ROOT, "production", "shared", "expansions")
+    repo_exp = os.path.join(_PROJECT_ROOT, "data", "expansions")
     if os.path.isdir(repo_exp):
         EXPANSIONS_DIR = repo_exp
 
@@ -90,7 +65,7 @@ SCRIPTS_DIR = os.path.join(EXPANSIONS_DIR, "scripts")
 
 DECKS_DIR = os.path.join(_PACKAGE_DIR, "decks")
 if not os.path.isdir(DECKS_DIR):
-    repo_decks = os.path.join(_PROJECT_ROOT, "production", "shared", "decks")
+    repo_decks = os.path.join(_PROJECT_ROOT, "data", "decks")
     if os.path.isdir(repo_decks):
         DECKS_DIR = repo_decks
 

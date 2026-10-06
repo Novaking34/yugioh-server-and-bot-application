@@ -8,10 +8,10 @@ The `development/tools/` package contains the automated compilers, converters, a
 
 | Script | Purpose | Input Source | Output Destination |
 | :--- | :--- | :--- | :--- |
-| [`cdb_builder.py`](file:///home/professorseanex/yugioh-server/development/tools/cdb_builder.py) | Compiles SQLite CDB binary for ocgcore | `production/main/web/ygo_story.db` | `production/shared/expansions/custom_cards.cdb` |
+| [`cdb_builder.py`](file:///home/professorseanex/yugioh-server/development/tools/cdb_builder.py) | Compiles SQLite CDB binary for ocgcore | `data/authoritative/content.db` | `data/expansions/custom_cards.cdb` |
 | [`constants.py`](file:///home/professorseanex/yugioh-server/development/tools/constants.py) | Centralized bitmasks, types, races, attributes | — | Exported across toolchain |
 | [`debug_diagnostics.py`](file:///home/professorseanex/yugioh-server/development/tools/debug_diagnostics.py) | System auditor inspecting DB, bitmasks, CDB parity, Lua, and decks | Database, CDB, scripts, decks | Terminal report & JSON diagnostics |
-| [`duelingbook_importer.py`](file:///home/professorseanex/yugioh-server/development/tools/duelingbook_importer.py) | Parses and imports Duelingbook JSON cards | Duelingbook JSON export | `ygo_story.db`, `custom_cards.cdb`, `c<id>.lua` |
+| [`duelingbook_importer.py`](file:///home/professorseanex/yugioh-server/development/tools/duelingbook_importer.py) | Parses and imports Duelingbook JSON cards | Duelingbook JSON export | `content.db`, `custom_cards.cdb`, `c<id>.lua` |
 | [`export_deck.py`](file:///home/professorseanex/yugioh-server/development/tools/export_deck.py) | Exports story and player decks to `.ydk` | `decks` & `player_decks` tables | `production/shared/decks/*.ydk` |
 | [`lua_generator.py`](file:///home/professorseanex/yugioh-server/development/tools/lua_generator.py) | Generates syntactically valid ocgcore Lua | `custom_cards` table | `production/shared/expansions/scripts/c<id>.lua` |
 
@@ -76,7 +76,7 @@ python3 development/tools/lua_generator.py
 Takes cards exported from Duelingbook (JSON format) and integrates them into the platform pipeline:
 
 1. Generates a unique 8-digit passcode in the non-colliding community custom range (`50,000,000` - `59,999,999`).
-2. Inserts or updates the record in `ygo_story.db`.
+2. Inserts or updates the record in `content.db`.
 3. Re-indexes Full-Text Search (FTS5).
 4. Automatically invokes `cdb_builder` and `lua_generator` to compile simulator assets immediately.
 
@@ -127,7 +127,7 @@ A deep diagnostic auditor engineered to inspect, assert, and isolate failpoints 
 
 * **Database & Schema**: Runs SQLite `PRAGMA integrity_check`, audits table definitions, and checks `cards_fts` synchronization.
 * **Card Bitmask Diagnostics**: Audits custom cards for valid passcodes (`50,000,000` - `59,999,999`), Link arrow compass masks (`0o757` octal / `495` dec, verifying the center coordinate `0o020` is omitted), Pendulum scale bounds (`0` - `13`), and single-bit elemental attributes.
-* **CDB Compilation Parity**: Asserts that `custom_cards.cdb` exists and that all custom cards from `ygo_story.db` are present in both `datas` and `texts` tables.
+* **CDB Compilation Parity**: Asserts that `custom_cards.cdb` exists and that all custom cards from `content.db` are present in both `datas` and `texts` tables.
 * **Lua Script Auditing**: Validates that all custom cards have matching `c<id>.lua` scripts with mandatory `local s, id = GetID()` and `s.initial_effect(c)` headers, plus bytecode syntax checking via `luac -p`.
 * **Deck Integrity**: Audits all `.ydk` files for proper `#main`, `#extra`, and `!side` section markers and valid numeric passcodes.
 

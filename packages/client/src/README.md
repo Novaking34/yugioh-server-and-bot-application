@@ -9,6 +9,7 @@ This directory contains the Python modules that power the client-side tooling fo
 | File | Purpose |
 | --- | --- |
 | [`__init__.py`](file:///home/professorseanex/yugioh-server/packages/client/src/__init__.py) | Package initialization and public API exports |
+| [`client_config.py`](file:///home/professorseanex/yugioh-server/packages/client/src/client_config.py) | Strongly-typed client configuration dataclass & manifest resolution engine |
 | [`sync_client.py`](file:///home/professorseanex/yugioh-server/packages/client/src/sync_client.py) | CLI synchronizer engine, directory detector & remote updater |
 | [`client_app.py`](file:///home/professorseanex/yugioh-server/packages/client/src/client_app.py) | Player Expansion Manager desktop GUI application |
 

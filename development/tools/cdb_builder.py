@@ -3,9 +3,9 @@
 =============================================================================
 Yu-Gi-Oh! Simulator SQLite CDB Builder & Synchronizer
 =============================================================================
-This tool compiles custom card entries from the main relational Story Database
-(`production/main/web/ygo_story.db`) into an official YGOPro / EDOPro SQLite `.cdb`
-file (`production/shared/expansions/custom_cards.cdb`).
+This tool compiles custom card entries from the authoritative Content Database
+(`data/authoritative/content.db`) into an official
+YGOPro / EDOPro SQLite `.cdb` file (`data/expansions/custom_cards.cdb`).
 
 How the YGOPro CDB Binary Format Works:
 ---------------------------------------
@@ -45,11 +45,13 @@ from typing import Optional, Tuple
 
 # Resolve project base directory
 try:
-    from config.paths import BASE_DIR, STORY_DB_PATH, CDB_OUTPUT_PATH, EXPANSIONS_DIR
+    from config.paths import BASE_DIR, CONTENT_DB_PATH, CDB_OUTPUT_PATH, EXPANSIONS_DIR
+    STORY_DB_PATH = CONTENT_DB_PATH
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
-    EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
+    CONTENT_DB_PATH = os.path.join(BASE_DIR, "data", "authoritative", "content.db")
+    STORY_DB_PATH = CONTENT_DB_PATH
+    EXPANSIONS_DIR = os.path.join(BASE_DIR, "data", "expansions")
     CDB_OUTPUT_PATH = os.path.join(EXPANSIONS_DIR, "custom_cards.cdb")
 
 # Import centralized YGOPro constants from local tools directory
@@ -226,8 +228,8 @@ def build_cdb(
     cdb_output_path: str = CDB_OUTPUT_PATH
 ) -> int:
     """
-    Reads all custom cards from `production/main/web/ygo_story.db` and writes them
-    into the YGOPro simulator SQLite `.cdb` file at `production/shared/expansions/custom_cards.cdb`.
+    Reads all custom cards from `data/authoritative/content.db` and writes them
+    into the YGOPro simulator SQLite `.cdb` file at `data/expansions/custom_cards.cdb`.
     
     Returns:
         int: The number of cards compiled into the CDB.

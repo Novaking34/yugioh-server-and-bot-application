@@ -157,8 +157,8 @@ def run_cli_wizard():
         ensure_directories()
         if not os.path.exists(STORY_DB_PATH):
             sys.path.insert(0, DATABASE_DIR)
-            import seed_story_data
-            seed_story_data.initialize_database()
+            import seed_databases
+            seed_databases.seed_all_databases()
             print("  ✔ Database seeded.")
 
         sys.path.insert(0, TOOLS_DIR)
@@ -400,8 +400,8 @@ def build_gui_wizard():
                     ensure_directories()
                     if not os.path.exists(STORY_DB_PATH):
                         sys.path.insert(0, DATABASE_DIR)
-                        import seed_story_data
-                        seed_story_data.initialize_database()
+                        import seed_databases
+                        seed_databases.seed_all_databases()
 
                     sys.path.insert(0, TOOLS_DIR)
                     from cdb_builder import build_cdb

@@ -18,19 +18,12 @@ development/
 │   ├── duelingbook_importer.py    # Imports custom cards from Duelingbook JSON
 │   ├── export_deck.py             # Exports character & player decks to standard .ydk
 │   └── lua_generator.py           # Generates syntactically valid ocgcore Lua scripts
-├── database/                      # Story database schema & seed scripts
-│   ├── README.md                  # Relational schema architecture & migration guide
-│   ├── __init__.py                # Database helpers
-│   ├── schema.sql                 # SQLite relational DDL definition
-│   └── seed_story_data.py         # Bootstraps sample cards, factions, and story arcs
-├── tests/                         # Automated unit & integration test suite
+├── tests/                         # Modular automated test suite (Unit, Integration, Functional)
 │   ├── README.md                  # Pytest architecture & test execution guide
-│   ├── __init__.py                # Test package initialization
-│   ├── test_api_server.py         # FastAPI endpoint tests (HTML dashboard & JSON API)
-│   ├── test_cdb_builder.py        # CDB bitmask & binary encoding tests
-│   ├── test_constants.py          # OCGCore bitwise orthogonality tests
-│   ├── test_duelingbook_importer.py # Duelingbook JSON parsing & ID generation tests
-│   └── test_lua_generator.py      # Procedure generators & Lua syntax tests
+│   ├── conftest.py                # Dual data mode fixtures (Live vs Sample)
+│   ├── unit/                      # Isolated unit tests (bot services, tools, constants)
+│   ├── integration/               # Multi-subsystem integration tests (CDB sync, artwork, tracker)
+│   └── functional/                # End-to-end functional workflows (diagnostics, API catalog)
 └── docs/                          # In-depth technical architecture manuals
     ├── README.md                  # Documentation index & cross-reference
     ├── HOSTING_24_7.md            # Cloud VPS options (Oracle Cloud, Hetzner, DigitalOcean)
@@ -44,7 +37,7 @@ development/
 
 ### 1. Synchronize All Custom Cards & Lua Scripts
 
-Compile the live story database (`ygo_story.db`) into the simulator's binary CDB and regenerate all Lua scripts:
+Compile the live content database (`content.db`) into the simulator's binary CDB and regenerate all Lua scripts:
 
 * **Linux / macOS:**
 

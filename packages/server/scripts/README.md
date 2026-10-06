@@ -47,7 +47,7 @@ setup_cloudflare_tunnel.bat --quick
 setup_cloudflare_tunnel.bat --token <YOUR_CLOUDFLARE_TOKEN>
 ```
 
-When a quick tunnel starts, it automatically updates `config/client/config.json` with the temporary HTTPS URL so connected duelists and developers can immediately access the catalog over SSL.
+When a quick tunnel starts, it automatically updates `packages/client/config.json` with the temporary HTTPS URL so connected duelists and developers can immediately access the catalog over SSL.
 
 ---
 

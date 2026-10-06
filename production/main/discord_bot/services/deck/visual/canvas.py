@@ -24,6 +24,12 @@ from ..foundation.constants import (
     STANDARD_MAX_SIDE_DECK
 )
 
+try:
+    from config.paths import PICS_DIR, DECKS_DIR
+except ImportError:
+    PICS_DIR = None
+    DECKS_DIR = None
+
 # =============================================================================
 # BLOCK 3: BODY BLOCK (Visual Deck Canvas Rendering Engine)
 # =============================================================================
@@ -34,10 +40,10 @@ from ..foundation.constants import (
 # -----------------------------------------------------------------------------
 
 def _find_repo_root() -> str:
-    """Traverses upward until reaching the repository root containing production/shared."""
+    """Traverses upward until reaching the repository root containing data/expansions or manage.py."""
     curr = os.path.abspath(os.path.dirname(__file__))
     while curr and os.path.dirname(curr) != curr:
-        if os.path.exists(os.path.join(curr, "production", "shared", "expansions", "pics")):
+        if os.path.exists(os.path.join(curr, "data", "expansions", "pics")) or os.path.exists(os.path.join(curr, "manage.py")):
             return curr
         curr = os.path.dirname(curr)
     # Fallback: 6 levels up from visual/canvas.py
@@ -108,7 +114,7 @@ def render_deck_canvas(
 
     root_dir = _find_repo_root()
     if not pics_dir:
-        pics_dir = os.path.join(root_dir, "production", "shared", "expansions", "pics")
+        pics_dir = PICS_DIR if PICS_DIR and os.path.exists(PICS_DIR) else os.path.join(root_dir, "data", "expansions", "pics")
 
     curr_y = header_h + 10
 
@@ -154,7 +160,7 @@ def render_deck_canvas(
         curr_y = draw_section(side_title, expanded_side, curr_y)
 
     if not output_path:
-        renders_dir = os.path.join(root_dir, "production", "shared", "decks", "renders")
+        renders_dir = os.path.join(DECKS_DIR, "renders") if DECKS_DIR else os.path.join(root_dir, "data", "decks", "renders")
         os.makedirs(renders_dir, exist_ok=True)
         safe_title = "".join(ch if ch.isalnum() else "_" for ch in deck_title).strip("_")
         target_file = os.path.join(renders_dir, f"deck_{safe_title}.png")
@@ -182,8 +188,8 @@ async def render_player_deck_canvas(
     d_name = deck_title or f"Player {user_id}'s Deck"
 
     root_dir = _find_repo_root()
-    pics_dir = os.path.join(root_dir, "production", "shared", "expansions", "pics")
-    renders_dir = os.path.join(root_dir, "production", "shared", "decks", "renders")
+    pics_dir = PICS_DIR if PICS_DIR and os.path.exists(PICS_DIR) else os.path.join(root_dir, "data", "expansions", "pics")
+    renders_dir = os.path.join(DECKS_DIR, "renders") if DECKS_DIR else os.path.join(root_dir, "data", "decks", "renders")
     os.makedirs(renders_dir, exist_ok=True)
 
     target_file = output_path or os.path.join(renders_dir, f"deck_{user_id}.png")
@@ -222,8 +228,8 @@ async def render_character_deck_canvas(
     d_name = f"{deck['name']} ({deck.get('duelist_name') or 'Story'})"
 
     root_dir = _find_repo_root()
-    pics_dir = os.path.join(root_dir, "production", "shared", "expansions", "pics")
-    renders_dir = os.path.join(root_dir, "production", "shared", "decks", "renders")
+    pics_dir = PICS_DIR if PICS_DIR and os.path.exists(PICS_DIR) else os.path.join(root_dir, "data", "expansions", "pics")
+    renders_dir = os.path.join(DECKS_DIR, "renders") if DECKS_DIR else os.path.join(root_dir, "data", "decks", "renders")
     os.makedirs(renders_dir, exist_ok=True)
 
     target_file = output_path or os.path.join(renders_dir, f"story_deck_{deck_id}.png")

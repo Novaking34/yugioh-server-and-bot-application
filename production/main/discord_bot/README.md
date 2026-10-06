@@ -28,10 +28,8 @@ The bot follows a strict **Separation of Concerns** using a three-tier architect
                                      │
 ┌────────────────────────────────────▼─────────────────────────────────────┐
 │                          Data & Telemetry Layer                          │
-│   SQLite Database: `production/main/web/ygo_story.db`                    │
-│   Tables: custom_cards, decks, player_decks, player_ratings,             │
-│           duel_matches, card_usage_stats, story_chapters, story_stages,  │
-│           player_story_progress, lore_arcs, factions, characters         │
+│   Content Store: `data/authoritative/content.db` (cards, decks, lore)    │
+│   Telemetry Store: `data/telemetry/telemetry.db` (ratings, matches, decks)│
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -42,7 +40,8 @@ The bot follows a strict **Separation of Concerns** using a three-tier architect
 ```bash
 production/main/discord_bot/
 ├── bot.py                  # Orchestrator with structured logging, lifecycle hooks & error handler
-├── bot_config.py           # Configuration bridge to centralized config subsystem
+├── bot_config.py           # Authoritative typed configuration, intents factory & theme palettes
+├── config.example.json     # Reference JSON configuration template for local overrides
 ├── utils/                  # Modular UI Presentation subsystem (foundation, domain embeds, board renderer)
 ├── utils.py                # Root Presentation entry point & translation bridge
 ├── services/               # Decoupled Domain & Database Services
@@ -194,3 +193,49 @@ Story scenarios are loaded dynamically from structured JSON files (`production/m
 * **Incident Tracking**: Any unhandled slash command exception generates a unique 8-character Incident ID (e.g. `[Incident #a1b2c3d4]`) logged with full traceback, while presenting a graceful explanation to the user.
 * **Zero Downtime Reloading**: Cogs can be hot-reloaded using `/admin reload <cog>` without interrupting other active features.
 * **Crash-Resistant State**: All competitive rankings, player decks, telemetry, and story progression persist in SQLite, ensuring zero state loss on server restarts.
+
+---
+
+## ⚙️ Configuration Subsystem (`bot_config.py`)
+
+The bot resolves its credentials and runtime settings through an authoritative 3-tier hierarchy:
+
+1. **Environment Variables** (`.env` or OS environment via `config.settings`):
+   * `DISCORD_BOT_TOKEN`: Secret bot authentication token.
+   * `DISCORD_GUILD_ID`: Target Discord server ID for instant slash command registration.
+   * `DISCORD_COMMAND_PREFIX`: Fallback prefix for message commands (default: `!`).
+   * `DISCORD_CLIENT_ID`: Application client ID for OAuth2 invite generation.
+2. **Local JSON File** (`production/main/discord_bot/config.json`):
+   * If present, overrides values loaded from `.env`. Useful for running isolated staging instances without modifying global secrets.
+3. **Safe Enterprise Defaults**:
+   * `prefix`: `!`
+   * `guild_id`: `None` (registers commands globally across Discord).
+
+### Reference Configuration (`config.example.json`)
+
+```json
+{
+  "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+  "guild_id": null,
+  "client_id": null,
+  "prefix": "!"
+}
+```
+
+### Python Programmatic Access
+
+```python
+from bot_config import BOT_CONFIG, BOT_SETTINGS, get_bot_intents
+
+# Dictionary access (used across cogs)
+token = BOT_CONFIG["token"]
+guild_id = BOT_CONFIG.get("guild_id")
+content_db = BOT_CONFIG["content_db_path"]
+
+# Strongly-typed dataclass access
+is_ready = BOT_SETTINGS.is_configured
+prefix = BOT_SETTINGS.prefix
+
+# Discord Intents factory
+intents = get_bot_intents(with_privileged=True)
+```

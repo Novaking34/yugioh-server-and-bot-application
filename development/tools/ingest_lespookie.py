@@ -5,11 +5,11 @@ Yu-Gi-Oh! Simulator - LeSpookie Commons Ingestion Pipeline
 =============================================================================
 Ingests all 50 cards from Duelingbook deck 8114120 ("LeSpookie Singles")
 into:
-1. SQLite Story Database (`production/main/web/ygo_story.db`)
-2. Master Trackers (CSV and TSV)
-3. Simulator Binary Database (`custom_cards.cdb`)
-4. Local Artwork Cache (`production/shared/expansions/pics/*.jpg`)
-5. Pre-built Story Deck (`production/shared/decks/LeSpookie Singles.ydk`)
+1. SQLite Authoritative Content Database (`data/authoritative/content.db`)
+2. Master Trackers (CSV and TSV in `data/trackers/`)
+3. Simulator Binary Database (`data/expansions/custom_cards.cdb`)
+4. Local Artwork Cache (`data/expansions/pics/*.jpg`)
+5. Pre-built Story Deck (`data/decks/LeSpookie Singles.ydk`)
 6. Story Mode Campaign (Chapter 2: The LeSpookiest Night, Stages 2-1 to 2-3)
 =============================================================================
 """
@@ -34,9 +34,8 @@ from config.paths import (
 from development.tools.cdb_builder import build_cdb, parse_card_type
 from development.tools.constants import LINK_ARROW_MAP
 
-JSON_DECK_PATH = "/home/professorseanex/.gemini/antigravity-ide/brain/3ee778d3-38e4-483c-aa6e-cd58a9c1f8b3/scratch/lespookie_deck_full.json"
-ROOT_TRACKER_CSV = os.path.join(BASE_DIR, "Duelingbook Master Tracker - Set 1 - The Land of Kustomazi.csv")
 TRACKER_CSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.csv")
+ROOT_TRACKER_CSV = TRACKER_CSV
 TRACKER_TSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.tsv")
 
 # Duelingbook arrow bit order -> compass string
@@ -62,7 +61,7 @@ def convert_db_arrows(arrows_str: Optional[str]) -> str:
 
 def determine_card_subtypes(card: Dict[str, Any]) -> Tuple[str, str]:
     """
-    Returns (card_type, card_subtype) normalized for ygo_story.db and cdb_builder.
+    Returns (card_type, card_subtype) normalized for content.db and cdb_builder.
     """
     ctype = card.get("card_type", "Monster")
     mcolor = (card.get("monster_color") or "").strip()
@@ -476,7 +475,7 @@ def run_ingestion():
 
     conn.commit()
     conn.close()
-    print("[+] Successfully seeded custom_cards, decks, chapters, and stages into ygo_story.db!")
+    print("[+] Successfully seeded custom_cards, decks, chapters, and stages into content.db!")
 
     # 5. Append rows to Master Trackers
     append_to_trackers(card_records)
@@ -547,11 +546,6 @@ def append_to_trackers(card_records: List[Dict[str, Any]]):
             current_row_idx += 1
 
     if rows_to_append:
-        # Append to ROOT_TRACKER_CSV
-        with open(ROOT_TRACKER_CSV, "a", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerows(rows_to_append)
-
         # Append to TRACKER_CSV
         with open(TRACKER_CSV, "a", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)

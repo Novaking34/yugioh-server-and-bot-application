@@ -14,7 +14,7 @@ The `production/main/` directory contains the host-side server runtime, services
 | [`gui/`](file:///home/professorseanex/yugioh-server/production/main/gui/) | GUI Subsystem | Encapsulated Desktop Platform Manager, Setup Wizard, and UI assets |
 | [`web/`](file:///home/professorseanex/yugioh-server/production/main/web/) | Web Service | FastAPI card catalog, deck viewer, lore portal, and expansion sync API (Port 8000) |
 | [`discord_bot/`](file:///home/professorseanex/yugioh-server/production/main/discord_bot/) | Bot Service | The Great Kasutamaiza modular Discord duel engine and card lookup bot |
-| [`simulator/`](file:///home/professorseanex/yugioh-server/production/main/simulator/) | Duel Engine | Docker Compose configuration and container orchestration for live duels (Port 7911 / 7922) |
+| [`docker-compose.yml`](file:///home/professorseanex/yugioh-server/docker-compose.yml) | Duel Engine | Container orchestration for ocgcore live duels (Port 7911 / 7922) with mounts in [`data/simulator/`](file:///home/professorseanex/yugioh-server/data/simulator/) |
 | [`assets/`](file:///home/professorseanex/yugioh-server/production/main/assets/) | Media Assets | Platform application icons, logos, and UI imagery (mirrored in `gui/assets/`) |
 
 ---

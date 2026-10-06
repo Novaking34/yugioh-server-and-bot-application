@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
 =============================================================================
-Yu-Gi-Oh! Custom Server, Story Platform & Simulator - Master Controller
+BLOCK 1: METADATA BLOCK
 =============================================================================
-Primary command-line interface (CLI) and orchestration engine for managing:
-- Live Duel Simulator (Docker Compose) container lifecycle and network sockets
-- Story database records (custom cards, lore sagas, duelists, decks)
-- Binary CDB compilation and Lua effect script generation for EDOPro/YGOPro
-- Duelingbook JSON card imports and character deck exports (.ydk)
-- Automated testing (Pytest) and Lua effect script bytecode validation (luac)
-- Service launchers (FastAPI web portal, modular Discord bot, desktop GUI)
-- Cloudflare Tunnel connections and dynamic DNS synchronizers
-- Release packaging and distribution bundling (.zip and .tar.gz in dist/)
-- Automated platform environment installation and schema migrations
+Module: manage.py
+Architecture: Hybrid Systems Engineering (Imperative Shell / Master Controller)
+Domain: Orchestration, Lifecycle Management & Operational Dispatch
+Description: Primary command-line interface (CLI) and orchestration engine for:
+  - Live Duel Simulator (Docker Compose) container lifecycle and network sockets
+  - Story database records (custom cards, lore sagas, duelists, decks)
+  - Binary CDB compilation and Lua effect script generation for EDOPro/YGOPro
+  - Duelingbook JSON card imports and character deck exports (.ydk)
+  - Automated testing (Pytest) and Lua effect script bytecode validation (luac)
+  - Service launchers (FastAPI web portal, modular Discord bot, desktop GUI)
+  - Cloudflare Tunnel connections and dynamic DNS synchronizers
+  - Release packaging and distribution bundling (.zip and .tar.gz in dist/)
+  - Automated platform environment installation and schema migrations
+
+Invariants:
+  - Single point of entry for operational workflows.
+  - Commands return deterministic exit codes (0 for success, non-zero for failure).
+  - Preserves isolated virtualenv path resolution.
 
 Usage:
     ./manage.sh [command] [args...]
@@ -20,6 +28,10 @@ Usage:
     ygo-manage [command] [args...]
 =============================================================================
 """
+
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Inclusions, Imports & Shared Primitives)
+# =============================================================================
 
 import sys
 import os
@@ -37,11 +49,12 @@ if BASE_DIR not in sys.path:
 
 # Centralized Path Definitions from config.paths
 from config.paths import (
-    STORY_DB_PATH, CDB_OUTPUT_PATH, SCRIPTS_DIR, DECKS_DIR,
-    TOOLS_DIR, TESTS_DIR, APP_PY_PATH, BOT_DIR, SCHEMA_PATH,
-    SEED_SCRIPT_PATH, PROD_MAIN_DIR, EXPANSIONS_DIR,
-    PACKAGES_DIR, SERVER_PACKAGE_DIR, CLIENT_PACKAGE_DIR, DIST_DIR,
-    ensure_directories
+    CONTENT_DB_PATH, TELEMETRY_DB_PATH, STORY_DB_PATH, CDB_OUTPUT_PATH, SCRIPTS_DIR, DECKS_DIR,
+    TOOLS_DIR, TESTS_DIR, TESTS_UNIT_DIR, TESTS_INTEGRATION_DIR,
+    TESTS_FUNCTIONAL_DIR, APP_PY_PATH, BOT_DIR, SCHEMA_PATH,
+    SEED_SCRIPT_PATH, DATABASE_DIR, PROD_MAIN_DIR, EXPANSIONS_DIR,
+    PACKAGES_DIR, SERVER_PACKAGE_DIR, CLIENT_PACKAGE_DIR, CLIENT_CONFIG_PATH,
+    DNS_ZONE_FILE_PATH, DIST_DIR, ensure_directories
 )
 
 # Terminal ANSI Color & Text Formatting Constants
@@ -98,8 +111,12 @@ def compute_sha256(file_path: str) -> str:
 
 
 # =============================================================================
-# SECTION 1: System Status & Diagnostic Inspector
+# BLOCK 3: BODY BLOCK (Master Orchestration & Command Implementations)
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.1: System Status & Diagnostic Inspector
+# -----------------------------------------------------------------------------
 
 def cmd_status() -> None:
     """Inspect and report the live status of all services, data stores, and containers.
@@ -137,31 +154,47 @@ def cmd_status() -> None:
     print(f"   • Web Room Manager (TCP 7922): {'[ACTIVE]' if room_port_open else '[OFFLINE]'}")
     print(f"   • Web Catalog API (TCP 8000) : {'[ACTIVE]' if web_port_open else '[OFFLINE]'}")
 
-    # 3. Database Statistics
-    print(f"\n{BLUE}>> Story Database Statistics ({os.path.relpath(STORY_DB_PATH, BASE_DIR)}):{NC}")
-    if os.path.exists(STORY_DB_PATH):
+    # 3. Two-Tier Database Statistics
+    print(f"\n{BLUE}>> Authoritative Content Database ({os.path.relpath(CONTENT_DB_PATH, BASE_DIR)}):{NC}")
+    if os.path.exists(CONTENT_DB_PATH):
         try:
-            conn = sqlite3.connect(STORY_DB_PATH)
+            conn = sqlite3.connect(CONTENT_DB_PATH)
             cur = conn.cursor()
             cards_count = cur.execute("SELECT COUNT(*) FROM custom_cards").fetchone()[0]
             factions_count = cur.execute("SELECT COUNT(*) FROM factions").fetchone()[0]
             chars_count = cur.execute("SELECT COUNT(*) FROM characters").fetchone()[0]
             decks_count = cur.execute("SELECT COUNT(*) FROM decks").fetchone()[0]
-            player_decks_count = cur.execute("SELECT COUNT(DISTINCT user_id) FROM player_decks").fetchone()[0]
             conn.close()
 
             print(f"   • Custom Cards in Pool : {cards_count}")
             print(f"   • Factions / Archetypes: {factions_count}")
             print(f"   • Story Duelists       : {chars_count}")
             print(f"   • Pre-made Story Decks : {decks_count}")
+        except Exception as e:
+            print(f"   • {RED}Error querying content database:{NC} {e}")
+    else:
+        print(f"   • {YELLOW}Content database not found at {CONTENT_DB_PATH}. Run: ./manage.sh install{NC}")
+
+    print(f"\n{BLUE}>> Dynamic Telemetry Database ({os.path.relpath(TELEMETRY_DB_PATH, BASE_DIR)}):{NC}")
+    if os.path.exists(TELEMETRY_DB_PATH):
+        try:
+            conn = sqlite3.connect(TELEMETRY_DB_PATH)
+            cur = conn.cursor()
+            ratings_count = cur.execute("SELECT COUNT(*) FROM player_ratings").fetchone()[0]
+            matches_count = cur.execute("SELECT COUNT(*) FROM duel_matches").fetchone()[0]
+            player_decks_count = cur.execute("SELECT COUNT(DISTINCT user_id) FROM player_decks").fetchone()[0]
+            conn.close()
+
+            print(f"   • Rated Duelists       : {ratings_count}")
+            print(f"   • Recorded Matches     : {matches_count}")
             print(f"   • Active Player Decks  : {player_decks_count}")
         except Exception as e:
-            print(f"   • {RED}Error querying database:{NC} {e}")
+            print(f"   • {RED}Error querying telemetry database:{NC} {e}")
     else:
-        print(f"   • {YELLOW}Database file not found at {STORY_DB_PATH}. Run: ./manage.sh install{NC}")
+        print(f"   • {YELLOW}Telemetry database not found at {TELEMETRY_DB_PATH}. Run: ./manage.sh install{NC}")
 
     # 4. Expansions & Shared Distribution Status
-    print(f"\n{BLUE}>> Shared Client Distribution Status (production/shared):{NC}")
+    print(f"\n{BLUE}>> Expansions & Shared Distribution Status (data/):{NC}")
     if os.path.exists(CDB_OUTPUT_PATH):
         size_kb = os.path.getsize(CDB_OUTPUT_PATH) / 1024
         print(f"   • Compiled CDB: {os.path.relpath(CDB_OUTPUT_PATH, BASE_DIR)} ({size_kb:.1f} KB)")
@@ -206,9 +239,9 @@ def cmd_status() -> None:
     print()
 
 
-# =============================================================================
-# SECTION 2: Docker Container Management (Simulator Engine)
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.2: Docker Container Management (Simulator Engine)
+# -----------------------------------------------------------------------------
 
 def cmd_start() -> int:
     """Start the live ocgcore simulator container using Docker Compose.
@@ -253,18 +286,18 @@ def cmd_restart() -> int:
     return res.returncode
 
 
-# =============================================================================
-# SECTION 3: Database & Simulator Expansion Synchronization
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.3: Database & Simulator Expansion Synchronization
+# -----------------------------------------------------------------------------
 
 def cmd_sync() -> None:
     """Rebuild the shared custom_cards.cdb SQLite database and regenerate Lua scripts.
     
-    Reads from the live story database (ygo_story.db) and compiles:
+    Reads from the live authoritative content database (content.db) and compiles:
     1. custom_cards.cdb binary SQLite database matching ocgcore specifications.
     2. Lua effect scripts (c<id>.lua) for all registered custom cards.
     """
-    print(f"{BLUE}[*] Synchronizing Story Database with Simulator CDB and Lua scripts...{NC}")
+    print(f"{BLUE}[*] Synchronizing Authoritative Content Database with Simulator CDB and Lua scripts...{NC}")
     ensure_directories()
     sys.path.insert(0, TOOLS_DIR)
 
@@ -276,9 +309,9 @@ def cmd_sync() -> None:
     print(f"{GREEN}[+] Sync complete: {card_count} cards compiled to CDB, {script_count} Lua scripts generated.{NC}")
 
 
-# =============================================================================
-# SECTION 4: Card Importing & Deck Exporting Pipelines
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.4: Card Ingestion & Deck Serialization Pipelines
+# -----------------------------------------------------------------------------
 
 def cmd_import(file_path: str) -> None:
     """Import custom cards from a Duelingbook JSON export file into database and CDB.
@@ -330,24 +363,51 @@ def cmd_export_player(user_id: str) -> None:
         print(f"{YELLOW}[!] No cards found in player deck for user {user_id}.{NC}")
 
 
-# =============================================================================
-# SECTION 5: Automated Testing & Lua Syntax Validation
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.5: Automated Testing & Lua Syntax Validation
+# -----------------------------------------------------------------------------
 
 def cmd_test(extra_args: Optional[List[str]] = None) -> int:
-    """Execute the Pytest test suite on development/tests.
+    """Execute the Pytest test suite across test taxonomy tiers with dual data modes.
     
     Args:
         extra_args (Optional[List[str]]): Additional arguments forwarded to pytest.
+            Supports tier shortcuts ('unit', 'integration', 'functional') and
+            data mode selection ('--data-mode=live|sample|both').
         
     Returns:
         int: Pytest exit code (0 for all tests passing).
     """
-    print(f"{BLUE}[*] Running Unit Test Suite with Pytest...{NC}")
+    raw_args = list(extra_args or [])
+    target = TESTS_DIR
+
+    # Check for tier shortcuts, explicit file/folder paths, or individual test nodes (path::test_fn)
+    if raw_args and raw_args[0] in ("unit", "integration", "functional"):
+        chosen_tier = raw_args.pop(0)
+        if chosen_tier == "unit":
+            target = TESTS_UNIT_DIR
+        elif chosen_tier == "integration":
+            target = TESTS_INTEGRATION_DIR
+        elif chosen_tier == "functional":
+            target = TESTS_FUNCTIONAL_DIR
+    elif raw_args and not raw_args[0].startswith("-"):
+        candidate = raw_args.pop(0)
+        file_part, sep, func_part = candidate.partition("::")
+        if os.path.exists(file_part):
+            target = file_part + (sep + func_part if sep else "")
+        elif os.path.exists(os.path.join(TESTS_DIR, file_part)):
+            target = os.path.join(TESTS_DIR, file_part) + (sep + func_part if sep else "")
+        else:
+            target = candidate
+
+    display_target = os.path.relpath(target, BASE_DIR) if not "::" in target else target
+    print(f"{BLUE}[*] Running Test Suite with Pytest on: {display_target}...{NC}")
     pytest_bin = os.path.join(BASE_DIR, "venv", "bin", "pytest")
     if not os.path.exists(pytest_bin):
-        pytest_bin = "pytest"
-    args = [pytest_bin, "-v", TESTS_DIR] + (extra_args or [])
+        pytest_bin = sys.executable
+        args = [pytest_bin, "-m", "pytest", "-v", target] + raw_args
+    else:
+        args = [pytest_bin, "-v", target] + raw_args
     res = subprocess.run(args, cwd=BASE_DIR)
     return res.returncode
 
@@ -386,9 +446,9 @@ def cmd_validate_lua() -> int:
         return 0
 
 
-# =============================================================================
-# SECTION 6: Service & Application Launchers
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.6: Service & Application Launchers
+# -----------------------------------------------------------------------------
 
 def cmd_web() -> None:
     """Launch the FastAPI Web Catalog Dashboard & REST API server on port 8000."""
@@ -449,9 +509,9 @@ def cmd_tunnel(extra: Optional[List[str]] = None) -> None:
         os.execv(tunnel_script, args)
 
 
-# =============================================================================
-# SECTION 7: Distribution Packaging & Release Bundler
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.7: Distribution Packaging & Release Bundler
+# -----------------------------------------------------------------------------
 
 def cmd_package() -> None:
     """Build standalone, self-contained distribution packages in dist/.
@@ -476,6 +536,20 @@ def cmd_package() -> None:
     # Step 1: Ensure expansions and decks are freshly compiled
     cmd_sync()
     cmd_export_decks()
+
+    # Synchronize player client connection manifest from active settings
+    try:
+        from packages.client.src.client_config import sync_manifest_from_settings
+        sync_manifest_from_settings(CLIENT_CONFIG_PATH)
+    except Exception as e:
+        print(f"{YELLOW}[!] Warning: Could not auto-sync client manifest: {e}{NC}")
+
+    # Synchronize host server DNS zone file from active settings
+    try:
+        from packages.server.dns.zone_manager import sync_zone_file_from_settings
+        sync_zone_file_from_settings(DNS_ZONE_FILE_PATH)
+    except Exception as e:
+        print(f"{YELLOW}[!] Warning: Could not auto-sync DNS zone file: {e}{NC}")
 
     os.makedirs(DIST_DIR, exist_ok=True)
     client_zip_path = os.path.join(DIST_DIR, "ygo-client-package.zip")
@@ -519,7 +593,11 @@ def cmd_package() -> None:
     # Step 3: Build Host Server Package (.tar.gz)
     print(f"\n{BLUE}[*] Packaging Host Server Deployment -> {os.path.relpath(server_tar_path, BASE_DIR)}...{NC}")
     with tarfile.open(server_tar_path, "w:gz", dereference=True) as tf:
-        tf.add(SERVER_PACKAGE_DIR, arcname="ygo-server-package")
+        def tar_filter(tarinfo):
+            if "__pycache__" in tarinfo.name or tarinfo.name.endswith((".pyc", ".pyo")):
+                return None
+            return tarinfo
+        tf.add(SERVER_PACKAGE_DIR, arcname="ygo-server-package", filter=tar_filter)
 
     server_size_kb = os.path.getsize(server_tar_path) / 1024
     server_sha = compute_sha256(server_tar_path)
@@ -542,9 +620,9 @@ def cmd_package() -> None:
     print(f"  • {BOLD}Verification:{NC}          {checksums_path}\n")
 
 
-# =============================================================================
-# SECTION 8: Platform Installation & Environment Initializer
-# =============================================================================
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.8: Platform Lifecycle, Diagnostics, Logs & Cloud Sync
+# -----------------------------------------------------------------------------
 
 def cmd_install() -> None:
     """Initialize directory layout, database schema, story seeds, CDB, and Lua scripts."""
@@ -552,15 +630,15 @@ def cmd_install() -> None:
     ensure_directories()
     print(f"{GREEN}[+] Directory structure verified.{NC}")
 
-    # Check and initialize database
-    if not os.path.exists(STORY_DB_PATH):
-        print(f"{BLUE}[*] Initializing database from schema and seeding initial story data...{NC}")
-        sys.path.insert(0, os.path.join(BASE_DIR, "development", "database"))
-        import seed_story_data
-        seed_story_data.initialize_database()
-        print(f"{GREEN}[+] Database initialized successfully.{NC}")
+    # Check and initialize two-tier databases
+    if not os.path.exists(CONTENT_DB_PATH) or not os.path.exists(TELEMETRY_DB_PATH):
+        print(f"{BLUE}[*] Initializing authoritative content and telemetry databases...{NC}")
+        sys.path.insert(0, DATABASE_DIR)
+        import seed_databases
+        seed_databases.seed_all_databases()
+        print(f"{GREEN}[+] Two-tier databases initialized successfully.{NC}")
     else:
-        print(f"{GREEN}[+] Story database already present.{NC}")
+        print(f"{GREEN}[+] Two-tier databases already present and verified.{NC}")
 
     # Rebuild custom_cards.cdb and Lua scripts
     cmd_sync()
@@ -578,11 +656,36 @@ def cmd_install() -> None:
 
 
 def cmd_diagnose(extra_args: Optional[List[str]] = None) -> int:
-    """Run comprehensive platform diagnostic auditor and failpoint inspector."""
+    """Run comprehensive platform diagnostic auditor and failpoint inspector.
+    
+    Supports optional test execution via flags:
+      --with-tests / -t: Execute automated test suite during audit
+      --tier=unit|integration|functional: Filter test tier
+      --data-mode=live|sample|both: Choose test data source mode
+    """
     print_header("Platform Diagnostics & Failpoint Auditor")
-    from development.tools.debug_diagnostics import PlatformDiagnostics, print_diagnostic_report
+    from config.debugger import PlatformDiagnostics, print_diagnostic_report
+    
+    args = extra_args or []
+    include_tests = False
+    tier = None
+    data_mode = "live"
+
+    for arg in args:
+        if arg in ("--with-tests", "-t", "--tests", "with-tests"):
+            include_tests = True
+        elif arg.startswith("--tier="):
+            tier = arg.split("=", 1)[1]
+        elif arg in ("unit", "integration", "functional"):
+            include_tests = True
+            tier = arg
+        elif arg.startswith("--data-mode="):
+            data_mode = arg.split("=", 1)[1]
+        elif arg in ("sample", "live", "both"):
+            data_mode = arg
+
     diag = PlatformDiagnostics()
-    results = diag.run_all()
+    results = diag.run_all(include_tests=include_tests, tier=tier, data_mode=data_mode)
     return print_diagnostic_report(results)
 
 
@@ -602,7 +705,7 @@ def cmd_tracker(extra_args: Optional[List[str]] = None) -> None:
 
 def cmd_sync_vm(extra_args: Optional[List[str]] = None) -> int:
     """Synchronizes code, database, and bot services to the live Oracle Cloud VM."""
-    script_path = os.path.join(BASE_DIR, "scripts", "sync_oracle_vm.sh")
+    script_path = os.path.join(SERVER_PACKAGE_DIR, "scripts", "sync_oracle_vm.sh")
     if not os.path.exists(script_path):
         print(f"{RED}[!] Script not found at: {script_path}{NC}")
         return 1
@@ -612,7 +715,7 @@ def cmd_sync_vm(extra_args: Optional[List[str]] = None) -> int:
 
 
 # =============================================================================
-# SECTION 9: CLI Argument Parser & Router
+# BLOCK 4: CLOSING BLOCK (CLI Router & Execution Entry Point)
 # =============================================================================
 
 def main() -> None:

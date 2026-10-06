@@ -161,7 +161,7 @@ Card Manifest Sync API:  https://mystic-dragon-realm.trycloudflare.com/api/manif
 =====================================================================
 ```
 
-*The script automatically updates `config/client/config.json` with this URL so player clients download custom cards over HTTPS.*
+*The script automatically updates `packages/client/config.json` with this URL so player clients download custom cards over HTTPS.*
 
 ---
 

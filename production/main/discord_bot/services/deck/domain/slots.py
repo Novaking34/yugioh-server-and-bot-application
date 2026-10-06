@@ -37,7 +37,10 @@ from ..foundation.types import SavedDeckSlot
 # -----------------------------------------------------------------------------
 
 async def ensure_saved_deck_tables(db_path: str) -> None:
-    """Ensures the player_saved_decks table exists for multi-deck support with match telemetry."""
+    """
+    Ensures the player_saved_decks table exists for multi-deck support with match telemetry.
+    Note: Schema is authoritatively defined in schema_telemetry.sql and schema.sql.
+    """
     async with aiosqlite.connect(db_path) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS player_saved_decks (
@@ -53,17 +56,6 @@ async def ensure_saved_deck_tables(db_path: str) -> None:
                 UNIQUE(user_id, deck_name)
             )
         """)
-        # Safe migration for existing schemas lacking usage telemetry columns
-        cur = await db.execute("PRAGMA table_info(player_saved_decks)")
-        cols = {r[1] for r in await cur.fetchall()}
-        if "times_used" not in cols:
-            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN times_used INTEGER DEFAULT 0")
-        if "wins" not in cols:
-            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN wins INTEGER DEFAULT 0")
-        if "losses" not in cols:
-            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN losses INTEGER DEFAULT 0")
-        if "last_used_at" not in cols:
-            await db.execute("ALTER TABLE player_saved_decks ADD COLUMN last_used_at TIMESTAMP DEFAULT NULL")
         await db.commit()
 
 

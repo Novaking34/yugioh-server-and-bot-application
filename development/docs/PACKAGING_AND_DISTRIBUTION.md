@@ -13,11 +13,12 @@ yugioh-server/
 ├── pyproject.toml              # Modern PEP 517/518 Python packaging metadata
 ├── setup.py                    # Setuptools build script for 'pip install -e .'
 ├── manage.sh / manage.py / .bat# Master controller & packaging engine
-├── config/                     # Centralized Configuration Subsystem
-│   ├── client/config.json      # Live server connection manifest
-│   ├── dns/                    # BIND DNS zone file (thelandofkustomazi.com.zone)
-│   ├── bot/                    # Discord bot settings & config.example.json
-│   └── simulator/              # ocgcore room configs & chat filters
+├── config/                     # Centralized Core Platform Configuration
+│   ├── paths.py                # Canonical filesystem path bindings
+│   ├── settings.py             # Strongly-typed platform settings singleton
+│   ├── game_rules.py           # Master Rule 5 bitmasks & passcode partitions
+│   ├── logging/                # Multi-sink structured logging system
+│   └── debugger/               # Platform diagnostics & execution tracing
 ├── packages/                   # Root Installation Packages Directory
 │   ├── README.md               # Packages overview & quick reference
 │   ├── server/                 # Server & Host 24/7 Installation Package
@@ -26,6 +27,10 @@ yugioh-server/
 │   │   ├── docker-compose.yml  # Simulator container orchestration manifest (symlink)
 │   │   ├── start_server.bat    # Windows server host manager
 │   │   ├── start_server.sh     # Linux/macOS local server host manager
+│   │   ├── dns/                # BIND DNS zone file & Cloudflare manager
+│   │   │   ├── thelandofkustomazi.com.zone
+│   │   │   ├── zone_manager.py
+│   │   │   └── README.md
 │   │   ├── scripts/            # Dedicated networking & DNS automation scripts
 │   │   │   ├── setup_cloudflare_tunnel.sh / .bat / .ps1
 │   │   │   └── update_duckdns.sh / .bat / .ps1
@@ -33,7 +38,7 @@ yugioh-server/
 │   └── client/                 # Player & Client Distribution Package
 │       ├── README.md           # Player setup & connection guide
 │       ├── __main__.py         # Direct execution entrypoint
-│       ├── config.json         # Symlink to config/client/config.json
+│       ├── config.json         # Standalone client connection manifest
 │       ├── install_client.bat  # Windows 1-click installer
 │       ├── install_client.sh   # Linux / macOS 1-click installer
 │       ├── launch_client.bat   # Windows launcher for Player GUI
@@ -69,7 +74,8 @@ The master controller can automatically bundle both packages into standalone, di
    - Bundles all pre-made character decks in `decks/*.ydk`.
    - Bundles the live connection manifest `config.json` and player `README.md`.
 4. **Host Server Package (`dist/ygo-server-package.tar.gz`):**
-   - Bundles `deploy_oracle_cloud.sh`, `start_server.*`, and the `scripts/` directory (`setup_cloudflare_tunnel.*`, `update_duckdns.*`).
+   - Bundles `deploy_oracle_cloud.sh`, `start_server.*`, and the `dns/` directory (BIND RFC 1035 zone file & manager).
+   - Bundles the `scripts/` directory (`setup_cloudflare_tunnel.*`, `update_duckdns.*`, `sync_oracle_vm.sh`).
    - Bundles the Docker Compose stack `docker-compose.yml` (dereferenced).
    - Bundles all systemd service unit files and `install_services.sh`.
 

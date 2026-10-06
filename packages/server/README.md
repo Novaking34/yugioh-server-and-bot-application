@@ -13,6 +13,10 @@ packages/server/
 ├── docker-compose.yml             # Container orchestration manifest (symlink to root)
 ├── start_server.bat               # Windows server host launcher & service controller
 ├── start_server.sh                # Linux/macOS local server host launcher & controller
+├── dns/                           # BIND RFC 1035 zone file & Cloudflare DNS manager
+│   ├── README.md                  # DNS routing & Cloudflare proxy architecture guide
+│   ├── thelandofkustomazi.com.zone# Authoritative BIND zone file for Cloudflare import
+│   └── zone_manager.py            # Strongly-typed zone renderer, validator & sync engine
 ├── scripts/                       # Networking & dynamic DNS automation scripts
 │   ├── setup_cloudflare_tunnel.sh # Cloudflare Tunnel manager (Linux/macOS)
 │   ├── setup_cloudflare_tunnel.bat# Cloudflare Tunnel manager (Windows Batch)
@@ -31,7 +35,7 @@ packages/server/
 ```
 
 > [!NOTE]
-> DNS zone configurations are centralized in [`config/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/config/dns/thelandofkustomazi.com.zone) per the repository architecture standards.
+> DNS zone configurations are packaged directly in [`packages/server/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/packages/server/dns/thelandofkustomazi.com.zone) as part of the host server release archive.
 
 ---
 
@@ -129,13 +133,13 @@ The scripts in `packages/server/scripts/` keep your DuckDNS subdomain synchroniz
 
 ### B. Custom Domain (`thelandofkustomazi.com`)
 
-The DNS zone configuration is centralized at [`config/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/config/dns/thelandofkustomazi.com.zone).
+The DNS zone configuration is packaged at [`packages/server/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/packages/server/dns/thelandofkustomazi.com.zone).
 
 To import into Cloudflare DNS:
 
 1. Open Cloudflare Dashboard ➔ `thelandofkustomazi.com` ➔ **DNS** ➔ **Records**.
 2. Click **Advanced -> Import and Export** ➔ **Import**.
-3. Select [`config/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/config/dns/thelandofkustomazi.com.zone).
+3. Select [`packages/server/dns/thelandofkustomazi.com.zone`](file:///home/professorseanex/yugioh-server/packages/server/dns/thelandofkustomazi.com.zone).
 4. Verify:
    * `@` and `www` CNAME point to your Cloudflare Tunnel with **Proxied (Orange Cloud)**.
    * `play` and `sim` A records point to `147.224.147.30` with **DNS-Only (Grey Cloud)** for raw TCP duel connections.

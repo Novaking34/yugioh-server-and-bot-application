@@ -52,7 +52,7 @@ if [ -z "$BASE_DIR" ]; then
 fi
 
 ENV_FILE="$BASE_DIR/.env"
-CLIENT_CONFIG="$BASE_DIR/config/client/config.json"
+CLIENT_CONFIG="$BASE_DIR/packages/client/config.json"
 if [ ! -f "$CLIENT_CONFIG" ]; then
     CLIENT_CONFIG="$BASE_DIR/production/shared/config.json"
 fi

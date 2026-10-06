@@ -24,6 +24,7 @@ import os
 from typing import Any, Dict, List, Optional, Union
 import aiosqlite
 
+from config.paths import STORY_DATA_DIR
 from production.main.logger import get_logger
 from ..foundation.types import ScenarioImportResult
 
@@ -131,8 +132,7 @@ async def sync_all_scenario_files(db_path: str, story_dir: Optional[str] = None)
     Scans story directory for scenario JSON files and synchronizes all chapters/stages into the database.
     """
     if not story_dir:
-        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        story_dir = os.path.join(base, "data", "story")
+        story_dir = STORY_DATA_DIR
 
     if not os.path.isdir(story_dir):
         return {"chapters_synced": 0, "stages_synced": 0, "files": []}

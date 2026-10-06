@@ -4,7 +4,7 @@
 # Manages the 24/7 FastAPI Uvicorn application:
 # - Serves interactive custom card catalog and archetype browser (Port 8000)
 # - Provides expansion download endpoints (/api/shared/cdb, /api/shared/manifest)
-# - Reads from primary SQLite database (production/main/web/ygo_story.db)
+# - Reads from primary SQLite database (data/authoritative/content.db)
 # =============================================================================
 
 [Unit]

@@ -5,7 +5,7 @@ Update Rarities & Complete Categorization for All 64 Cards in Set 1
 =============================================================================
 Assigns authentic official Yu-Gi-Oh! rarities (Secret Rare, Ultra Rare,
 Super Rare, Rare, Common) and enforces exact categorization across:
-1. SQLite story database (`ygo_story.db`)
+1. SQLite content database (`content.db`)
 2. Master Tracker files (CSV and TSV)
 3. Simulator binary CDB (`custom_cards.cdb`)
 =============================================================================
@@ -25,11 +25,10 @@ from constants import (
 )
 from cdb_builder import build_cdb
 
-STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
-ROOT_CSV_PATH = os.path.join(BASE_DIR, "Duelingbook Master Tracker - Set 1 - The Land of Kustomazi.csv")
-DEV_CSV_PATH = os.path.join(BASE_DIR, "development", "trackers", "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.csv")
-DEV_TSV_PATH = os.path.join(BASE_DIR, "development", "trackers", "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.tsv")
-CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
+from config.paths import STORY_DB_PATH, DEFAULT_TRACKER_CSV, DEFAULT_TRACKER_TSV, CDB_OUTPUT_PATH
+DEV_CSV_PATH = DEFAULT_TRACKER_CSV
+ROOT_CSV_PATH = DEV_CSV_PATH
+DEV_TSV_PATH = DEFAULT_TRACKER_TSV
 
 # Official Yu-Gi-Oh! Rarity Assignment Mapping for all 64 Cards:
 # Follows booster pack rarity philosophy:
@@ -123,7 +122,7 @@ def update_database(conn: sqlite3.Connection):
     print("[*] Rebuilding cards_fts index...")
     cur.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
     conn.commit()
-    print(f"    -> Updated {len(OFFICIAL_CARD_RARITIES)} cards in ygo_story.db")
+    print(f"    -> Updated {len(OFFICIAL_CARD_RARITIES)} cards in content.db")
 
 
 def update_tracker_file(file_path: str, is_tsv: bool = False):
@@ -162,7 +161,6 @@ def main():
     finally:
         conn.close()
 
-    update_tracker_file(ROOT_CSV_PATH, is_tsv=False)
     update_tracker_file(DEV_CSV_PATH, is_tsv=False)
     update_tracker_file(DEV_TSV_PATH, is_tsv=True)
 

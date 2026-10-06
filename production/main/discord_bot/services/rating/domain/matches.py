@@ -34,13 +34,11 @@ logger = get_logger("discord_bot.services.rating.domain.matches")
 # =============================================================================
 
 async def ensure_duel_matches_schema(db: aiosqlite.Connection) -> None:
-    """Ensures optional metadata columns exist on duel_matches table."""
-    cur = await db.execute("PRAGMA table_info(duel_matches)")
-    dm_cols = {r[1] for r in await cur.fetchall()}
-    if "p1_deck_name" not in dm_cols:
-        await db.execute("ALTER TABLE duel_matches ADD COLUMN p1_deck_name TEXT DEFAULT NULL")
-    if "p2_deck_name" not in dm_cols:
-        await db.execute("ALTER TABLE duel_matches ADD COLUMN p2_deck_name TEXT DEFAULT NULL")
+    """
+    Ensures duel_matches schema compatibility.
+    Note: Schema is authoritatively defined in schema_telemetry.sql and schema.sql.
+    """
+    pass
 
 
 async def record_duel_match(

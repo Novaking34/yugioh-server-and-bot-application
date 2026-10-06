@@ -1,0 +1,37 @@
+; =============================================================================
+; BIND Zone File for thelandofkustomazi.com
+; Compatible with Cloudflare DNS Zone File Import
+; Subsystem: packages/server/dns (Yu-Gi-Oh! Server Infrastructure)
+; Generated for Yu-Gi-Oh! Platform (Web Card Catalog & Game Simulator)
+; =============================================================================
+$ORIGIN thelandofkustomazi.com.
+$TTL 3600
+
+; =============================================================================
+; 1. WEBSITE & CARD CATALOG (HTTP/HTTPS - Port 8000)
+; =============================================================================
+; Option A: Cloudflare Tunnel (Recommended)
+; Tunnel ID: c346aa27-b4c1-41ba-815c-f66b2b84243b
+; Provides instant DDoS protection, SSL certificates, and zero open web ports.
+@       IN  CNAME   c346aa27-b4c1-41ba-815c-f66b2b84243b.cfargotunnel.com.
+www     IN  CNAME   c346aa27-b4c1-41ba-815c-f66b2b84243b.cfargotunnel.com.
+
+; Option B: Direct Oracle Cloud Public IP (Alternative if not using Tunnel)
+; If using direct IP instead of Tunnel, comment out Option A above and uncomment below:
+; @     IN  A       147.224.147.30
+; www   IN  CNAME   thelandofkustomazi.com.
+
+; =============================================================================
+; 2. YU-GI-OH! SIMULATOR & EDOPro PROTOCOL (TCP 7911 & 7922)
+; =============================================================================
+; [IMPORTANT] Cloudflare Proxy Status MUST be DNS-ONLY (Grey Cloud) for this!
+; Cloudflare's standard CDN proxy only supports HTTP/HTTPS web traffic.
+; Raw TCP game socket connections (Port 7911) will fail if Proxied (Orange Cloud).
+play    IN  A       147.224.147.30
+sim     IN  A       147.224.147.30
+
+; =============================================================================
+; 3. DYNAMIC DNS FALLBACK (Optional)
+; =============================================================================
+; If your server IP ever changes dynamically, you can use DuckDNS as an alias:
+; play  IN  CNAME   thelandofkustomazi.duckdns.org.

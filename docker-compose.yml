@@ -1,8 +1,11 @@
 # =============================================================================
-# Yu-Gi-Oh! Live Duel Simulator & Server Orchestration
+# BLOCK 1: METADATA BLOCK
 # =============================================================================
-# Docker Compose configuration for the automated ocgcore rule-enforcing
-# duel engine container.
+# Module: docker-compose.yml
+# Architecture: Containerized Live Duel Simulator Engine (ocgcore Stack)
+# Domain: Container Orchestration, Network Sockets & Volume Persistence
+# Description: Docker Compose configuration for the automated ocgcore
+#              rule-enforcing duel engine container.
 #
 # Container Responsibilities:
 # 1. Listen for raw TCP game client connections on Port 7911 (EDOPro / YGOPro).
@@ -10,8 +13,16 @@
 # 3. Mount live custom card expansions (CDB SQLite database and Lua effect scripts).
 # 4. Mount character and player decklists (.ydk files).
 # 5. Persist recorded duel replays (.yrp) to disk.
+#
+# Operational Invariants:
+#   - Port 7911 MUST be exposed as raw TCP (bypassing HTTP proxies/Cloudflare CDN).
+#   - Mounted expansion directories are read-only (:ro) inside the container.
+#   - Replays and config directories require read-write (:rw) permissions.
 # =============================================================================
 
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Service Declaration & Container Image Definition)
+# =============================================================================
 services:
   ygoserver:
     # Docker Hub image repository; defaults to professorseanex/ygoserver:latest
@@ -22,7 +33,13 @@ services:
     # 24/7 Resilience: Automatically restart container if host reboots or process crashes
     restart: unless-stopped
 
-    # Network Ports Mapping:
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Network Socket Routing & Volume Persistence)
+# =============================================================================
+
+    # -------------------------------------------------------------------------
+    # SUB-BLOCK 3.1: Network Port Mappings
+    # -------------------------------------------------------------------------
     # - Port 7911 (TCP): Primary game client duel socket (EDOPro / Project Ignis / YGOPro)
     #   [NOTE]: When routing through firewalls (Cloudflare/OCI), this port MUST be RAW TCP
     #           (DNS-Only / Grey Cloud in Cloudflare, NOT HTTP-proxied).
@@ -31,21 +48,25 @@ services:
       - "7911:7911"
       - "7922:7922"
 
-    # Volume Mounts (Host Path -> Container Path):
+    # -------------------------------------------------------------------------
+    # SUB-BLOCK 3.2: Storage Volume Mounts (Host Path -> Container Path)
+    # -------------------------------------------------------------------------
     volumes:
       # Simulator configuration: room parameters, chat filters, and admin credentials
-      - ./production/main/simulator/config:/ygoserver/config:rw
+      - ./data/simulator/config:/ygoserver/config:rw
       
       # Custom Card Expansions: compiled custom_cards.cdb and generated c<id>.lua scripts
-      - ./production/shared/expansions:/ygoserver/ygopro/expansions:ro
+      - ./data/expansions:/ygoserver/ygopro/expansions:ro
       
       # Shared & Story Decks: character deck profiles (.ydk format)
-      - ./production/shared/decks:/ygoserver/decks:ro
+      - ./data/decks:/ygoserver/decks:ro
       
       # Duel Replays: persisted binary replay files (.yrp) generated after each match
-      - ./production/main/simulator/replays:/ygoserver/replays:rw
+      - ./data/simulator/replays:/ygoserver/replays:rw
 
-    # Runtime Environment Variables
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Environment Variables & Production Log Rotation)
+# =============================================================================
     environment:
       - TZ=UTC
 

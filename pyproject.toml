@@ -1,15 +1,32 @@
 # =============================================================================
-# Yu-Gi-Oh! Platform - Modern Python Packaging Metadata (PEP 517 / 518 / 621)
+# BLOCK 1: METADATA BLOCK
 # =============================================================================
-# Configures declarative package specifications, build backend, dependencies,
-# entry points, and test runner configurations for pip and modern build tools.
+# Module: pyproject.toml
+# Architecture: Declarative Python Packaging Specification (PEP 517 / 518 / 621)
+# Domain: Platform Packaging, Dependency Manifest & Tool Configuration
+# Description: Modern declarative configuration defining build requirements,
+#              runtime dependencies, console script entry points, and Pytest
+#              test suite runner options.
+#
+# Invariants:
+#   - Synchronized with setup.py and requirements.txt dependencies.
+#   - Excludes non-source build and test directories from wheel distributions.
 # =============================================================================
 
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Build System Specification)
+# =============================================================================
 [build-system]
-# Standard build requirements for building wheels and editable installs
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Core Project Specification & Dependencies)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.1: Project Identity & Classifiers
+# -----------------------------------------------------------------------------
 [project]
 name = "yugioh-server"
 version = "1.0.0"
@@ -45,49 +62,62 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-# Core platform dependencies required for runtime operation
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.2: Runtime Dependencies
+# -----------------------------------------------------------------------------
 dependencies = [
     "fastapi>=0.115.0",      # Interactive card catalog and REST API server
-    "uvicorn>=0.30.0",      # Production ASGI web server engine
-    "pydantic>=2.8.0",      # Data validation models for card lore and decks
-    "python-dotenv>=1.0.0",  # Automated environment variable resolution
-    "httpx>=0.27.0",        # Async HTTP client for test suite and API requests
-    "requests>=2.31.0",     # HTTP library for client card sync downloads
-    "discord.py>=2.3.0",    # Modular Discord bot runner and slash command framework
-    "aiosqlite>=0.20.0",    # Asynchronous SQLite driver for non-blocking bot queries
-    "pillow>=10.0.0",       # Image processing library for card thumbnails
+    "uvicorn>=0.30.0",       # Production ASGI web server engine
+    "pydantic>=2.8.0",       # Data validation models for card lore and decks
+    "python-dotenv>=1.0.0",   # Automated environment variable resolution
+    "httpx>=0.27.0",         # Async HTTP client for test suite and API requests
+    "requests>=2.31.0",      # HTTP library for client card sync downloads
+    "discord.py>=2.3.0",     # Modular Discord bot runner and slash command framework
+    "aiosqlite>=0.20.0",     # Asynchronous SQLite driver for non-blocking bot queries
+    "pillow>=10.0.0",        # Image processing library for card thumbnails
 ]
 
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.3: Optional & Development Dependencies
+# -----------------------------------------------------------------------------
 [project.optional-dependencies]
-# Dependencies for running unit and integration test suites
 dev = [
     "pytest>=8.0.0",
 ]
 
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.4: Project URLs & Repository Links
+# -----------------------------------------------------------------------------
 [project.urls]
-# Official repository and web URLs
 "Homepage" = "https://thelandofkustomazi.com"
 "Repository" = "https://github.com/Novaking34/yugioh-server-and-bot-application"
 "Bug Tracker" = "https://github.com/Novaking34/yugioh-server-and-bot-application/issues"
 "Documentation" = "https://github.com/Novaking34/yugioh-server-and-bot-application/blob/master/README.md"
 
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Entry Points, Tooling Configuration & Test Options)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 4.1: Console Scripts & Tooling Discovery
+# -----------------------------------------------------------------------------
 [project.scripts]
-# Command line entry point installed into Python's bin/ or Scripts/
 ygo-manage = "manage:main"
 
 [tool.setuptools]
-# Expose the master controller as a top-level module
 py-modules = ["manage"]
-# Package discovery directories
 packages = [
     "config",
     "development",
     "production",
     "packages",
+    "data",
 ]
 
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 4.2: Pytest Test Suite Configuration
+# -----------------------------------------------------------------------------
 [tool.pytest.ini_options]
-# Pytest test discovery settings
 minversion = "8.0"
 testpaths = ["development/tests"]
 python_files = ["test_*.py"]
@@ -98,4 +128,3 @@ filterwarnings = [
     "ignore:.*Using `httpx` with `starlette.testclient` is deprecated.*:DeprecationWarning",
     "ignore:.*Using `httpx` with `starlette.testclient` is deprecated.*:UserWarning",
 ]
-

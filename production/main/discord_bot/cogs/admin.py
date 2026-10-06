@@ -77,7 +77,7 @@ class AdminCog(commands.GroupCog, group_name="admin"):
             )
             embed.add_field(name="Cards Compiled to CDB", value=f"**{cards_count}** cards", inline=True)
             embed.add_field(name="Lua Effect Scripts", value=f"**{scripts_count}** scripts", inline=True)
-            embed.add_field(name="CDB Path", value=f"`production/shared/expansions/custom_cards.cdb`", inline=False)
+            embed.add_field(name="CDB Path", value=f"`{os.path.relpath(CDB_OUTPUT_PATH, BASE_DIR)}`", inline=False)
             embed.set_footer(text="Players can now update via the Client App!")
 
             await interaction.followup.send(embed=embed, ephemeral=True)

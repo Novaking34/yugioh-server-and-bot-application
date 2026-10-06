@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Yu-Gi-Oh! Custom Server, Story Platform & Simulator - Master CLI & Installer
+# BLOCK 1: METADATA BLOCK
 # =============================================================================
-# Master shell controller and environment bootstrap script for Linux and macOS.
+# Module: manage.sh
+# Architecture: Imperative Host Bootstrap Shell
+# Domain: Environment Resolution, Virtualenv Management & Operational Entry
+# Description: Master shell controller and environment bootstrap script for Linux
+#              and macOS. Ensures runtime preconditions before execution:
+#              1. Verifies Python 3 (>= 3.9) in system PATH.
+#              2. Bootstraps virtual environment (./venv) and pip dependencies.
+#              3. Verifies optional tooling (Docker, Docker Compose, luac).
+#              4. Hands off control transparently to manage.py in venv.
 #
-# Primary Responsibilities:
-# 1. Environment Verification:
-#    - Validates that Python 3 (>= 3.9) is installed and available in system PATH.
-#    - Verifies presence of the Python virtual environment (./venv).
-#    - Automatically bootstraps virtualenv and dependencies from requirements.txt.
-# 2. Dependency & Tool Checking:
-#    - Checks for Docker engine and Docker Compose for containerized duel simulation.
-#    - Checks for the luac bytecode compiler for Lua effect script validation.
-# 3. Command Execution:
-#    - Transparently hands off commands and arguments to the Python Master
-#      Controller (manage.py) inside the isolated virtual environment.
-#
-# Usage:
-#   ./manage.sh [command] [options...]
+# Invariants:
+#   - Deterministic execution regardless of invocation directory ($BASE_DIR).
+#   - Halts on unhandled errors (set -e).
+#   - Isolates all Python execution to ./venv/bin/python3.
 #
 # Common Commands:
 #   ./manage.sh status             # Inspect container, DB, and card pool status
@@ -25,20 +23,24 @@
 #   ./manage.sh stop               # Stop the live duel simulator container
 #   ./manage.sh restart            # Restart the live duel simulator container
 #   ./manage.sh sync               # Compile SQLite CDB and regenerate Lua scripts
-#   ./manage.sh sync-vm            # Sync git repo & restart services on Oracle Cloud VM
+#   ./manage.sh sync-vm            # Sync git repo & restart services on Oracle VM
 #   ./manage.sh web                # Launch the FastAPI web portal (Port 8000)
 #   ./manage.sh bot                # Launch The Great Kasutamaiza Discord bot
 #   ./manage.sh tunnel             # Launch Cloudflare HTTPS Tunnel
 #   ./manage.sh package            # Build standalone client & server packages in dist/
 #   ./manage.sh test               # Run the comprehensive Pytest test suite
-#   ./manage.sh validate-lua       # Validate Lua script syntax
+#   ./manage.sh validate-lua       # Validate Lua script syntax with luac
 #   ./manage.sh install            # Initialize database, CDB, and dependencies
+# =============================================================================
+
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Environment Configuration & Path Definitions)
 # =============================================================================
 
 # Halt immediately if any command returns an unhandled non-zero exit status
 set -e
 
-# Resolve the absolute base directory of the repository regardless of where the script is invoked
+# Resolve the absolute base directory of the repository regardless of invocation path
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$BASE_DIR"
 
@@ -56,11 +58,9 @@ BOLD="\033[1m"
 NC="\033[0m" # Reset / No Color
 
 # =============================================================================
-# Function: ensure_environment
+# BLOCK 3: BODY BLOCK (Environment Verification & Pre-flight Diagnostics)
 # =============================================================================
-# Ensures that Python 3 and an activated virtual environment with all required
-# dependencies are present before attempting to execute manage.py.
-# =============================================================================
+
 ensure_environment() {
     # 1. Verify that Python 3 executable exists in PATH
     if ! command -v python3 >/dev/null 2>&1; then
@@ -90,7 +90,7 @@ ensure_environment() {
 }
 
 # =============================================================================
-# Main Command Dispatcher
+# BLOCK 4: CLOSING BLOCK (Command Dispatcher & Process Hand-off)
 # =============================================================================
 
 # Display help banner if invoked with help flags

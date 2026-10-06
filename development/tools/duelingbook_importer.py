@@ -10,7 +10,7 @@ parameters (Attribute, Level/Rank/Link Rating, Scales, ATK/DEF).
 This tool bridges Duelingbook and our live platform by:
 1. Parsing raw Duelingbook JSON card definitions (or standardized dictionaries).
 2. Generating a valid, non-colliding 8-digit custom passcode (50,000,000 range).
-3. Inserting/updating the card in the SQLite Story Database (`ygo_story.db`).
+3. Inserting/updating the card in the SQLite Content Database (`content.db`).
 4. Updating the Full-Text Search (FTS5) virtual table index.
 5. Automatically calling `cdb_builder.py` to update the duel simulator CDB.
 6. Automatically calling `lua_generator.py` to scaffold the card's Lua effect script.
@@ -26,10 +26,12 @@ from typing import Dict, Any, Optional, List, Union, Tuple
 
 # Resolve project base directory
 try:
-    from config.paths import BASE_DIR, STORY_DB_PATH
+    from config.paths import BASE_DIR, CONTENT_DB_PATH
+    STORY_DB_PATH = CONTENT_DB_PATH
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
+    CONTENT_DB_PATH = os.path.join(BASE_DIR, "data", "authoritative", "content.db")
+    STORY_DB_PATH = CONTENT_DB_PATH
 
 # Import centralized tools and constants from local tools directory
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

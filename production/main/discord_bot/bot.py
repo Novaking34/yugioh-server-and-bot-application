@@ -34,7 +34,7 @@ if BOT_DIR not in sys.path:
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from bot_config import BOT_CONFIG
+from bot_config import BOT_CONFIG, get_bot_intents
 from production.main.logger import get_logger
 
 logger = get_logger("discord_bot")
@@ -115,11 +115,7 @@ def attach_event_handlers(bot: commands.Bot):
 
 async def run_bot_instance(token: str, with_privileged_intents: bool = True):
     """Initializes and runs a bot instance with specified intents."""
-    intents = discord.Intents.default()
-    if with_privileged_intents:
-        intents.message_content = True
-        intents.members = True
-
+    intents = get_bot_intents(with_privileged=with_privileged_intents) or discord.Intents.default()
     bot = commands.Bot(command_prefix=BOT_CONFIG["prefix"], intents=intents)
     attach_event_handlers(bot)
 

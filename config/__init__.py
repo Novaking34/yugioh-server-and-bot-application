@@ -1,16 +1,35 @@
+# =============================================================================
+# BLOCK 1: METADATA BLOCK
+# =============================================================================
 """
-=============================================================================
-Yu-Gi-Oh! Platform - Centralized Configuration Subsystem
-=============================================================================
-Provides a unified access point for all configuration layers:
-1. Canonical Filesystem Paths (config.paths)
-2. Strongly-Typed Environment & Network Settings (config.settings)
-3. Discord Bot Identity & Command Profiles (config.bot)
-4. Client JSON Connection Manifest (config/client/config.json)
-5. Live Duel Simulator Settings (config/simulator/)
-=============================================================================
+Module: config
+Description:
+    Centralized Platform Configuration, Global Invariants, Logging & Diagnostics.
+    Provides a unified, single-import access surface for all 6 platform configuration tiers:
+    1. Canonical Filesystem Hierarchy & Unified Data Subsystems (config.paths)
+    2. Strongly-Typed Environment & Infrastructure Settings (config.settings)
+    3. Global Master Rule 5 Invariants, Bitmasks & Geometry (config.game_rules)
+    4. Multi-Sink Structured JSON Logging Engine (config.logging)
+    5. Distributed Tracing & 14-Table Diagnostic Auditor (config.debugger)
+    6. Discord Bot Configuration Subsystem (production.main.discord_bot.bot_config)
 """
 
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Inclusions & Imports)
+# =============================================================================
+
+import os
+import sys
+
+# Prevent config/ package directory from shadowing Python stdlib logging
+_CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+_ROOT_DIR = os.path.dirname(_CURR_DIR)
+if sys.path and sys.path[0] == _CURR_DIR:
+    sys.path.pop(0)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
+# 1. Canonical Filesystem Paths
 from config.paths import (
     BASE_DIR,
     CONFIG_DIR,
@@ -28,6 +47,8 @@ from config.paths import (
     SIMULATOR_TIPS_JSON,
     DNS_CONFIG_DIR,
     DNS_ZONE_FILE_PATH,
+    LOGGING_CONFIG_DIR,
+    DEBUGGER_CONFIG_DIR,
     PROD_DIR,
     DEV_DIR,
     PACKAGES_DIR,
@@ -36,7 +57,9 @@ from config.paths import (
     SIMULATOR_DIR,
     SIMULATOR_REPLAYS_DIR,
     WEB_DIR,
+    CONTENT_DB_PATH,
     STORY_DB_PATH,
+    TELEMETRY_DB_PATH,
     TEMPLATES_DIR,
     BOT_DIR,
     BOT_COGS_DIR,
@@ -50,6 +73,9 @@ from config.paths import (
     PICS_DIR,
     THUMBNAILS_DIR,
     DECKS_DIR,
+    LORE_DATA_DIR,
+    STORY_DATA_DIR,
+    TELEMETRY_DATA_DIR,
     SERVER_PACKAGE_DIR,
     CLIENT_PACKAGE_DIR,
     CLIENT_ZIP_PATH,
@@ -57,15 +83,32 @@ from config.paths import (
     CHECKSUMS_PATH,
     TOOLS_DIR,
     TESTS_DIR,
+    TESTS_UNIT_DIR,
+    TESTS_INTEGRATION_DIR,
+    TESTS_FUNCTIONAL_DIR,
+    DATA_DIR,
+    AUTHORITATIVE_DATA_DIR,
     DATABASE_DIR,
     TRACKERS_DIR,
+    DEFAULT_TRACKER_CSV,
+    DEFAULT_TRACKER_TSV,
+    ARTWORK_DIR,
     SCHEMA_PATH,
     SEED_SCRIPT_PATH,
     DOCS_DIR,
+    DEV_DOCS_DIR,
+    RAW_CARD_ART_DIR,
+    SIMULATOR_DATA_DIR,
+    LOGS_DIR,
+    COMBINED_LOG_PATH,
+    ERRORS_LOG_PATH,
+    AUDIT_LOG_PATH,
+    DEBUG_SNAPSHOTS_DIR,
     get_all_runtime_directories,
     ensure_directories,
 )
 
+# 2. Strongly-Typed Platform Settings
 from config.settings import (
     Settings,
     settings,
@@ -77,25 +120,177 @@ from config.settings import (
     DuckDNSConfig,
     StorageConfig,
     PipelineConfig,
+    DatabaseConfig,
+    DebugConfig,
+    LoggingConfig,
 )
 
-from config.bot import (
-    load_bot_config,
-    BOT_CONFIG,
+# 3. Global Game Rules & Invariants
+from config.game_rules import (
+    CUSTOM_PASSCODE_MIN,
+    CUSTOM_PASSCODE_MAX,
+    OFFICIAL_PASSCODE_MAX,
+    TYPE_MONSTER,
+    TYPE_SPELL,
+    TYPE_TRAP,
+    TYPE_NORMAL,
+    TYPE_EFFECT,
+    TYPE_FUSION,
+    TYPE_RITUAL,
+    TYPE_TRAPMONSTER,
+    TYPE_SPIRIT,
+    TYPE_UNION,
+    TYPE_DUAL,
+    TYPE_TUNER,
+    TYPE_SYNCHRO,
+    TYPE_TOKEN,
+    TYPE_QUICKPLAY,
+    TYPE_CONTINUOUS,
+    TYPE_EQUIP,
+    TYPE_FIELD,
+    TYPE_COUNTER,
+    TYPE_FLIP,
+    TYPE_TOON,
+    TYPE_XYZ,
+    TYPE_PENDULUM,
+    TYPE_SPSUMMON,
+    TYPE_LINK,
+    ATTRIBUTE_EARTH,
+    ATTRIBUTE_WATER,
+    ATTRIBUTE_FIRE,
+    ATTRIBUTE_WIND,
+    ATTRIBUTE_LIGHT,
+    ATTRIBUTE_DARK,
+    ATTRIBUTE_DIVINE,
+    RACE_WARRIOR,
+    RACE_SPELLCASTER,
+    RACE_FAIRY,
+    RACE_FIEND,
+    RACE_ZOMBIE,
+    RACE_MACHINE,
+    RACE_AQUA,
+    RACE_PYRO,
+    RACE_ROCK,
+    RACE_WINGEDBEAST,
+    RACE_PLANT,
+    RACE_INSECT,
+    RACE_THUNDER,
+    RACE_DRAGON,
+    RACE_BEAST,
+    RACE_BEASTWARRIOR,
+    RACE_DINOSAUR,
+    RACE_FISH,
+    RACE_SEASERPENT,
+    RACE_REPTILE,
+    RACE_PSYCHIC,
+    RACE_DIVINEBEAST,
+    RACE_CREATORGOD,
+    RACE_WYRM,
+    RACE_CYBERSE,
+    RACE_ILLUSION,
+    LINK_B,
+    LINK_BL,
+    LINK_BR,
+    LINK_L,
+    LINK_R,
+    LINK_T,
+    LINK_TL,
+    LINK_TR,
+    STANDARD_MAIN_DECK_MIN,
+    STANDARD_MAIN_DECK_MAX,
+    STANDARD_EXTRA_DECK_MAX,
+    STANDARD_SIDE_DECK_MAX,
+    STANDARD_CARD_COPY_LIMIT,
+    INITIAL_HAND_SIZE,
+    STARTING_LIFE_POINTS,
+    MONSTER_ZONES_COUNT,
+    SPELL_TRAP_ZONES_COUNT,
+    ATTRIBUTE_MAP,
+    RACE_MAP,
+    LINK_ARROW_MAP,
 )
 
+# 4. Structured Logging Engine & Telemetry Tools
 from config.logging import (
     get_logger,
     audit_operation,
+    record_audit_event,
     log_diagnostic_snapshot,
+    ColoredConsoleFormatter,
+    StructuredJSONFormatter,
+    ContextEnrichmentFilter,
+    get_logging_paths,
+    get_log_stats,
+    tail_log,
+    query_logs,
+    query_audit_logs,
+    clean_logs,
 )
 
+# 5. Centralized Debugger & Tracing
+from config.debugger import (
+    get_current_trace_id,
+    set_trace_id,
+    new_trace_id,
+    trace_span,
+    measure_slow_query,
+    DiagnosticResult,
+    PlatformDiagnostics,
+    take_debug_snapshot,
+    prune_debug_snapshots,
+    print_diagnostic_report,
+    run_diagnostics,
+)
+
+# 6. Discord Bot Configuration
+from production.main.discord_bot.bot_config import (
+    load_bot_config,
+    BOT_CONFIG,
+    BOT_SETTINGS,
+    BotRuntimeConfig,
+    get_bot_intents,
+)
+
+# 7. Player Client Configuration
+from packages.client.src.client_config import (
+    ClientConfig,
+    load_client_config,
+)
+
+# 8. Server DNS Configuration
+from packages.server.dns import (
+    DNSZoneRecord,
+    render_zone_content,
+    validate_zone_content,
+    sync_zone_file_from_settings,
+    load_zone_file,
+)
+
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Conveniences & Subsystem Information)
+# =============================================================================
+
+def get_platform_info() -> dict:
+    """Returns a high-level summary of active configuration, environment, and storage state."""
+    return {
+        "environment": settings.platform.environment,
+        "debug_mode": settings.platform.debug,
+        "log_level": settings.logging.level,
+        "log_format": settings.logging.format,
+        "database_path": settings.storage.db_path,
+        "cdb_path": settings.storage.cdb_path,
+        "sim_port": settings.simulator.port,
+        "web_port": settings.network.web_port,
+        "discord_prefix": settings.discord.command_prefix,
+    }
+
+
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Exports & Namespace Control)
+# =============================================================================
+
 __all__ = [
-    # Centralized Logger & Telemetry
-    "get_logger",
-    "audit_operation",
-    "log_diagnostic_snapshot",
-    # Global Settings Singleton
+    # Global Platform Settings
     "settings",
     "Settings",
     "PlatformConfig",
@@ -106,15 +301,140 @@ __all__ = [
     "DuckDNSConfig",
     "StorageConfig",
     "PipelineConfig",
-    # Discord Bot Config
+    "DatabaseConfig",
+    "DebugConfig",
+    "LoggingConfig",
+    "get_platform_info",
+    # Global Game Rules & Invariants
+    "CUSTOM_PASSCODE_MIN",
+    "CUSTOM_PASSCODE_MAX",
+    "OFFICIAL_PASSCODE_MAX",
+    "TYPE_MONSTER",
+    "TYPE_SPELL",
+    "TYPE_TRAP",
+    "TYPE_NORMAL",
+    "TYPE_EFFECT",
+    "TYPE_FUSION",
+    "TYPE_RITUAL",
+    "TYPE_TRAPMONSTER",
+    "TYPE_SPIRIT",
+    "TYPE_UNION",
+    "TYPE_DUAL",
+    "TYPE_TUNER",
+    "TYPE_SYNCHRO",
+    "TYPE_TOKEN",
+    "TYPE_QUICKPLAY",
+    "TYPE_CONTINUOUS",
+    "TYPE_EQUIP",
+    "TYPE_FIELD",
+    "TYPE_COUNTER",
+    "TYPE_FLIP",
+    "TYPE_TOON",
+    "TYPE_XYZ",
+    "TYPE_PENDULUM",
+    "TYPE_SPSUMMON",
+    "TYPE_LINK",
+    "ATTRIBUTE_EARTH",
+    "ATTRIBUTE_WATER",
+    "ATTRIBUTE_FIRE",
+    "ATTRIBUTE_WIND",
+    "ATTRIBUTE_LIGHT",
+    "ATTRIBUTE_DARK",
+    "ATTRIBUTE_DIVINE",
+    "RACE_WARRIOR",
+    "RACE_SPELLCASTER",
+    "RACE_FAIRY",
+    "RACE_FIEND",
+    "RACE_ZOMBIE",
+    "RACE_MACHINE",
+    "RACE_AQUA",
+    "RACE_PYRO",
+    "RACE_ROCK",
+    "RACE_WINGEDBEAST",
+    "RACE_PLANT",
+    "RACE_INSECT",
+    "RACE_THUNDER",
+    "RACE_DRAGON",
+    "RACE_BEAST",
+    "RACE_BEASTWARRIOR",
+    "RACE_DINOSAUR",
+    "RACE_FISH",
+    "RACE_SEASERPENT",
+    "RACE_REPTILE",
+    "RACE_PSYCHIC",
+    "RACE_DIVINEBEAST",
+    "RACE_CREATORGOD",
+    "RACE_WYRM",
+    "RACE_CYBERSE",
+    "RACE_ILLUSION",
+    "LINK_B",
+    "LINK_BL",
+    "LINK_BR",
+    "LINK_L",
+    "LINK_R",
+    "LINK_T",
+    "LINK_TL",
+    "LINK_TR",
+    "STANDARD_MAIN_DECK_MIN",
+    "STANDARD_MAIN_DECK_MAX",
+    "STANDARD_EXTRA_DECK_MAX",
+    "STANDARD_SIDE_DECK_MAX",
+    "STANDARD_CARD_COPY_LIMIT",
+    "INITIAL_HAND_SIZE",
+    "STARTING_LIFE_POINTS",
+    "MONSTER_ZONES_COUNT",
+    "SPELL_TRAP_ZONES_COUNT",
+    "ATTRIBUTE_MAP",
+    "RACE_MAP",
+    "LINK_ARROW_MAP",
+    # Structured Logging Engine & Telemetry Tools
+    "get_logger",
+    "audit_operation",
+    "record_audit_event",
+    "log_diagnostic_snapshot",
+    "ColoredConsoleFormatter",
+    "StructuredJSONFormatter",
+    "ContextEnrichmentFilter",
+    "get_logging_paths",
+    "get_log_stats",
+    "tail_log",
+    "query_logs",
+    "query_audit_logs",
+    "clean_logs",
+    # Centralized Debugger & Tracing
+    "get_current_trace_id",
+    "set_trace_id",
+    "new_trace_id",
+    "trace_span",
+    "measure_slow_query",
+    "DiagnosticResult",
+    "PlatformDiagnostics",
+    "take_debug_snapshot",
+    "prune_debug_snapshots",
+    "print_diagnostic_report",
+    "run_diagnostics",
+    # Discord Bot Profiles & Settings
     "load_bot_config",
     "BOT_CONFIG",
-    # Path Constants
+    "BOT_SETTINGS",
+    "BotRuntimeConfig",
+    "get_bot_intents",
+    # Player Client Profiles & Settings
+    "ClientConfig",
+    "load_client_config",
+    # Server DNS Configuration & Tools
+    "DNSZoneRecord",
+    "render_zone_content",
+    "validate_zone_content",
+    "sync_zone_file_from_settings",
+    "load_zone_file",
+    # Canonical Filesystem Paths
     "BASE_DIR",
     "CONFIG_DIR",
     "CLIENT_CONFIG_DIR",
     "CLIENT_CONFIG_PATH",
     "BOT_CONFIG_DIR",
+    "BOT_CONFIG_PATH",
     "BOT_EXAMPLE_CONFIG_PATH",
     "ENV_FILE_PATH",
     "ENV_EXAMPLE_PATH",
@@ -126,6 +446,8 @@ __all__ = [
     "SIMULATOR_TIPS_JSON",
     "DNS_CONFIG_DIR",
     "DNS_ZONE_FILE_PATH",
+    "LOGGING_CONFIG_DIR",
+    "DEBUGGER_CONFIG_DIR",
     "PROD_DIR",
     "DEV_DIR",
     "PACKAGES_DIR",
@@ -134,7 +456,9 @@ __all__ = [
     "SIMULATOR_DIR",
     "SIMULATOR_REPLAYS_DIR",
     "WEB_DIR",
+    "CONTENT_DB_PATH",
     "STORY_DB_PATH",
+    "TELEMETRY_DB_PATH",
     "TEMPLATES_DIR",
     "BOT_DIR",
     "BOT_COGS_DIR",
@@ -148,6 +472,9 @@ __all__ = [
     "PICS_DIR",
     "THUMBNAILS_DIR",
     "DECKS_DIR",
+    "LORE_DATA_DIR",
+    "STORY_DATA_DIR",
+    "TELEMETRY_DATA_DIR",
     "SERVER_PACKAGE_DIR",
     "CLIENT_PACKAGE_DIR",
     "CLIENT_ZIP_PATH",
@@ -155,14 +482,27 @@ __all__ = [
     "CHECKSUMS_PATH",
     "TOOLS_DIR",
     "TESTS_DIR",
+    "TESTS_UNIT_DIR",
+    "TESTS_INTEGRATION_DIR",
+    "TESTS_FUNCTIONAL_DIR",
+    "DATA_DIR",
+    "AUTHORITATIVE_DATA_DIR",
     "DATABASE_DIR",
     "TRACKERS_DIR",
+    "DEFAULT_TRACKER_CSV",
+    "DEFAULT_TRACKER_TSV",
+    "ARTWORK_DIR",
     "SCHEMA_PATH",
     "SEED_SCRIPT_PATH",
     "DOCS_DIR",
-    # Helper Functions
+    "DEV_DOCS_DIR",
+    "RAW_CARD_ART_DIR",
+    "SIMULATOR_DATA_DIR",
+    "LOGS_DIR",
+    "COMBINED_LOG_PATH",
+    "ERRORS_LOG_PATH",
+    "AUDIT_LOG_PATH",
+    "DEBUG_SNAPSHOTS_DIR",
     "get_all_runtime_directories",
     "ensure_directories",
 ]
-
-

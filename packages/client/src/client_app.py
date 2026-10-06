@@ -35,29 +35,19 @@ if _SRC_DIR not in sys.path:
 
 # Import sync engine and configuration resolver
 try:
-    import sync_client
-    CLIENT_CONFIG: Dict[str, Any] = sync_client.resolve_config_manifest()
+    from .client_config import CLIENT_CONFIG, CLIENT_SETTINGS, ClientConfig
+    from . import sync_client
 except ImportError:
-    # Standalone fallback when running unpacked
-    try:
-        from . import sync_client
-        CLIENT_CONFIG = sync_client.resolve_config_manifest()
-    except Exception:
-        CLIENT_CONFIG = {
-            "server_name": "The Great Kasutamaiza Duel Server",
-            "server_host": "thelandofkustomazi.com",
-            "server_port": 7911,
-            "room_port": 7922,
-            "fallback_host": "thelandofkustomazi.duckdns.org",
-            "web_catalog_url": "https://thelandofkustomazi.com",
-        }
+    from client_config import CLIENT_CONFIG, CLIENT_SETTINGS, ClientConfig
+    import sync_client
+
 
 # Resolve directory locations for assets, database, and decks
 BASE_DIR: str = _PACKAGE_DIR
 
 EXPANSIONS_DIR: str = os.path.join(BASE_DIR, "expansions")
 if not os.path.isdir(EXPANSIONS_DIR):
-    repo_exp = os.path.join(_PROJECT_ROOT, "production", "shared", "expansions")
+    repo_exp = os.path.join(_PROJECT_ROOT, "data", "expansions")
     if os.path.isdir(repo_exp):
         EXPANSIONS_DIR = repo_exp
 
@@ -66,7 +56,7 @@ SCRIPTS_DIR: str = os.path.join(EXPANSIONS_DIR, "scripts")
 
 DECKS_DIR: str = os.path.join(BASE_DIR, "decks")
 if not os.path.isdir(DECKS_DIR):
-    repo_decks = os.path.join(_PROJECT_ROOT, "production", "shared", "decks")
+    repo_decks = os.path.join(_PROJECT_ROOT, "data", "decks")
     if os.path.isdir(repo_decks):
         DECKS_DIR = repo_decks
 

@@ -1,1 +1,13 @@
-../../config/client/config.json
+{
+  "server_name": "The Great Kasutamaiza Duel Server",
+  "server_host": "thelandofkustomazi.com",
+  "server_port": 7911,
+  "room_port": 7922,
+  "domain": "thelandofkustomazi.com",
+  "fallback_host": "147.224.147.30",
+  "fallback_simulator_host": "147.224.147.30",
+  "web_catalog_url": "https://thelandofkustomazi.com",
+  "server_url": "https://thelandofkustomazi.com",
+  "web_port": 8000,
+  "expansions_update_url": "https://thelandofkustomazi.com/api/expansions/download"
+}

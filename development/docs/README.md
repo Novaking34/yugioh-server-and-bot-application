@@ -17,7 +17,7 @@ This directory contains in-depth architectural specifications, cloud infrastruct
 ## 🌐 Subsystem Documentation Cross-References
 
 * **Central Configuration:** [`config/README.md`](file:///home/professorseanex/yugioh-server/config/README.md)
-* **DNS & Domain Architecture:** [`config/dns/README.md`](file:///home/professorseanex/yugioh-server/config/dns/README.md)
+* **DNS & Domain Architecture:** [`packages/server/dns/README.md`](file:///home/professorseanex/yugioh-server/packages/server/dns/README.md)
 * **Player Client Package:** [`packages/client/README.md`](file:///home/professorseanex/yugioh-server/packages/client/README.md)
 * **Host Server Package:** [`packages/server/README.md`](file:///home/professorseanex/yugioh-server/packages/server/README.md)
 * **Server Scripts Manual:** [`packages/server/scripts/README.md`](file:///home/professorseanex/yugioh-server/packages/server/scripts/README.md)

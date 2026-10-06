@@ -29,11 +29,13 @@ from typing import Optional, List, Tuple
 
 # Resolve project base directory
 try:
-    from config.paths import BASE_DIR, STORY_DB_PATH, DECKS_DIR
+    from config.paths import BASE_DIR, CONTENT_DB_PATH, DECKS_DIR
+    STORY_DB_PATH = CONTENT_DB_PATH
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    STORY_DB_PATH = os.path.join(BASE_DIR, "production", "main", "web", "ygo_story.db")
-    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
+    CONTENT_DB_PATH = os.path.join(BASE_DIR, "data", "authoritative", "content.db")
+    STORY_DB_PATH = CONTENT_DB_PATH
+    DECKS_DIR = os.path.join(BASE_DIR, "data", "decks")
 
 
 def sanitize_filename(name: str) -> str:

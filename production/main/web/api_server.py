@@ -27,22 +27,23 @@ import zipfile
 # Resolve base directories
 try:
     from config.paths import (
-        BASE_DIR, STORY_DB_PATH, TEMPLATES_DIR, STATIC_DIR, TOOLS_DIR,
+        BASE_DIR, CONTENT_DB_PATH, TELEMETRY_DB_PATH, TEMPLATES_DIR, STATIC_DIR, TOOLS_DIR,
         CDB_OUTPUT_PATH, DECKS_DIR, EXPANSIONS_DIR, SCRIPTS_DIR, PICS_DIR
     )
 except ImportError:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    STORY_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ygo_story.db")
+    CONTENT_DB_PATH = os.path.join(BASE_DIR, "data", "authoritative", "content.db")
+    TELEMETRY_DB_PATH = os.path.join(BASE_DIR, "data", "telemetry", "telemetry.db")
     TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
     STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
     TOOLS_DIR = os.path.join(BASE_DIR, "development", "tools")
-    CDB_OUTPUT_PATH = os.path.join(BASE_DIR, "production", "shared", "expansions", "custom_cards.cdb")
-    DECKS_DIR = os.path.join(BASE_DIR, "production", "shared", "decks")
-    EXPANSIONS_DIR = os.path.join(BASE_DIR, "production", "shared", "expansions")
+    EXPANSIONS_DIR = os.path.join(BASE_DIR, "data", "expansions")
+    CDB_OUTPUT_PATH = os.path.join(EXPANSIONS_DIR, "custom_cards.cdb")
+    DECKS_DIR = os.path.join(BASE_DIR, "data", "decks")
     SCRIPTS_DIR = os.path.join(EXPANSIONS_DIR, "scripts")
     PICS_DIR = os.path.join(EXPANSIONS_DIR, "pics")
 
-DB_PATH = STORY_DB_PATH
+DB_PATH = CONTENT_DB_PATH
 
 # Centralized platform logging
 try:

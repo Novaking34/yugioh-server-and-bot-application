@@ -1,27 +1,49 @@
 # =============================================================================
-# Yu-Gi-Oh! Platform - Git Ignore Rules
+# BLOCK 1: METADATA BLOCK
 # =============================================================================
-# Protects repository integrity by excluding:
-# - Python bytecode and compiled C extensions
-# - Virtual environments and package build directories
-# - Release archives in dist/
-# - Environment files, Discord bot tokens, and sensitive secrets
-# - OS-specific metadata and IDE workspace settings
-# - Runtime log files and large binary duel replays (.yrp)
+# Module: .gitignore
+# Architecture: Git Version Control Exclusion Rules
+# Domain: Repository Cleanliness, Artifact Exclusion & Secret Protection
+# Description: Authoritative specification of files, patterns, and directories
+#              prohibited from git version control:
+#              - Python bytecode and compiled C extensions
+#              - Virtual environments and package build directories
+#              - Release distribution archives in dist/
+#              - Environment files, credentials, and sensitive tokens
+#              - Operating system metadata and IDE workspace configs
+#              - Runtime log files and large binary duel replays (.yrp)
+#
+# Invariants:
+#   - STRICT SECRECY: Never permit .env or credentials to be tracked.
+#   - REPRODUCIBILITY: Only source code and canonical assets are committed.
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# 1. Python Bytecode, Caching & Compiled Binaries
-# -----------------------------------------------------------------------------
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Runtimes, Compilers & Bytecode Caches)
+# =============================================================================
 __pycache__/
-**/__pycache__/
+/**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Virtual Environments, Builds, Testing & Secrets)
+# =============================================================================
+
 # -----------------------------------------------------------------------------
-# 2. Package Builds, Distributions & Setuptools Artifacts
+# SUB-BLOCK 3.1: Python Virtual Environments
+# -----------------------------------------------------------------------------
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# -----------------------------------------------------------------------------
+# SUB-BLOCK 3.2: Package Builds, Distributions & Setuptools Artifacts
 # -----------------------------------------------------------------------------
 build/
 develop-eggs/
@@ -41,17 +63,7 @@ wheels/
 *.whl
 
 # -----------------------------------------------------------------------------
-# 3. Python Virtual Environments
-# -----------------------------------------------------------------------------
-venv/
-env/
-ENV/
-.venv/
-env.bak/
-venv.bak/
-
-# -----------------------------------------------------------------------------
-# 4. Automated Testing, Coverage & Linters
+# SUB-BLOCK 3.3: Automated Testing, Coverage & Linters
 # -----------------------------------------------------------------------------
 .pytest_cache/
 .coverage
@@ -62,7 +74,7 @@ htmlcov/
 .mypy_cache/
 
 # -----------------------------------------------------------------------------
-# 5. Secrets, Tokens & Environment Configurations
+# SUB-BLOCK 3.4: Secrets, Tokens & Environment Configurations
 # -----------------------------------------------------------------------------
 .env
 .env.*
@@ -74,7 +86,7 @@ discord_bot/config.json
 production/main/discord_bot/config.json
 
 # -----------------------------------------------------------------------------
-# 6. Operating System & Editor Metadata
+# SUB-BLOCK 3.5: Operating System & Editor Metadata
 # -----------------------------------------------------------------------------
 .DS_Store
 .DS_Store?
@@ -91,10 +103,10 @@ desktop.ini
 *~
 *.bak
 
-# -----------------------------------------------------------------------------
-# 7. Runtime Server Logs & Match Replays
-# -----------------------------------------------------------------------------
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Runtime Server Logs & Match Replays)
+# =============================================================================
 *.log
 logs/
-production/main/simulator/replays/*.yrp
-!production/main/simulator/replays/.gitkeep
+data/simulator/replays/*.yrp
+!data/simulator/replays/.gitkeep

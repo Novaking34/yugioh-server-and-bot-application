@@ -35,8 +35,8 @@ from config.paths import STORY_DB_PATH, CDB_OUTPUT_PATH, DECKS_DIR, TRACKERS_DIR
 from development.tools.cdb_builder import build_cdb, parse_card_type
 
 JSON_DECK_PATH = "/home/professorseanex/.gemini/antigravity-ide/brain/3ee778d3-38e4-483c-aa6e-cd58a9c1f8b3/scratch/deck_20861703_full.json"
-ROOT_TRACKER_CSV = os.path.join(BASE_DIR, "Duelingbook Master Tracker - Set 1 - The Land of Kustomazi.csv")
 TRACKER_CSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.csv")
+ROOT_TRACKER_CSV = TRACKER_CSV
 TRACKER_TSV = os.path.join(TRACKERS_DIR, "Duelingbook_Master_Tracker_Set_1_The_Land_of_Kustomazi.tsv")
 
 
@@ -220,7 +220,7 @@ def run_update():
 
 def update_trackers(updated_map: Dict[int, Dict[str, Any]]):
     """Updates the rows of passcodes in CSV and TSV trackers."""
-    for file_path, delimiter in [(ROOT_TRACKER_CSV, ","), (TRACKER_CSV, ","), (TRACKER_TSV, "\t")]:
+    for file_path, delimiter in [(TRACKER_CSV, ","), (TRACKER_TSV, "\t")]:
         with open(file_path, "r", encoding="utf-8") as f:
             if delimiter == ",":
                 rows = list(csv.reader(f))

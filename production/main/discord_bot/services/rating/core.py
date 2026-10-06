@@ -56,7 +56,7 @@ class RatingService:
     # Sub-Block 3.1: Constructor & Database Binding
     # -------------------------------------------------------------------------
     def __init__(self, db_path: Optional[str] = None) -> None:
-        self.db_path: str = db_path or BOT_CONFIG["db_path"]
+        self.db_path: str = db_path or BOT_CONFIG.get("telemetry_db_path") or BOT_CONFIG["db_path"]
 
     # -------------------------------------------------------------------------
     # Sub-Block 3.2: Static ELO & Tier Utilities (Public API Compatibility)

@@ -1,17 +1,24 @@
 # =============================================================================
-# Yu-Gi-Oh! Platform - Python Package Dependencies
+# BLOCK 1: METADATA BLOCK
 # =============================================================================
-# Specifies runtime dependencies required across the platform:
-# - Core Web Catalog Dashboard & REST API (production/main/web)
-# - The Great Kasutamaiza Modular Discord Bot (production/main/discord_bot)
-# - Desktop Platform Manager GUI (production/main/app.py)
-# - Client Synchronizer & Player GUI (packages/client)
-# - Development Tools & Test Suite (development/tools, development/tests)
+# Module: requirements.txt
+# Architecture: Platform Runtime & Test Dependencies Manifest
+# Domain: Python Dependency Resolution & Virtualenv Bootstrap
+# Description: Specifies exact minimum version constraints for all Python
+#              libraries required to operate the Web Catalog API, Discord Bot,
+#              Live Duel Simulator integration, and Pytest QA suite.
+#
+# Usage:
+#   pip install -r requirements.txt
+#
+# Invariants:
+#   - Synchronized with setup.py install_requires and pyproject.toml dependencies.
+#   - Pinned with lower bounds (>=) to guarantee API stability.
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# 1. Core Web Portal & REST API Server (FastAPI / Uvicorn Stack)
-# -----------------------------------------------------------------------------
+# =============================================================================
+# BLOCK 2: OPENING BLOCK (Core Application & API Framework)
+# =============================================================================
 # High-performance async ASGI web framework for the interactive card catalog
 fastapi>=0.115.0
 
@@ -30,23 +37,20 @@ httpx>=0.27.0
 # Synchronous HTTP library for client card sync scripts and manifest downloads
 requests>=2.31.0
 
-# -----------------------------------------------------------------------------
-# 2. The Great Kasutamaiza - Modular Discord Story & Duel Bot
-# -----------------------------------------------------------------------------
+# =============================================================================
+# BLOCK 3: BODY BLOCK (Discord Bot Subsystem & Media Processing)
+# =============================================================================
 # Modern discord.py library supporting application slash commands (/) and cogs
 discord.py>=2.3.0
 
 # Asynchronous SQLite driver for non-blocking database queries inside bot events
 aiosqlite>=0.20.0
 
-# -----------------------------------------------------------------------------
-# 3. Native Desktop GUI & Image Processing
-# -----------------------------------------------------------------------------
 # Image processing library for resizing and caching Duelingbook card artwork thumbnails
 pillow>=10.0.0
 
-# -----------------------------------------------------------------------------
-# 4. Quality Assurance & Automated Testing
-# -----------------------------------------------------------------------------
+# =============================================================================
+# BLOCK 4: CLOSING BLOCK (Testing, Quality Assurance & Developer Tooling)
+# =============================================================================
 # Comprehensive unit testing framework verifying API routes, CDB encoding, and Lua syntax
 pytest>=8.0.0

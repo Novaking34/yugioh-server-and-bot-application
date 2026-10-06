@@ -78,7 +78,7 @@ class CardService:
 
     def __init__(self, db_path: Optional[str] = None):
         """Initializes service with database path from config if not provided."""
-        self.db_path = db_path or BOT_CONFIG["db_path"]
+        self.db_path = db_path or BOT_CONFIG.get("content_db_path") or BOT_CONFIG["db_path"]
 
     # -------------------------------------------------------------------------
     # Sub-Block 3.1: Card Discovery & Direct Lookups

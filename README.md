@@ -1,17 +1,56 @@
 # 🌌 Yu-Gi-Oh! Custom Card, Story & Simulator Platform
 
-A unified environment for designing, cataloging, storybuilding, and dueling with custom Yu-Gi-Oh! cards hosted on **Duelingbook**, synchronized with a **modular Discord story & duel bot** and a **live automated duel simulator**.
+A unified systems engineering repository hosting **3 distinct applications in 1 server codebase**, built around custom Yu-Gi-Oh! card design, automated compilation pipelines, and bi-directional real-time gameplay.
+
+---
+
+## 🏛️ The Three Unified Applications
+
+The platform hosts three autonomous domain applications that interoperate through a shared functional core, SQLite authoritative storage, and binary compiled derivatives:
+
+1. **🎮 Live Duel Simulator (`ocgcore`)**:
+   - Automated rule-enforcement simulation engine running in a Docker container.
+   - Exposes raw TCP game client connectivity on port `7911` (EDOPro, YGOPro, Omega).
+   - Exposes HTTP room management interface on port `7922`.
+2. **🖥️ Web Catalog Dashboard & REST API (`FastAPI`)**:
+   - High-speed ASGI web service running on `http://localhost:8000`.
+   - Full-text search over card text, stats, lore backstories, and archetypes.
+   - REST API endpoints for card registration, deck querying, and duelist statistics.
+3. **🤖 Modular Discord Story & Duel Bot (`discord.py`)**:
+   - Interactive Discord bot powered by modular Cogs (`cardpool`, `deckbuilding`, `duel_engine`, `lore`).
+   - In-chat duel engine with private hand inspection, LP state machine, and dice rolls.
+   - Story mode sagas, character deck loaders, and real-time autocomplete search.
+
+*Also includes:*
+
+- **Platform Manager Desktop Application**: Native Python GUI control panel ([`production/main/app.py`](file:///home/professorseanex/yugioh-server/production/main/app.py)).
+- **Player Client Distribution Package**: 1-click player installation suite ([`packages/client/`](file:///home/professorseanex/yugioh-server/packages/client/)).
+
+---
+
+## 📚 Architectural Doctrine & Engineering Documentation
+
+The repository follows a **Systems Engineering & Data-Oriented Design (DOD)** paradigm based on the **"Functional Core, Imperative Shell"** pattern and **Autonomous Domain Silos**.
+
+Comprehensive architecture, roadmap, and state documentation is housed in the [`docs/`](file:///home/professorseanex/yugioh-server/docs/) directory:
+
+- 📖 [**`docs/README.md`**](file:///home/professorseanex/yugioh-server/docs/README.md): Architecture Suite Overview & Index.
+- 🏛️ [**`docs/ARCHITECTURE_PHILOSOPHY.md`**](file:///home/professorseanex/yugioh-server/docs/ARCHITECTURE_PHILOSOPHY.md): Engineering doctrine, Functional Core / Imperative Shell, C-style 4-block compilation units, autonomous domain silos, and the bi-directional closed loop.
+- 💾 [**`docs/DATA_ARCHITECTURE.md`**](file:///home/professorseanex/yugioh-server/docs/DATA_ARCHITECTURE.md): Authoritative 6-tier storage hierarchy, DDL schemas, and ingestion pipelines.
+- ⚙️ [**`docs/CONFIGURATION_SYSTEM.md`**](file:///home/professorseanex/yugioh-server/docs/CONFIGURATION_SYSTEM.md): 5-tier configuration precedence, dataclass schemas, logging sinks, and telemetry.
+- 📋 [**`docs/ACTION_PLAN.md`**](file:///home/professorseanex/yugioh-server/docs/ACTION_PLAN.md): 6-phase master execution roadmap from root consolidation to automated deployment.
+- 📊 [**`docs/REPOSITORY_STATE_TRACKER.md`**](file:///home/professorseanex/yugioh-server/docs/REPOSITORY_STATE_TRACKER.md): Live audit matrix, file verification ledger, and health status.
 
 ---
 
 ## ⚡ Master CLI Controller (`./manage.sh`)
 
-Use the master CLI script to manage all platform services, run tests, and synchronize expansions:
+All platform operations, service lifecycles, compilers, and test suites are managed via the Master CLI Controller ([`manage.sh`](file:///home/professorseanex/yugioh-server/manage.sh) / [`manage.py`](file:///home/professorseanex/yugioh-server/manage.py)):
 
 ```bash
 cd /home/professorseanex/yugioh-server
 
-# View live status of containers, card count, and expansions
+# View live status of containers, databases, ports, and expansions
 ./manage.sh status
 
 # Launch the Desktop GUI Application (or double-click the Desktop icon)
@@ -37,6 +76,18 @@ cd /home/professorseanex/yugioh-server
 # Re-synchronize cards from Story DB to simulator CDB & Lua scripts
 ./manage.sh sync
 
+# Synchronize code, database, and bot services to Oracle Cloud VM
+./manage.sh sync-vm "Deployment message"
+
+# Run platform diagnostics and failpoint auditor
+./manage.sh diagnose
+
+# Inspect multi-target platform logs (stats, tail, query)
+./manage.sh logs stats
+
+# Manage master card tracker & Google Sheets synchronization
+./manage.sh tracker verify
+
 # Import custom cards from a Duelingbook JSON export
 ./manage.sh import /path/to/duelingbook_cards.json
 
@@ -55,21 +106,22 @@ cd /home/professorseanex/yugioh-server
 
 ## 🏗️ Platform Architecture & Data Pipeline
 
-```bash
+```text
                      ┌─────────────────────────────┐
                      │   Duelingbook Card Design   │
                      │  (Artwork, Stats & Text)    │
                      └──────────────┬──────────────┘
-                                    │  Export JSON
+                                    │  Export JSON / Sheet CSV
                                     ▼
                      ┌─────────────────────────────┐
                      │ tools/duelingbook_importer  │
+                     │ tools/tracker_sync          │
                      └──────────────┬──────────────┘
                                     │
          ┌──────────────────────────┴──────────────────────────┐
          ▼                                                     ▼
 ┌───────────────────────────────┐             ┌───────────────────────────────┐
-│ story_database/ygo_story.db   │             │   Live Simulator Expansions   │
+│ data/authoritative/ygo_story  │             │   data/expansions/ (Custom)   │
 │ - custom_cards & cards_fts    │             │ - custom_cards.cdb (SQLite)   │
 │ - factions & characters       │             │ - scripts/c<id>.lua (ocgcore) │
 │ - decks & player_decks        │             └───────────────┬───────────────┘
@@ -96,7 +148,7 @@ The server runs an automated rule-enforcement duel engine container (`ocgcore`) 
 1. Open your EDOPro / YGOPro client.
 2. Go to **Multiplayer / Duel Online**.
 3. Select **Direct Connect / IP Connection**:
-   - **Host:** `localhost` (or your local IP / VPN IP for friends)
+   - **Host:** `localhost` (or server IP: `147.224.147.30`)
    - **Port:** `7911`
 4. Enter any room name or leave blank for auto-matching.
 
@@ -104,9 +156,9 @@ The server runs an automated rule-enforcement duel engine container (`ocgcore`) 
 
 All files needed for other players to duel on this server are organized in the [`packages/client/`](file:///home/professorseanex/yugioh-server/packages/client/) installation package:
 
-- **Windows:** Double-click `packages/client/install_client.bat`
-- **Linux / macOS:** Run `./packages/client/install_client.sh`
-- **Player GUI:** Run `launch_client.bat` or `./launch_client.sh`
+- **Windows:** Double-click [`packages/client/install_client.bat`](file:///home/professorseanex/yugioh-server/packages/client/install_client.bat)
+- **Linux / macOS:** Run [`./packages/client/install_client.sh`](file:///home/professorseanex/yugioh-server/packages/client/install_client.sh)
+- **Player GUI:** Run [`launch_client.bat`](file:///home/professorseanex/yugioh-server/packages/client/launch_client.bat) or [`./launch_client.sh`](file:///home/professorseanex/yugioh-server/packages/client/launch_client.sh)
 
 To generate standalone distributable zip and tarball archives for players and servers:
 
@@ -114,7 +166,7 @@ To generate standalone distributable zip and tarball archives for players and se
 ./manage.sh package
 ```
 
-Distributable archives are output to `dist/`:
+Distributable archives are output to [`dist/`](file:///home/professorseanex/yugioh-server/dist/):
 
 - `dist/ygo-client-package.zip`: Standalone zip archive for players (includes custom cards, scripts, decks, and installers).
 - `dist/ygo-server-package.tar.gz`: Standalone tarball for server hosts (includes Docker manifests, systemd services, and cloud scripts).
@@ -130,24 +182,27 @@ Duelingbook is the primary design workshop for card artwork, text, and manual te
 ### Workflow
 
 1. **Design on Duelingbook:** Create your custom card with artwork, stats, and effects.
-2. **Export or Save JSON:** Export card details from Duelingbook.
+2. **Export or Save JSON / CSV:** Export card details from Duelingbook or master Google Sheet tracker.
 3. **Import:**
 
    ```bash
    ./manage.sh import cards.json
+   # or synchronize from master Google Sheets tracker:
+   ./manage.sh tracker import
    ```
 
 4. **Automatic Synchronization:**
-   - The card is registered in `production/main/web/ygo_story.db` with its Duelingbook URL and artwork thumbnail.
-   - The simulator `.cdb` binary database is compiled into `production/shared/expansions/custom_cards.cdb`.
-   - A full Lua effect script (`c<id>.lua`) is generated in `production/shared/expansions/scripts/`.
+   - The card is registered in [`data/authoritative/content.db`](file:///home/professorseanex/yugioh-server/data/authoritative/content.db) with its Duelingbook URL and artwork thumbnail.
+   - The simulator `.cdb` binary database is compiled into [`data/expansions/custom_cards.cdb`](file:///home/professorseanex/yugioh-server/data/expansions/custom_cards.cdb).
+   - A full Lua effect script (`c<id>.lua`) is generated in [`data/expansions/scripts/`](file:///home/professorseanex/yugioh-server/data/expansions/scripts/).
+   - High-resolution artwork is cached in [`data/expansions/pics/`](file:///home/professorseanex/yugioh-server/data/expansions/pics/).
    - The card is immediately searchable in the Discord bot and Web Dashboard!
 
 ---
 
 ## 🤖 3. Modular Discord Story & Duel Bot
 
-The Discord bot is organized modularly using discord.py Cogs:
+The Discord bot is organized modularly using discord.py Cogs located in [`production/main/discord_bot/cogs/`](file:///home/professorseanex/yugioh-server/production/main/discord_bot/cogs/):
 
 | Cog Module | Commands | Description |
 | --- | --- | --- |
@@ -193,21 +248,47 @@ A responsive web dashboard runs locally at:
 
 ## 🗂️ 5. Project Directory Structure
 
+Every root code file adheres to the strict **C-Style 4-Block Compilation Unit Structure** (`BLOCK 1: METADATA`, `BLOCK 2: OPENING`, `BLOCK 3: BODY`, `BLOCK 4: CLOSING`).
+
 ```text
 /home/professorseanex/yugioh-server/
-├── .env                               # Environment secrets & credentials (local/ignored)
-├── .gitignore                         # Git exclusion rules for artifacts & secrets
-├── README.md                          # Master platform documentation & guide
-├── requirements.txt                   # Platform Python dependencies
-├── manage.sh                          # Master CLI controller & automated installer (Linux/macOS)
-├── manage.bat                         # Master CLI controller wrapper (Windows)
-├── manage.py                          # Master Python controller & orchestration engine
-├── pyproject.toml                     # Modern PEP 517/518 Python packaging metadata
-├── setup.py                           # Setuptools installation script (pip install -e .)
-├── docker-compose.yml                 # Live Duel Simulator Container (Port 7911 / 7922)
-├── config/
-│   └── paths.py                       # Centralized Path Resolution Module
-├── packages/                          # Standalone Installation Packages
+├── .env                               # [4-Block] Environment secrets & credentials (local/ignored)
+├── .env.example                       # [4-Block] Documented environment secrets template
+├── .gitignore                         # [4-Block] Git exclusion rules for artifacts & secrets
+├── README.md                          # Master platform documentation & topology guide
+├── requirements.txt                   # [4-Block] Platform Python runtime & test dependencies
+├── pyproject.toml                     # [4-Block] Modern PEP 517/518 build metadata & pytest config
+├── setup.py                           # [4-Block] Setuptools build & installation specification
+├── manage.sh                          # [4-Block] Master CLI host bootstrap & virtualenv manager (Linux/macOS)
+├── manage.bat                         # [4-Block] Master CLI wrapper (Windows)
+├── manage.py                          # [4-Block] Master Python controller & orchestration engine
+├── docker-compose.yml                 # [4-Block] Live Duel Simulator container manifest (Port 7911 / 7922)
+├── config/                            # Global Configuration & Shared Primitives
+│   ├── __init__.py                    # [4-Block] Master export hub for settings, paths, rules, logging & debugger
+│   ├── paths.py                       # [4-Block] Centralized canonical directory & file paths
+│   ├── settings.py                    # [4-Block] Strongly-typed dataclass settings (10 domains)
+│   ├── game_rules.py                  # [4-Block] Authoritative Master Rule 5 bitmasks & rules
+│   ├── bot/                           # Discord bot example configurations
+│   ├── client/                        # Canonical client configuration manifest
+│   ├── debugger/                      # Centralized execution tracing & 14-table diagnostic auditor
+│   ├── dns/                           # BIND DNS zone configurations
+│   └── logging/                       # Structured JSON & console logging subsystem
+├── data/                              # Unified Platform Data & Assets Subsystem
+│   ├── authoritative/                 # Canonical SQLite database (content.db) & schema_content.sql
+│   ├── trackers/                      # Master CSV/TSV Google Sheets card trackers
+│   ├── artwork/                       # Raw high-resolution card artwork (raw/)
+│   ├── expansions/                    # Compiled custom_cards.cdb, Lua scripts, & artwork pics/
+│   ├── decks/                         # Pre-made character story decks (.ydk)
+│   └── simulator/                     # Simulator JSON configs (config/) & replay telemetry (replays/)
+├── docs/                              # Master Architectural & Engineering Suite
+│   ├── README.md                      # Documentation index & guide
+│   ├── ARCHITECTURE_PHILOSOPHY.md     # Systems engineering doctrine (Functional Core, Silos)
+│   ├── DATA_ARCHITECTURE.md           # Authoritative 6-tier storage hierarchy & schemas
+│   ├── CONFIGURATION_SYSTEM.md        # 5-tier configuration precedence & telemetry
+│   ├── ACTION_PLAN.md                 # 6-phase implementation roadmap
+│   └── REPOSITORY_STATE_TRACKER.md    # Live audit matrix & component state tracker
+├── logs/                              # Operational service logs (bot, web, simulator, audits)
+├── packages/                          # Standalone Distribution & Deployment Packages
 │   ├── README.md                      # Packages Overview & Distribution Guide
 │   ├── server/                        # Server & Host 24/7 Installation Package
 │   │   ├── README.md                  # Server deployment & operations guide
@@ -216,6 +297,7 @@ A responsive web dashboard runs locally at:
 │   │   ├── update_duckdns.sh          # DuckDNS dynamic DNS updater
 │   │   ├── thelandofkustomazi.com.zone # BIND DNS zone file
 │   │   ├── docker-compose.yml         # Container orchestration manifest
+│   │   ├── scripts/                   # Operator automation (sync_oracle_vm.sh)
 │   │   └── systemd/                   # 24/7 background systemd units & installer
 │   └── client/                        # Player & Client Distribution Package
 │       ├── README.md                  # Player setup & connection guide
@@ -228,23 +310,27 @@ A responsive web dashboard runs locally at:
 │       └── config.json                # Live server connection manifest
 ├── dist/                              # Standalone release packages (built via ./manage.sh package)
 │   ├── ygo-client-package.zip         # Pre-packaged distribution for players (.zip)
-│   └── ygo-server-package.tar.gz      # Pre-packaged deployment for servers (.tar.gz)
+│   ├── ygo-server-package.tar.gz      # Pre-packaged deployment for servers (.tar.gz)
+│   └── SHA256SUMS.txt                 # Checksums for release verification
 ├── production/
-│   ├── main/                          # Host Server Services (app.py, discord_bot/, simulator/, web/)
-│   └── shared/                        # Client / Player Distribution (expansions/, decks/)
-├── development/                       # Development Tools, Tests & Pipeline
-│   ├── database/                      # Schema & Seeding Tools
-│   ├── docs/                          # Architecture & Developer Documentation
-│   ├── tests/                         # Pytest Unit Test Suite
-│   └── tools/                         # Card Generation & Sync Tools
-└── venv/                              # Isolated Python 3 Virtual Environment
+│   ├── main/                          # Host Server Services
+│   │   ├── app.py                     # Native desktop GUI platform manager
+│   │   ├── discord_bot/               # Modular Discord bot (bot.py, cogs/, services/)
+│   │   ├── gui/                       # Encapsulated Desktop GUI and setup wizards
+│   │   └── web/                       # FastAPI dashboard & expansion sync API
+│   └── shared/                        # Client distribution symlinks
+├── development/                       # Development Tools, Compilers & Tests
+│   ├── docs/                          # Specialized developer documentation
+│   ├── tests/                         # Pytest comprehensive unit test suite (112 tests)
+│   └── tools/                         # CDB compiler, Lua generator, importer, diagnostics
+└── venv/                              # Isolated Python 3 virtual environment
 ```
 
 ---
 
 ## 🧪 6. Testing & Quality Assurance
 
-Run the test suite at any time:
+Run the comprehensive unit test suite:
 
 ```bash
 ./manage.sh test
@@ -254,4 +340,10 @@ Validate all generated Lua effect scripts:
 
 ```bash
 ./manage.sh validate-lua
+```
+
+Run platform diagnostics and failpoint auditor:
+
+```bash
+./manage.sh diagnose
 ```
